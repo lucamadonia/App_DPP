@@ -1,43 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import {
-  staggerContainer,
-  staggerItem,
-  spring,
-  useReducedMotion,
-} from '@/lib/motion';
-import { AnimatedCounter } from '@/components/ui/animated-counter';
-import {
-  CheckCircle2,
-  Circle,
-  FileText,
-  Download,
-  AlertTriangle,
-  Shield,
-  ChevronDown,
-  Printer,
-  Search,
-  Filter,
-  Info,
-  ExternalLink,
-  Clock,
-  AlertCircle,
-  HelpCircle,
-  BookOpen,
-  Zap,
-  Recycle,
-  FlaskConical,
-  Tag,
-  Package,
-  Globe,
-  Calendar,
-  CheckSquare,
-  XCircle,
-  Minus,
-  Factory,
-  Loader2,
-} from 'lucide-react';
+import { staggerContainer, staggerItem, useReducedMotion } from '@/lib/motion';
+import { ClipboardCheck, Download, Filter, Loader2, Printer, Search, SearchX, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getChecklistTemplates } from '@/services/supabase';
 import {
@@ -48,125 +14,21 @@ import {
 import { canPrint } from '@/lib/download-file';
 import { getCategoryIcon } from '@/lib/category-utils';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+import { EmptyState } from '@/components/ui/state-feedback';
 import { PageContainer } from '@/components/layout/page-container';
-
-interface ChecklistItem {
-  id: string;
-  title: string;
-  description: string;
-  detailedDescription: string;
-  mandatory: boolean;
-  category: string;
-  subcategory?: string;
-  documentRequired: boolean;
-  documentTypes?: string[];
-  checked: boolean;
-  status: 'pending' | 'in_progress' | 'completed' | 'not_applicable';
-  legalBasis?: string;
-  authority?: string;
-  deadline?: string;
-  penalties?: string;
-  tips?: string[];
-  links?: { title: string; url: string }[];
-  applicableProducts?: string[];
-  priority: 'critical' | 'high' | 'medium' | 'low';
-}
-
-
-const categoryIcons: Record<string, React.ElementType> = {
-  // Compliance group 1: Product Safety & CE
-  'Product Safety & CE Conformity': Shield,
-  'Safety & CE Conformity': Shield,
-  'Safety': Shield,
-  'CE Conformity': Shield,
-  'General Product Safety': Shield,
-  'Machine Safety': Shield,
-  'Toy Safety': Shield,
-  'Food Safety': Shield,
-  // Compliance group 2: Environment & Sustainability
-  'Environment & Sustainability': Recycle,
-  'Sustainability': Recycle,
-  'Recycling': Recycle,
-  'Recycling & Disposal': Recycle,
-  'Take-back & Recovery': Recycle,
-  'Circular Economy': Recycle,
-  'Electrical Equipment Act (ElektroG)': Recycle,
-  // Compliance group 3: Chemicals & Ingredients
-  'Chemicals & Ingredients': FlaskConical,
-  'RoHS (Substance Restrictions)': FlaskConical,
-  'REACH (Chemicals)': FlaskConical,
-  'Chemicals (REACH)': FlaskConical,
-  'Chemicals': FlaskConical,
-  'Ingredients & Safety': FlaskConical,
-  'Substance Restrictions': FlaskConical,
-  // Compliance group 4: Labeling & Packaging
-  'Labeling & Packaging': Tag,
-  'Labeling': Tag,
-  'Product Labeling': Tag,
-  'Product Identification': Tag,
-  'Textile Labeling': Tag,
-  'Food Labeling': Tag,
-  'Energy Labeling': Zap,
-  'Packaging (VerpackG)': Package,
-  'Packaging': Package,
-  'Packaging Compliance': Package,
-  // Compliance group 5: Documentation & Traceability
-  'Documentation & Traceability': BookOpen,
-  'Documentation & Manuals': BookOpen,
-  'Documentation': BookOpen,
-  'Traceability': BookOpen,
-  'Registration Germany': FileText,
-  'Registration': FileText,
-  // Compliance group 6: Social Responsibility & Supply Chain
-  'Social Responsibility & Supply Chain': Factory,
-  'Supply Chain Due Diligence': Factory,
-  'EPR (Producer Responsibility)': Factory,
-  'Producer Responsibility': Factory,
-  // Compliance group 7: Digital Product Passport
-  'Digital Product Passport': Globe,
-  'DPP': Globe,
-  // Specific categories
-  'Batteries (BattG)': Zap,
-  'EU Battery Regulation': Zap,
-  'Battery Compliance': Zap,
-};
-
-const priorityColors: Record<string, string> = {
-  critical: 'bg-destructive text-destructive-foreground',
-  high: 'bg-warning text-warning-foreground',
-  medium: 'bg-primary text-primary-foreground',
-  low: 'bg-muted text-muted-foreground',
-};
-
-const statusIcons: Record<string, React.ElementType> = {
-  pending: Circle,
-  in_progress: Clock,
-  completed: CheckCircle2,
-  not_applicable: Minus,
-};
-
-const statusColors: Record<string, string> = {
-  pending: 'text-muted-foreground',
-  in_progress: 'text-warning',
-  completed: 'text-success',
-  not_applicable: 'text-muted-foreground',
-};
+import { KnowledgeHero } from '@/components/knowledge/KnowledgeHero';
+import { Chip, ChipRail } from '@/components/knowledge/ChipRail';
+import { ChecklistOverview } from '@/components/checklists/ChecklistOverview';
+import { ChecklistGroup } from '@/components/checklists/ChecklistGroup';
+import {
+  COUNTRY_CODES,
+  PRODUCT_CATEGORIES,
+  STATUS_ORDER,
+  type ChecklistItem,
+} from '@/components/checklists/checklist-meta';
 
 export interface ChecklistPageProps {
   /**
@@ -181,8 +43,13 @@ export interface ChecklistPageProps {
 export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageProps = {}) {
   const { t } = useTranslation('compliance');
   const prefersReduced = useReducedMotion();
-  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
-  const [selectedCountry, setSelectedCountry] = useState('DE');
+  const MotionDiv = prefersReduced ? ('div' as const) : motion.div;
+  // `/checklists/:country` (linked from the market entry check) preselects
+  // the country; anything unknown falls back to Germany.
+  const { country: countryParam } = useParams<{ country?: string }>();
+  const initialCountry =
+    COUNTRY_CODES.find((c) => c.code === countryParam?.toUpperCase())?.code ?? 'DE';
+  const [selectedCountry, setSelectedCountry] = useState(initialCountry);
   const [selectedCategory, setSelectedCategory] = useState('electronics');
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
@@ -195,7 +62,7 @@ export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageP
   const [checklistData, setChecklistData] = useState<Record<string, ChecklistItem[]>>({});
 
   const key = `${selectedCountry}-${selectedCategory}`;
-  const checklist = checklistData[key] || [];
+  const checklist = useMemo(() => checklistData[key] || [], [checklistData, key]);
 
   const [itemStates, setItemStates] = useState<Record<string, ChecklistItem['status']>>({});
 
@@ -205,31 +72,29 @@ export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageP
       setIsLoading(true);
 
       try {
-        // Load checklist templates
         const templates = await getChecklistTemplates(selectedCountry, selectedCategory);
 
         if (templates && templates.length > 0) {
-          // Transform templates into ChecklistItem format
-          const items: ChecklistItem[] = templates.map(t => ({
-            id: t.id,
-            title: t.title,
-            description: t.description,
-            detailedDescription: t.detailedDescription || t.description,
-            mandatory: t.mandatory,
-            category: t.category,
-            subcategory: t.subcategory,
-            documentRequired: t.documentRequired,
-            documentTypes: t.documentTypes,
+          const items: ChecklistItem[] = templates.map(tpl => ({
+            id: tpl.id,
+            title: tpl.title,
+            description: tpl.description,
+            detailedDescription: tpl.detailedDescription || tpl.description,
+            mandatory: tpl.mandatory,
+            category: tpl.category,
+            subcategory: tpl.subcategory,
+            documentRequired: tpl.documentRequired,
+            documentTypes: tpl.documentTypes,
             checked: false,
             status: 'pending' as const,
-            legalBasis: t.legalBasis,
-            authority: t.authority,
-            deadline: t.deadline,
-            penalties: t.penalties,
-            tips: t.tips,
-            links: t.links,
-            applicableProducts: t.applicableProducts,
-            priority: t.priority,
+            legalBasis: tpl.legalBasis,
+            authority: tpl.authority,
+            deadline: tpl.deadline,
+            penalties: tpl.penalties,
+            tips: tpl.tips,
+            links: tpl.links,
+            applicableProducts: tpl.applicableProducts,
+            priority: tpl.priority,
           }));
 
           setChecklistData(prev => ({
@@ -256,14 +121,12 @@ export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageP
   const getItemStatus = (item: ChecklistItem) => itemStates[item.id] || item.status;
 
   const toggleItemStatus = async (id: string, currentStatus: ChecklistItem['status']) => {
-    const statusOrder: ChecklistItem['status'][] = ['pending', 'in_progress', 'completed', 'not_applicable'];
-    const currentIndex = statusOrder.indexOf(currentStatus);
-    const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
+    const currentIndex = STATUS_ORDER.indexOf(currentStatus);
+    const nextStatus = STATUS_ORDER[(currentIndex + 1) % STATUS_ORDER.length];
 
     // Optimistic update
     setItemStates(prev => ({ ...prev, [id]: nextStatus }));
 
-    // Save to API
     setIsSaving(true);
     try {
       await store.set(selectedCountry, selectedCategory, id, nextStatus as ChecklistStatus);
@@ -276,9 +139,10 @@ export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageP
     }
   };
 
+  const query = searchQuery.toLowerCase();
   const filteredChecklist = checklist.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = item.title.toLowerCase().includes(query) ||
+                         item.description.toLowerCase().includes(query);
     const matchesIncomplete = !showOnlyIncomplete || getItemStatus(item) !== 'completed';
     return matchesSearch && matchesIncomplete;
   });
@@ -287,48 +151,15 @@ export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageP
 
   const mandatoryItems = checklist.filter(i => i.mandatory);
   const completedMandatory = mandatoryItems.filter(i => getItemStatus(i) === 'completed');
+  const completedAll = checklist.filter(i => getItemStatus(i) === 'completed').length;
   const progress = mandatoryItems.length > 0 ? Math.round((completedMandatory.length / mandatoryItems.length) * 100) : 0;
 
   const criticalItems = checklist.filter(i => i.priority === 'critical' && getItemStatus(i) !== 'completed');
 
-  const countryOptions = [
-    { code: 'DE', name: t('Germany'), flag: '🇩🇪' },
-    { code: 'FR', name: t('France'), flag: '🇫🇷' },
-    { code: 'AT', name: t('Austria'), flag: '🇦🇹' },
-    { code: 'IT', name: t('Italy'), flag: '🇮🇹' },
-    { code: 'ES', name: t('Spain'), flag: '🇪🇸' },
-    { code: 'NL', name: t('Netherlands'), flag: '🇳🇱' },
-    { code: 'GB', name: t('United Kingdom'), flag: '🇬🇧' },
-    { code: 'US', name: t('United States'), flag: '🇺🇸' },
-    { code: 'CH', name: t('Switzerland'), flag: '🇨🇭' },
-    { code: 'PL', name: t('Poland'), flag: '🇵🇱' },
-    { code: 'CZ', name: t('Czech Republic'), flag: '🇨🇿' },
-    { code: 'SE', name: t('Sweden'), flag: '🇸🇪' },
-    { code: 'DK', name: t('Denmark'), flag: '🇩🇰' },
-    { code: 'BE', name: t('Belgium'), flag: '🇧🇪' },
-    { code: 'PT', name: t('Portugal'), flag: '🇵🇹' },
-    { code: 'IE', name: t('Ireland'), flag: '🇮🇪' },
-  ];
-
-  // Icons come from the shared registry in category-utils, not from this
-  // list — see getCategoryIcon().
-  const categoryOptions = [
-    { id: 'electronics', name: t('Electronics') },
-    { id: 'textiles', name: t('Textiles') },
-    { id: 'batteries', name: t('Batteries') },
-    { id: 'furniture', name: t('Furniture') },
-    { id: 'toys', name: t('Toys') },
-    { id: 'packaging', name: t('Packaging') },
-    { id: 'cosmetics', name: t('Cosmetics') },
-    { id: 'food', name: t('Food') },
-    { id: 'construction', name: t('Construction Materials') },
-    { id: 'machinery', name: t('Machinery') },
-    { id: 'medical_devices', name: t('Medical Devices') },
-    { id: 'automotive', name: t('Automotive') },
-    { id: 'chemicals', name: t('Chemical Products') },
-    { id: 'food_supplements', name: t('Food Supplements') },
-    { id: 'pet_products', name: t('Pet Products') },
-  ];
+  const countryOptions = COUNTRY_CODES.map(c => ({ code: c.code, flag: c.flag, name: t(c.nameKey) }));
+  const categoryOptions = PRODUCT_CATEGORIES.map(c => ({ id: c.id, name: t(c.nameKey) }));
+  const country = countryOptions.find(c => c.code === selectedCountry);
+  const category = categoryOptions.find(c => c.id === selectedCategory);
 
   const handlePrint = () => {
     setIsPrinting(true);
@@ -351,8 +182,6 @@ export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageP
     try {
       // Lazy import keeps @react-pdf/renderer out of the initial bundle
       const { generateChecklistPDF } = await import('@/components/compliance/ChecklistPDF');
-      const country = countryOptions.find(c => c.code === selectedCountry);
-      const category = categoryOptions.find(c => c.id === selectedCategory);
 
       await generateChecklistPDF({
         countryCode: selectedCountry,
@@ -406,470 +235,194 @@ export function ChecklistPage({ store = supabaseChecklistStore }: ChecklistPageP
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-2">
-            <ShimmerSkeleton className="h-8 w-48" />
-            <ShimmerSkeleton className="h-4 w-72" />
-          </div>
-          <div className="flex gap-2">
-            <ShimmerSkeleton className="h-10 w-24" />
-            <ShimmerSkeleton className="h-10 w-28" />
-          </div>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardContent className="pt-6 space-y-2">
-              <ShimmerSkeleton className="h-4 w-28" />
-              <div className="flex flex-wrap gap-2">
-                {Array.from({ length: 8 }, (_, i) => (
-                  <ShimmerSkeleton key={i} className="h-9 w-24 rounded" />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 space-y-2">
-              <ShimmerSkeleton className="h-4 w-32" />
-              <div className="flex flex-wrap gap-2">
-                {Array.from({ length: 6 }, (_, i) => (
-                  <ShimmerSkeleton key={i} className="h-9 w-28 rounded" />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <Card>
-          <CardContent className="pt-6 space-y-2">
-            <ShimmerSkeleton className="h-4 w-36" />
-            <ShimmerSkeleton className="h-3 rounded-full" />
-          </CardContent>
-        </Card>
-        <div className="space-y-4">
-          {Array.from({ length: 3 }, (_, i) => (
-            <Card key={i}>
-              <CardContent className="pt-6 space-y-3">
-                <div className="flex items-center gap-2">
-                  <ShimmerSkeleton className="h-5 w-5 rounded" />
-                  <ShimmerSkeleton className="h-5 w-40" />
-                  <ShimmerSkeleton className="h-5 w-10 rounded-full" />
-                </div>
-                {Array.from({ length: 3 }, (_, j) => (
-                  <ShimmerSkeleton key={j} className="h-14 rounded" />
-                ))}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const hasData = !isLoading && checklist.length > 0;
+  const visibleGroups = categories
+    .map(cat => ({ cat, items: filteredChecklist.filter(i => i.category === cat) }))
+    .filter(g => g.items.length > 0);
 
   return (
     <TooltipProvider>
-      <PageContainer
-        size="full"
-        padding={false}
-        className="checklist-print-area"
-        title={t('Compliance Checklist')}
-        description={t('Comprehensive, interactive checklist for country-specific requirements')}
-        actions={
-          // `checklist-print-hide` has to ride on this wrapper: PageContainer
-          // owns the actions row, so the buttons cannot carry it themselves.
-          <span className="flex gap-2 checklist-print-hide">
-            {/* window.print() resolves to nothing inside a WebView, so on
-                native this button would silently do nothing at all. Hiding it
-                is honest; the PDF export next to it does the same job. */}
-            {canPrint() && (
-              <Button
-                variant="outline"
-                onClick={handlePrint}
-                disabled={isPrinting || checklist.length === 0}
-              >
-                {isPrinting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Printer className="mr-2 h-4 w-4" />
-                )}
-                {t('Print', { ns: 'common' })}
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={handleExportPDF}
-              disabled={isExporting || checklist.length === 0}
-            >
-              {isExporting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              {isExporting ? t('Generating PDF...') : t('PDF Export')}
-            </Button>
-          </span>
-        }
-      >
-        <div className="space-y-6">
-        {/* Selection */}
-        <div className="grid gap-4 md:grid-cols-2 checklist-print-hide">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{t('Select Country')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {countryOptions.map((country) => (
+      <PageContainer size="full" padding={false} className="checklist-print-area">
+        <div className="space-y-5 sm:space-y-6">
+          <KnowledgeHero
+            icon={ClipboardCheck}
+            eyebrow={t('Compliance & Knowledge')}
+            title={t('Compliance Checklist')}
+            description={t('Comprehensive, interactive checklist for country-specific requirements')}
+            actions={
+              // `checklist-print-hide` keeps the buttons off the printout.
+              <>
+                {/* window.print() resolves to nothing inside a WebView, so on
+                    native this button would silently do nothing at all. Hiding it
+                    is honest; the PDF export next to it does the same job. */}
+                {canPrint() && (
                   <Button
-                    key={country.code}
-                    variant={selectedCountry === country.code ? 'default' : 'outline'}
-                    onClick={() => setSelectedCountry(country.code)}
+                    variant="outline"
+                    className="checklist-print-hide"
+                    onClick={handlePrint}
+                    disabled={isPrinting || checklist.length === 0}
                   >
-                    <span className="mr-2">{country.flag}</span>
-                    {country.name}
+                    {isPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                    {t('Print', { ns: 'common' })}
                   </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{t('Product Category')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {categoryOptions.map((cat) => {
-                  const CategoryIcon = getCategoryIcon(cat.id);
-                  return (
-                    <Button
-                      key={cat.id}
-                      variant={selectedCategory === cat.id ? 'default' : 'outline'}
-                      onClick={() => setSelectedCategory(cat.id)}
-                    >
-                      <CategoryIcon className="mr-2 h-4 w-4" />
-                      {cat.name}
-                    </Button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Critical Items Warning */}
-        {criticalItems.length > 0 && (
-          <Card className="border-destructive bg-destructive/5">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                {t('{{count}} critical items open', { count: criticalItems.length })}
-              </CardTitle>
-              <CardDescription>
-                {t('These items have the highest priority and may lead to sales bans')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {criticalItems.slice(0, 3).map(item => (
-                  <div key={item.id} className="flex items-center gap-2 text-sm">
-                    <XCircle className="h-4 w-4 text-destructive" />
-                    <span>{item.title}</span>
-                  </div>
-                ))}
-                {criticalItems.length > 3 && (
-                  <p className="text-sm text-muted-foreground">
-                    {t('+ {{count}} more critical items', { count: criticalItems.length - 3 })}
-                  </p>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Progress */}
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                <span className="font-medium">{t('Compliance Progress')}</span>
-              </div>
-              <span className="font-bold text-lg">
-                <AnimatedCounter value={progress} suffix="%" />
-              </span>
-            </div>
-            <div className="h-3 rounded-full bg-muted overflow-hidden">
-              {prefersReduced ? (
-                <div className="h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />
-              ) : (
-                <motion.div
-                  className="h-full bg-primary rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={spring.gentle}
-                />
-              )}
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 mt-2 text-sm text-muted-foreground">
-              <span className="min-w-0">{t('{{completed}} of {{total}} mandatory items completed', { completed: completedMandatory.length, total: mandatoryItems.length })}</span>
-              {progress === 100 ? (
-                <Badge className="bg-success text-success-foreground">
-                  <CheckCircle2 className="mr-1 h-3 w-3" />
-                  {t('Complete')}
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-warning border-warning">
-                  <AlertTriangle className="mr-1 h-3 w-3" />
-                  {t('Incomplete')}
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Filter */}
-        <div className="flex items-center gap-4 checklist-print-hide">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder={t('Search checklist...')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Button
-            variant={showOnlyIncomplete ? 'default' : 'outline'}
-            onClick={() => setShowOnlyIncomplete(!showOnlyIncomplete)}
+                <Button
+                  className="checklist-print-hide"
+                  onClick={handleExportPDF}
+                  disabled={isExporting || checklist.length === 0}
+                >
+                  {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {isExporting ? t('Generating PDF...') : t('PDF Export')}
+                </Button>
+              </>
+            }
           >
-            <Filter className="mr-2 h-4 w-4" />
-            {t('Open items only')}
-          </Button>
-        </div>
+            <div className="checklist-print-hide space-y-3">
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-muted-foreground">{t('Select Country')}</p>
+                <ChipRail label={t('Select Country')}>
+                  {countryOptions.map(c => (
+                    <Chip
+                      key={c.code}
+                      selected={selectedCountry === c.code}
+                      onClick={() => setSelectedCountry(c.code)}
+                      icon={<span className="text-base leading-none" aria-hidden="true">{c.flag}</span>}
+                    >
+                      {c.name}
+                    </Chip>
+                  ))}
+                </ChipRail>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-muted-foreground">{t('Product Category')}</p>
+                <ChipRail label={t('Product Category')}>
+                  {categoryOptions.map(cat => {
+                    const CategoryIcon = getCategoryIcon(cat.id);
+                    return (
+                      <Chip
+                        key={cat.id}
+                        selected={selectedCategory === cat.id}
+                        onClick={() => setSelectedCategory(cat.id)}
+                        icon={<CategoryIcon className="h-4 w-4" aria-hidden="true" />}
+                      >
+                        {cat.name}
+                      </Chip>
+                    );
+                  })}
+                </ChipRail>
+              </div>
+            </div>
+          </KnowledgeHero>
 
-        {/* No data notice */}
-        {checklist.length === 0 && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">{t('No checklist available')}</h3>
-              <p className="text-muted-foreground">
-                {t('No detailed checklist is available yet for this country/category combination.')}
-              </p>
-            </CardContent>
-          </Card>
-        )}
+          {isLoading ? (
+            <div className="space-y-4" aria-busy="true">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <ShimmerSkeleton className="h-40 rounded-2xl" />
+                <ShimmerSkeleton className="h-40 rounded-2xl" />
+              </div>
+              <ShimmerSkeleton className="h-11 rounded-xl" />
+              {Array.from({ length: 3 }, (_, i) => (
+                <ShimmerSkeleton key={i} className="h-24 rounded-2xl" />
+              ))}
+            </div>
+          ) : checklist.length === 0 ? (
+            <div className="rounded-2xl border border-dashed bg-card">
+              <EmptyState
+                icon={SearchX}
+                title={t('No checklist available')}
+                description={t('No detailed checklist is available yet for this country/category combination.')}
+              />
+            </div>
+          ) : (
+            <>
+              <ChecklistOverview
+                progress={progress}
+                completedMandatory={completedMandatory.length}
+                totalMandatory={mandatoryItems.length}
+                totalItems={checklist.length}
+                completedItems={completedAll}
+                criticalOpen={criticalItems}
+                countryLabel={`${country?.flag ?? ''} ${country?.name ?? selectedCountry}`.trim()}
+                categoryLabel={category?.name ?? selectedCategory}
+              />
 
-        {/* Checklist by categories */}
-        <MotionDiv
-          className="space-y-4"
-          {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
-        >
-          {categories.map((category) => {
-            const categoryItems = filteredChecklist.filter(i => i.category === category);
-            if (categoryItems.length === 0) return null;
+              {/* Filter bar */}
+              <div className="checklist-print-hide flex flex-col gap-2 xs:flex-row">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder={t('Search checklist...')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-11 pl-9 pr-10 sm:h-10"
+                    aria-label={t('Search checklist...')}
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-0.5 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+                      aria-label={t('Clear search')}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <Button
+                  variant={showOnlyIncomplete ? 'default' : 'outline'}
+                  onClick={() => setShowOnlyIncomplete(!showOnlyIncomplete)}
+                  aria-pressed={showOnlyIncomplete}
+                  className="h-11 sm:h-10"
+                >
+                  <Filter className="h-4 w-4" />
+                  {t('Open items only')}
+                </Button>
+              </div>
 
-            const completedCount = categoryItems.filter(i => getItemStatus(i) === 'completed').length;
-            const CategoryIcon = categoryIcons[category] || Shield;
+              {visibleGroups.length === 0 ? (
+                <div className="rounded-2xl border border-dashed bg-card">
+                  <EmptyState
+                    icon={Search}
+                    illustration={false}
+                    title={t('No matching items')}
+                    description={t('Try adjusting your filters')}
+                    actionLabel={t('Reset filters')}
+                    onAction={() => {
+                      setSearchQuery('');
+                      setShowOnlyIncomplete(false);
+                    }}
+                  />
+                </div>
+              ) : (
+                <MotionDiv
+                  key={key}
+                  className="space-y-3 sm:space-y-4"
+                  {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+                >
+                  {visibleGroups.map(({ cat, items }) => (
+                    <MotionDiv
+                      key={cat}
+                      className="checklist-print-group"
+                      {...(!prefersReduced && { variants: staggerItem })}
+                    >
+                      <ChecklistGroup
+                        category={cat}
+                        items={items}
+                        getStatus={getItemStatus}
+                        onCycleStatus={(item) => toggleItemStatus(item.id, getItemStatus(item))}
+                      />
+                    </MotionDiv>
+                  ))}
+                </MotionDiv>
+              )}
 
-            return (
-              <MotionDiv
-                key={category}
-                className="checklist-print-group"
-                {...(!prefersReduced && { variants: staggerItem })}
-              >
-              <Collapsible defaultOpen>
-                <Card>
-                  <CollapsibleTrigger className="w-full">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <CardTitle className="text-base flex min-w-0 flex-wrap items-center gap-2 text-left">
-                          <CategoryIcon className="h-5 w-5 shrink-0 text-primary" />
-                          {category}
-                          <Badge variant="secondary">
-                            {completedCount}/{categoryItems.length}
-                          </Badge>
-                        </CardTitle>
-                        <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200" />
-                      </div>
-                    </CardHeader>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <CardContent className="pt-0">
-                      <Accordion type="multiple" className="w-full">
-                        {categoryItems.map((item) => {
-                          const status = getItemStatus(item);
-                          const StatusIcon = statusIcons[status];
-                          const statusColor = statusColors[status];
-
-                          return (
-                            <AccordionItem key={item.id} value={item.id}>
-                              <div
-                                className={`flex items-start gap-4 p-4 rounded-lg border mb-2 transition-colors ${
-                                  status === 'completed'
-                                    ? 'bg-success/5 border-success/20'
-                                    : status === 'in_progress'
-                                      ? 'bg-warning/5 border-warning/20'
-                                      : 'hover:bg-muted/50'
-                                }`}
-                              >
-                                <div
-                                  className="mt-0.5 cursor-pointer"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleItemStatus(item.id, status);
-                                  }}
-                                >
-                                  <StatusIcon className={`h-5 w-5 ${statusColor}`} />
-                                </div>
-                                <div className="flex-1">
-                                  <AccordionTrigger className="hover:no-underline p-0 font-normal">
-                                    <div className="flex-1 text-left">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <p className={`font-medium ${status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
-                                          {item.title}
-                                        </p>
-                                        {item.mandatory && (
-                                          <Badge variant="destructive" className="text-xs">
-                                            {t('Required')}
-                                          </Badge>
-                                        )}
-                                        <Badge className={`text-xs ${priorityColors[item.priority]}`}>
-                                          {item.priority === 'critical' ? t('Critical') :
-                                           item.priority === 'high' ? t('High') :
-                                           item.priority === 'medium' ? t('Medium') : t('Low')}
-                                        </Badge>
-                                        {item.documentRequired && (
-                                          <Badge variant="outline" className="text-xs">
-                                            <FileText className="mr-1 h-3 w-3" />
-                                            {t('Document')}
-                                          </Badge>
-                                        )}
-                                        {item.deadline && (
-                                          <Badge variant="outline" className="text-xs">
-                                            <Calendar className="mr-1 h-3 w-3" />
-                                            {item.deadline}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <p className="text-sm text-muted-foreground mt-1">
-                                        {item.description}
-                                      </p>
-                                    </div>
-                                  </AccordionTrigger>
-                                  <AccordionContent>
-                                    <div className="mt-4 space-y-4 border-t pt-4">
-                                      {/* Detailed description */}
-                                      <div>
-                                        <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                                          <Info className="h-4 w-4" />
-                                          {t('Detailed Description')}
-                                        </h4>
-                                        <p className="text-sm text-muted-foreground">
-                                          {item.detailedDescription}
-                                        </p>
-                                      </div>
-
-                                      {/* Metadata Grid */}
-                                      <div className="grid gap-4 md:grid-cols-2">
-                                        {item.legalBasis && (
-                                          <div>
-                                            <h5 className="text-sm font-medium mb-1">{t('Legal Basis')}</h5>
-                                            <p className="text-sm text-muted-foreground">{item.legalBasis}</p>
-                                          </div>
-                                        )}
-                                        {item.authority && (
-                                          <div>
-                                            <h5 className="text-sm font-medium mb-1">{t('Responsible Authority')}</h5>
-                                            <p className="text-sm text-muted-foreground">{item.authority}</p>
-                                          </div>
-                                        )}
-                                        {item.penalties && (
-                                          <div>
-                                            <h5 className="text-sm font-medium mb-1">{t('Penalties')}</h5>
-                                            <p className="text-sm text-destructive">{item.penalties}</p>
-                                          </div>
-                                        )}
-                                        {item.documentTypes && item.documentTypes.length > 0 && (
-                                          <div>
-                                            <h5 className="text-sm font-medium mb-1">{t('Required Documents')}</h5>
-                                            <div className="flex flex-wrap gap-1">
-                                              {item.documentTypes.map(doc => (
-                                                <Badge key={doc} variant="outline" className="text-xs">
-                                                  {doc}
-                                                </Badge>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      {/* Tips */}
-                                      {item.tips && item.tips.length > 0 && (
-                                        <div>
-                                          <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
-                                            <HelpCircle className="h-4 w-4" />
-                                            {t('Implementation Tips')}
-                                          </h5>
-                                          <ul className="space-y-1">
-                                            {item.tips.map((tip, idx) => (
-                                              <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
-                                                <CheckSquare className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
-                                                {tip}
-                                              </li>
-                                            ))}
-                                          </ul>
-                                        </div>
-                                      )}
-
-                                      {/* Applicable Products */}
-                                      {item.applicableProducts && item.applicableProducts.length > 0 && (
-                                        <div>
-                                          <h5 className="text-sm font-medium mb-2">{t('Affected Products')}</h5>
-                                          <div className="flex flex-wrap gap-1">
-                                            {item.applicableProducts.map(product => (
-                                              <Badge key={product} variant="secondary" className="text-xs">
-                                                {product}
-                                              </Badge>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {/* Links */}
-                                      {item.links && item.links.length > 0 && (
-                                        <div>
-                                          <h5 className="text-sm font-medium mb-2">{t('Related Links')}</h5>
-                                          <div className="flex flex-wrap gap-2">
-                                            {item.links.map(link => (
-                                              <Button key={link.url} variant="outline" size="sm" asChild>
-                                                <a href={link.url} target="_blank" rel="noopener noreferrer">
-                                                  {link.title}
-                                                  <ExternalLink className="ml-1 h-3 w-3" />
-                                                </a>
-                                              </Button>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </AccordionContent>
-                                </div>
-                              </div>
-                            </AccordionItem>
-                          );
-                        })}
-                      </Accordion>
-                    </CardContent>
-                  </CollapsibleContent>
-                </Card>
-              </Collapsible>
-              </MotionDiv>
-            );
-          })}
-        </MotionDiv>
+              {hasData && (
+                <p className="checklist-print-hide text-center text-xs text-muted-foreground">
+                  {t('Tap the status icon to cycle: pending → in progress → completed → not applicable')}
+                </p>
+              )}
+            </>
+          )}
         </div>
       </PageContainer>
     </TooltipProvider>

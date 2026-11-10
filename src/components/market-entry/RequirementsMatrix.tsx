@@ -13,8 +13,8 @@ import {
   Clock,
   AlertTriangle,
   Euro,
-  ExternalLink,
   Scale,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   Accordion,
@@ -23,20 +23,19 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import { IconTile } from '@/components/ui/icon-tile';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
-import { cn } from '@/lib/utils';
+import { DeadlineChip } from '@/components/knowledge/DeadlineChip';
+import { DetailField, DetailGrid, LinkPills } from '@/components/knowledge/DetailField';
+import { PriorityBadge } from '@/components/knowledge/PriorityBadge';
 import {
   MARKET_ENTRY_TYPE_ORDER,
   type MarketEntryRequirement,
   type MarketEntryRequirementType,
   type MarketEntryResult,
-  type MarketEntryPriority,
 } from '@/services/supabase';
 
-const TYPE_META: Record<
-  MarketEntryRequirementType,
-  { labelKey: string; icon: React.ComponentType<{ className?: string }> }
-> = {
+const TYPE_META: Record<MarketEntryRequirementType, { labelKey: string; icon: LucideIcon }> = {
   registration: { labelKey: 'Registration', icon: ClipboardCheck },
   labeling: { labelKey: 'Labeling', icon: Tag },
   language: { labelKey: 'Language', icon: Languages },
@@ -46,120 +45,69 @@ const TYPE_META: Record<
   tax: { labelKey: 'Taxes & Fees', icon: Percent },
 };
 
-const PRIORITY_META: Record<MarketEntryPriority, { labelKey: string; className: string }> = {
-  critical: {
-    labelKey: 'Critical',
-    className: 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400',
-  },
-  high: {
-    labelKey: 'High',
-    className: 'bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400',
-  },
-  medium: {
-    labelKey: 'Medium',
-    className: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400',
-  },
-  low: {
-    labelKey: 'Low',
-    className: 'bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300',
-  },
-};
-
 function RequirementDetail({ requirement }: { requirement: MarketEntryRequirement }) {
   const { t } = useTranslation('compliance');
 
   return (
     <div className="space-y-4 pt-1">
-      <p className="text-sm leading-relaxed text-muted-foreground">
+      <p className="text-sm leading-relaxed text-muted-foreground text-pretty">
         {requirement.description}
       </p>
 
       {requirement.applicableRegulations.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <Scale className="h-3.5 w-3.5 text-muted-foreground" />
+          <Scale className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
           {requirement.applicableRegulations.map((reg) => (
-            <Badge key={reg} variant="outline" className="text-[10px] font-normal">
+            <Badge key={reg} variant="outline" className="h-auto whitespace-normal text-[11px] font-normal">
               {reg}
             </Badge>
           ))}
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <DetailGrid>
         {requirement.authority && (
-          <div className="flex items-start gap-2 text-sm">
-            <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <span>
-              <span className="block text-xs text-muted-foreground">
-                {t('Responsible Authority')}
-              </span>
-              {requirement.authority}
-            </span>
-          </div>
+          <DetailField icon={Building2} label={t('Responsible Authority')}>
+            {requirement.authority}
+          </DetailField>
         )}
         {requirement.deadlineNote && (
-          <div className="flex items-start gap-2 text-sm">
-            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <span>
-              <span className="block text-xs text-muted-foreground">{t('Deadline')}</span>
-              {requirement.deadlineNote}
-            </span>
-          </div>
+          <DetailField icon={Clock} label={t('Deadline')}>
+            <span className="block">{requirement.deadlineNote}</span>
+            <DeadlineChip date={requirement.deadlineNote} className="mt-1.5" />
+          </DetailField>
         )}
         {requirement.costEstimate && (
-          <div className="flex items-start gap-2 text-sm">
-            <Euro className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <span>
-              <span className="block text-xs text-muted-foreground">{t('Cost Estimate')}</span>
-              {requirement.costEstimate}
-            </span>
-          </div>
+          <DetailField icon={Euro} label={t('Cost Estimate')}>
+            {requirement.costEstimate}
+          </DetailField>
         )}
         {requirement.penaltiesSummary && (
-          <div className="flex items-start gap-2 text-sm">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-            <span>
-              <span className="block text-xs text-muted-foreground">{t('Penalties')}</span>
-              {requirement.penaltiesSummary}
-            </span>
-          </div>
+          <DetailField icon={AlertTriangle} label={t('Penalties')} tone="danger">
+            {requirement.penaltiesSummary}
+          </DetailField>
         )}
-      </div>
+      </DetailGrid>
 
       {requirement.implementationSteps.length > 0 && (
         <div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             {t('Implementation Steps')}
           </p>
-          <ol className="space-y-1.5">
+          <ol className="relative space-y-2 before:absolute before:bottom-3 before:left-[11px] before:top-3 before:w-px before:bg-border">
             {requirement.implementationSteps.map((step, i) => (
-              <li key={i} className="flex items-start gap-2.5 text-sm">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+              <li key={i} className="relative flex items-start gap-3 text-sm">
+                <span className="relative z-[1] flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
                   {i + 1}
                 </span>
-                {step}
+                <span className="min-w-0 pt-0.5 break-words">{step}</span>
               </li>
             ))}
           </ol>
         </div>
       )}
 
-      {requirement.links.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {requirement.links.map((link) => (
-            <a
-              key={link.url}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-[32px] items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs text-primary transition-colors hover:bg-primary/5"
-            >
-              <ExternalLink className="h-3 w-3" />
-              {link.label}
-            </a>
-          ))}
-        </div>
-      )}
+      <LinkPills links={requirement.links} />
     </div>
   );
 }
@@ -175,9 +123,9 @@ export function RequirementsMatrix({ result, loading }: RequirementsMatrixProps)
 
   if (loading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3" aria-busy="true">
         {Array.from({ length: 4 }).map((_, i) => (
-          <ShimmerSkeleton key={i} className="h-16 rounded-xl" />
+          <ShimmerSkeleton key={i} className="h-28 rounded-2xl" />
         ))}
       </div>
     );
@@ -197,59 +145,53 @@ export function RequirementsMatrix({ result, loading }: RequirementsMatrixProps)
         if (!requirements || requirements.length === 0) return null;
 
         const meta = TYPE_META[type];
+        const criticalCount = requirements.filter((r) => r.priority === 'critical').length;
         const ItemWrapper = prefersReduced ? 'div' : motion.div;
         const itemProps = prefersReduced ? {} : { variants: gridItem };
 
         return (
           <ItemWrapper key={type} {...itemProps}>
-            <div className="rounded-xl border bg-card">
-              <div className="flex items-center gap-2.5 border-b px-4 py-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                  <meta.icon className="h-4 w-4 text-primary" />
-                </div>
-                <h3 className="font-semibold">{t(meta.labelKey)}</h3>
-                <Badge variant="secondary" className="ml-auto tabular-nums">
+            <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+              <div className="flex items-center gap-3 border-b bg-muted/30 px-3 py-3 sm:px-4">
+                <IconTile icon={meta.icon} size="sm" tone={criticalCount > 0 ? 'danger' : 'primary'} />
+                <h3 className="min-w-0 flex-1 font-semibold leading-snug">{t(meta.labelKey)}</h3>
+                {criticalCount > 0 && (
+                  <span className="hidden shrink-0 text-xs font-medium text-destructive xs:inline">
+                    {t('{{count}} critical', { count: criticalCount })}
+                  </span>
+                )}
+                <Badge variant="secondary" className="shrink-0 tabular-nums">
                   {requirements.length}
                 </Badge>
               </div>
-              <Accordion type="multiple" className="px-4">
-                {requirements.map((req) => {
-                  const priority = PRIORITY_META[req.priority];
-                  return (
-                    <AccordionItem key={req.id} value={req.id} className="last:border-b-0">
-                      <AccordionTrigger className="min-h-[44px] gap-3 py-3 text-left hover:no-underline">
-                        <span className="flex flex-1 flex-wrap items-center gap-2">
-                          <span className="text-sm font-medium">{req.title}</span>
-                          <Badge
-                            className={cn(
-                              'h-5 px-1.5 text-[10px] hover:bg-current/10',
-                              priority.className
-                            )}
-                          >
-                            {t(priority.labelKey)}
-                          </Badge>
+              <Accordion type="multiple" className="px-3 sm:px-4">
+                {requirements.map((req) => (
+                  <AccordionItem key={req.id} value={req.id} className="last:border-b-0">
+                    <AccordionTrigger className="min-h-11 gap-3 py-3 text-left hover:no-underline">
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium leading-snug break-words">{req.title}</span>
+                        <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          <PriorityBadge priority={req.priority} />
                           {req.mandatory ? (
-                            <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                            <Badge variant="outline" className="h-6 text-[11px]">
                               {t('Mandatory')}
                             </Badge>
                           ) : (
-                            <Badge
-                              variant="outline"
-                              className="h-5 px-1.5 text-[10px] text-muted-foreground"
-                            >
+                            <Badge variant="outline" className="h-6 text-[11px] text-muted-foreground">
                               {t('Recommended')}
                             </Badge>
                           )}
+                          <DeadlineChip date={req.deadlineNote} showDate={false} />
                         </span>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <RequirementDetail requirement={req} />
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <RequirementDetail requirement={req} />
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
               </Accordion>
-            </div>
+            </section>
           </ItemWrapper>
         );
       })}

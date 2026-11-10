@@ -110,11 +110,11 @@ async function supabaseRequest(path, options = {}) {
 
 const COUNTRIES = [
   // Bestehende EU-Kernländer
-  { code: 'DE', name: 'Deutschland', flag: '🇩🇪', regulations: 45, checklists: 12, authorities: ['Bundesministerium für Wirtschaft und Klimaschutz', 'Umweltbundesamt', 'Bundesnetzagentur'], description: 'Größter EU-Markt mit strengen Umweltauflagen' },
-  { code: 'FR', name: 'Frankreich', flag: '🇫🇷', regulations: 38, checklists: 10, authorities: ['Ministère de la Transition écologique', 'ADEME'], description: 'Vorreiter bei Reparierbarkeitsindex' },
-  { code: 'AT', name: 'Österreich', flag: '🇦🇹', regulations: 32, checklists: 8, authorities: ['Bundesministerium für Klimaschutz', 'Umweltbundesamt'], description: 'Hohe Standards bei Nachhaltigkeit' },
-  { code: 'IT', name: 'Italien', flag: '🇮🇹', regulations: 35, checklists: 9, authorities: ['Ministero della Transizione Ecologica', 'ISPRA'], description: 'Fokus auf Kreislaufwirtschaft' },
-  { code: 'ES', name: 'Spanien', flag: '🇪🇸', regulations: 30, checklists: 7, authorities: ['Ministerio para la Transición Ecológica', 'MITERD'], description: 'Wachsender Nachhaltigkeitsmarkt' },
+  { code: 'DE', name: 'Deutschland', flag: '🇩🇪', regulations: 45, checklists: 12, authorities: ['Bundesministerium für Wirtschaft und Energie', 'Bundesministerium für Umwelt, Klimaschutz, Naturschutz und nukleare Sicherheit', 'Umweltbundesamt', 'Bundesnetzagentur'], description: 'Größter EU-Markt mit strengen Umweltauflagen' },
+  { code: 'FR', name: 'Frankreich', flag: '🇫🇷', regulations: 38, checklists: 10, authorities: ['Ministère de la Transition écologique', 'ADEME', 'DGCCRF'], description: 'Vorreiter bei Reparierbarkeits- und Haltbarkeitsindex (AGEC)' },
+  { code: 'AT', name: 'Österreich', flag: '🇦🇹', regulations: 32, checklists: 8, authorities: ['Bundesministerium für Land- und Forstwirtschaft, Klima- und Umweltschutz, Regionen und Wasserwirtschaft', 'Umweltbundesamt'], description: 'Hohe Standards bei Nachhaltigkeit' },
+  { code: 'IT', name: 'Italien', flag: '🇮🇹', regulations: 35, checklists: 9, authorities: ["Ministero dell'Ambiente e della Sicurezza Energetica", 'ISPRA', 'CONAI'], description: 'Fokus auf Kreislaufwirtschaft' },
+  { code: 'ES', name: 'Spanien', flag: '🇪🇸', regulations: 30, checklists: 7, authorities: ['Ministerio para la Transición Ecológica y el Reto Demográfico', 'MITECO'], description: 'Wachsender Nachhaltigkeitsmarkt' },
   { code: 'NL', name: 'Niederlande', flag: '🇳🇱', regulations: 33, checklists: 9, authorities: ['Rijkswaterstaat', 'RIVM'], description: 'Führend bei Kreislaufwirtschaft' },
   { code: 'BE', name: 'Belgien', flag: '🇧🇪', regulations: 28, checklists: 7, authorities: ['SPF Santé publique', 'IBGE-BIM'], description: 'Strikte Verpackungsvorschriften' },
   { code: 'PL', name: 'Polen', flag: '🇵🇱', regulations: 25, checklists: 6, authorities: ['Ministerstwo Klimatu i Środowiska'], description: 'Aufstrebender Markt' },
@@ -137,21 +137,21 @@ const COUNTRIES = [
   { code: 'MT', name: 'Malta', flag: '🇲🇹', regulations: 18, checklists: 4, authorities: ['Environment and Resources Authority'], description: 'Kleinster EU-Staat' },
   { code: 'PT', name: 'Portugal', flag: '🇵🇹', regulations: 30, checklists: 7, authorities: ['Agência Portuguesa do Ambiente'], description: 'Wachsender Nachhaltigkeitsmarkt' },
   { code: 'RO', name: 'Rumänien', flag: '🇷🇴', regulations: 22, checklists: 5, authorities: ['Ministerul Mediului'], description: 'EU-Mitglied seit 2007' },
-  { code: 'SI', name: 'Slowenien', flag: '🇸🇮', regulations: 24, checklists: 6, authorities: ['Ministrstvo za okolje in prostor'], description: 'Grüner Alpensstaat' },
+  { code: 'SI', name: 'Slowenien', flag: '🇸🇮', regulations: 24, checklists: 6, authorities: ['Ministrstvo za okolje, podnebje in energijo', 'Ministrstvo za naravne vire in prostor'], description: 'Grüner Alpenstaat' },
   { code: 'SK', name: 'Slowakei', flag: '🇸🇰', regulations: 23, checklists: 6, authorities: ['Ministerstvo životného prostredia'], description: 'Starke Automobilindustrie' },
   // EWR-Länder
   { code: 'NO', name: 'Norwegen', flag: '🇳🇴', regulations: 35, checklists: 9, authorities: ['Miljødirektoratet'], description: 'EWR-Mitglied, hohe Umweltstandards' },
-  { code: 'IS', name: 'Island', flag: '🇮🇸', regulations: 20, checklists: 5, authorities: ['Umhverfis- og auðlindaráðuneytið'], description: 'EWR-Mitglied, erneuerbare Energien' },
+  { code: 'IS', name: 'Island', flag: '🇮🇸', regulations: 20, checklists: 5, authorities: ['Umhverfis-, orku- og loftslagsráðuneytið'], description: 'EWR-Mitglied, erneuerbare Energien' },
   { code: 'LI', name: 'Liechtenstein', flag: '🇱🇮', regulations: 18, checklists: 4, authorities: ['Amt für Umwelt'], description: 'EWR-Mitglied, Kleinstaat' },
   // Wichtige Handelspartner
-  { code: 'GB', name: 'Vereinigtes Königreich', flag: '🇬🇧', regulations: 40, checklists: 10, authorities: ['Department for Environment, Food & Rural Affairs', 'Environment Agency'], description: 'Wichtiger Handelspartner nach Brexit' },
+  { code: 'GB', name: 'Vereinigtes Königreich', flag: '🇬🇧', regulations: 40, checklists: 10, authorities: ['Department for Environment, Food & Rural Affairs', 'Environment Agency', 'Office for Product Safety and Standards'], description: 'Wichtiger Handelspartner nach Brexit' },
   { code: 'US', name: 'Vereinigte Staaten', flag: '🇺🇸', regulations: 35, checklists: 8, authorities: ['EPA', 'FTC', 'CPSC'], description: 'Größte Volkswirtschaft weltweit' },
   { code: 'CN', name: 'China', flag: '🇨🇳', regulations: 30, checklists: 7, authorities: ['Ministry of Ecology and Environment'], description: 'Größter Produktionsstandort' },
   { code: 'JP', name: 'Japan', flag: '🇯🇵', regulations: 32, checklists: 8, authorities: ['Ministry of the Environment'], description: 'Hohe Qualitäts- und Umweltstandards' },
   { code: 'KR', name: 'Südkorea', flag: '🇰🇷', regulations: 28, checklists: 7, authorities: ['Ministry of Environment'], description: 'Technologieführer in Asien' },
   { code: 'IN', name: 'Indien', flag: '🇮🇳', regulations: 22, checklists: 5, authorities: ['Ministry of Environment, Forest and Climate Change'], description: 'Wachsender Markt' },
   { code: 'TR', name: 'Türkei', flag: '🇹🇷', regulations: 25, checklists: 6, authorities: ['Çevre, Şehircilik ve İklim Değişikliği Bakanlığı'], description: 'Wichtiger Handelspartner' },
-  { code: 'TW', name: 'Taiwan', flag: '🇹🇼', regulations: 26, checklists: 6, authorities: ['Environmental Protection Administration'], description: 'Halbleiter- und Elektronikproduktion' },
+  { code: 'TW', name: 'Taiwan', flag: '🇹🇼', regulations: 26, checklists: 6, authorities: ['Ministry of Environment (MOENV)'], description: 'Halbleiter- und Elektronikproduktion' },
 
   // =========================================================================
   // Europa (nicht EU/EWR)

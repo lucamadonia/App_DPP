@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Settings, Zap, Recycle, Mail, Save, Loader2, Factory, Store, Ship } from 'lucide-react';
+import { Zap, Recycle, Mail, Save, Loader2, Factory, Store, Ship } from 'lucide-react';
 import { FormSections, FormSection, FormGrid, FormField, ChoiceCards, FormToggleRow } from '@/components/ui/form-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,10 @@ import {
 } from '@/services/supabase/compliance-settings';
 import type { ComplianceSettings, DistributorRole } from '@/types/compliance';
 import { toast } from 'sonner';
+import { PageContainer } from '@/components/layout/page-container';
+import { Card } from '@/components/ui/card';
+import { ComplianceSubnav } from '@/components/compliance/hub/hub-primitives';
+import { ComplianceSetupStatus } from '@/components/compliance/hub/ComplianceSetupStatus';
 
 export function ComplianceSettingsPage() {
   const { t } = useTranslation('compliance');
@@ -36,33 +40,56 @@ export function ComplianceSettingsPage() {
     toast.success(t('Compliance settings saved'));
   }
 
-  if (loading) return <ShimmerSkeleton className="h-96 w-full" />;
+  if (loading) {
+    return (
+      <div className="space-y-5" aria-busy="true">
+        <div className="space-y-2">
+          <ShimmerSkeleton className="h-8 w-56" />
+          <ShimmerSkeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <ShimmerSkeleton className="h-11 w-full max-w-md rounded-2xl" />
+        <div className="grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+          <Card className="p-4"><ShimmerSkeleton className="h-28 rounded-lg" /></Card>
+          <Card className="p-4"><ShimmerSkeleton className="h-28 rounded-lg" /></Card>
+        </div>
+        <Card className="p-4"><ShimmerSkeleton className="h-72 rounded-lg" /></Card>
+      </div>
+    );
+  }
 
   const ear = settings.ear || DEFAULT_COMPLIANCE_SETTINGS.ear!;
   const lucid = settings.lucid || DEFAULT_COMPLIANCE_SETTINGS.lucid!;
 
+  const saveButton = (
+    <Button onClick={save} disabled={saving} className="min-h-11 w-full gap-1.5 md:min-h-9 md:w-auto">
+      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+      {t('Save')}
+    </Button>
+  );
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Settings className="h-6 w-6" />
-            {t('Compliance Settings')}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('Registration numbers, brands, and reminder options for the EAR/LUCID monthly reports.')}
-          </p>
-        </div>
-        <Button onClick={save} disabled={saving} className="gap-1.5">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {t('Save')}
-        </Button>
-      </div>
+    <PageContainer
+      size="full"
+      padding={false}
+      title={t('Compliance Settings')}
+      description={t('Registration numbers, brands, and reminder options for the EAR/LUCID monthly reports.')}
+      actions={<div className="hidden md:block">{saveButton}</div>}
+      bottomBar={saveButton}
+    >
+      <ComplianceSubnav />
+      <div className="space-y-5 sm:space-y-6">
+      <ComplianceSetupStatus ear={ear} lucid={lucid} />
 
       <Tabs defaultValue="ear">
-        <TabsList>
-          <TabsTrigger value="ear" className="gap-1.5"><Zap className="h-3.5 w-3.5" />EAR / ElektroG</TabsTrigger>
-          <TabsTrigger value="lucid" className="gap-1.5"><Recycle className="h-3.5 w-3.5" />LUCID / VerpackG</TabsTrigger>
+        <TabsList className="h-auto w-full sm:w-auto">
+          <TabsTrigger value="ear" className="min-h-10 flex-1 gap-1.5 sm:flex-none">
+            <Zap className="h-3.5 w-3.5" />EAR / ElektroG
+            <StatusDot on={ear.enabled} />
+          </TabsTrigger>
+          <TabsTrigger value="lucid" className="min-h-10 flex-1 gap-1.5 sm:flex-none">
+            <Recycle className="h-3.5 w-3.5" />LUCID / VerpackG
+            <StatusDot on={lucid.enabled} />
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="ear" className="mt-4">
@@ -201,7 +228,17 @@ export function ComplianceSettingsPage() {
           </FormSections>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PageContainer>
+  );
+}
+
+function StatusDot({ on }: { on: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={on ? 'h-1.5 w-1.5 shrink-0 rounded-full bg-success' : 'h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40'}
+    />
   );
 }
 

@@ -48,7 +48,7 @@ export function CountrySelectGrid({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13rem),1fr))] gap-2.5 sm:gap-3">
         {Array.from({ length: 8 }).map((_, i) => (
           <ShimmerSkeleton key={i} className="h-20 rounded-xl" />
         ))}
@@ -63,7 +63,7 @@ export function CountrySelectGrid({
 
   return (
     <div className="space-y-4">
-      <div className="relative max-w-sm">
+      <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={search}
@@ -75,7 +75,7 @@ export function CountrySelectGrid({
 
       <GridWrapper
         {...gridProps}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+        className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13rem),1fr))] gap-2.5 sm:gap-3"
       >
         {filtered.map((country) => {
           const isCurated = curatedSet.has(country.code);
@@ -96,7 +96,7 @@ export function CountrySelectGrid({
                 onClick={() => onSelect(country)}
                 aria-pressed={isSelected}
                 className={cn(
-                  'w-full min-h-[64px] flex items-center gap-3 rounded-xl border bg-card p-3 text-left',
+                  'w-full min-h-[64px] flex items-center gap-3 rounded-xl border bg-card p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   'transition-colors duration-200 hover:border-primary/50 hover:shadow-md',
                   isSelected
                     ? 'border-primary ring-2 ring-primary/20 shadow-md'
@@ -109,7 +109,7 @@ export function CountrySelectGrid({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium text-sm">{country.name}</span>
                   {isCurated ? (
-                    <Badge className="mt-1 h-5 gap-1 px-1.5 text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 hover:bg-emerald-100">
+                    <Badge variant="outline" className="mt-1 h-5 gap-1 border-success/30 bg-success/10 px-1.5 text-[10px] text-success">
                       <ShieldCheck className="h-3 w-3" />
                       {t('Verified Data')}
                     </Badge>

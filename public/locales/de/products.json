@@ -1010,5 +1010,20 @@
   "Disassembly and disposal instructions": "Demontage- und Entsorgungshinweise",
   "Test reports & safety information": "Prüfberichte & Sicherheitsinformationen",
   "Search certifications...": "Zertifizierungen suchen...",
-  "Image unavailable": "Bild nicht verfügbar"
+  "Image unavailable": "Bild nicht verfügbar",
+  "Categories": "Kategorien",
+  "Chemicals": "Chemikalien",
+  "Clear search": "Suche leeren",
+  "Custom": "Eigene",
+  "Drop to upload": "Zum Hochladen ablegen",
+  "Energy": "Energie",
+  "Grid view": "Rasteransicht",
+  "List view": "Listenansicht",
+  "Pictograms": "Piktogramme",
+  "Recycling": "Recycling",
+  "Replace file": "Datei ersetzen",
+  "Reset filters": "Filter zurücksetzen",
+  "Safety": "Sicherheit",
+  "Sharpest at any print size": "Gestochen scharf in jeder Druckgröße",
+  "Vector files (SVG)": "Vektordateien (SVG)"
 }
