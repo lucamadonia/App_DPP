@@ -6,6 +6,7 @@ import { IconTile } from '@/components/ui/icon-tile';
 import { PhotoLightbox } from '@/components/returns/PhotoLightbox';
 import type { ProductImage } from '@/types/database';
 import { cn } from '@/lib/utils';
+import { SafeHtml } from '@/components/ui/safe-html';
 
 // ---------------------------------------------------------------------------
 // Fade-in image
@@ -251,8 +252,11 @@ export function ProductHero({
   const urls = useMemo(() => orderProductImages(images, fallbackImageUrl), [images, fallbackImageUrl]);
 
   return (
-    <section className="grid gap-6 lg:grid-cols-12 lg:gap-10">
-      <div className="lg:col-span-5">
+    // minmax(0,1fr): without an explicit track the implicit column sizes to
+    // its widest child (the thumbnail strip), pushing the whole hero —
+    // gallery, text and action buttons — past the phone's right edge.
+    <section className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-12 lg:gap-10">
+      <div className="min-w-0 lg:col-span-5">
         <ProductGallery urls={urls} name={name} />
       </div>
 
@@ -267,9 +271,12 @@ export function ProductHero({
         </div>
 
         {description && (
-          <p className="max-w-prose text-sm leading-relaxed text-muted-foreground text-pretty line-clamp-3">
-            {description}
-          </p>
+          // Descriptions come from the rich-text editor (HTML); render them
+          // sanitised instead of showing the raw tags.
+          <SafeHtml
+            html={description}
+            className="max-w-prose break-words text-sm leading-relaxed text-muted-foreground text-pretty line-clamp-3 [&_p]:inline [&_p]:after:content-['_']"
+          />
         )}
 
         {facts.length > 0 && (

@@ -518,14 +518,14 @@ export function ProductPage() {
               </div>
               <div className="grid grid-cols-3 gap-1 sm:-ml-3 sm:flex sm:flex-wrap">
                 {publicBatch && (
-                  <Button variant="ghost" asChild className="h-auto min-h-11 flex-col gap-1 px-1 py-2 text-xs text-muted-foreground hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm">
+                  <Button variant="ghost" asChild className="h-auto min-h-11 min-w-0 flex-col gap-1 whitespace-normal px-1 py-2 text-center text-xs leading-tight text-muted-foreground sm:whitespace-nowrap hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm">
                     <Link to={`/products/${id}/batches/new`}>
                       <Plus className="h-4 w-4" />
                       {t('New Batch')}
                     </Link>
                   </Button>
                 )}
-                <Button variant="ghost" asChild className="h-auto min-h-11 flex-col gap-1 px-1 py-2 text-xs text-muted-foreground hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm">
+                <Button variant="ghost" asChild className="h-auto min-h-11 min-w-0 flex-col gap-1 whitespace-normal px-1 py-2 text-center text-xs leading-tight text-muted-foreground sm:whitespace-nowrap hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm">
                   <Link to="/dpp/qr-generator">
                     <QrCode className="h-4 w-4" />
                     {t('QR Code')}
@@ -535,7 +535,7 @@ export function ProductPage() {
                   variant="ghost"
                   onClick={handleExport}
                   disabled={isExporting || batchesLoading}
-                  className="h-auto min-h-11 flex-col gap-1 px-1 py-2 text-xs text-muted-foreground hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm"
+                  className="h-auto min-h-11 min-w-0 flex-col gap-1 whitespace-normal px-1 py-2 text-center text-xs leading-tight text-muted-foreground sm:whitespace-nowrap hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm"
                 >
                   <Download className="h-4 w-4" />
                   {t('Export')}
