@@ -229,6 +229,12 @@ html[data-native="true"]:has(.app-content),
     z-index: 10;
   }
 
+  /* The adaptive bottom sheet already places a 44px close at top-2/right-2;
+     the corner pull above would push it 4px past the sheet edge (320px phones). */
+  [data-slot="dialog-content"].bottom-0 [data-slot="dialog-close"].absolute {
+    margin: 0;
+  }
+
   /* 44pt targets for Radix triggers that are bare <button>s rather than our
      Button (which already has its own rule). Only buttons that contain an icon
      are matched, so plain inline text triggers keep their size; min-* never
