@@ -396,7 +396,7 @@ export function DocumentsPage() {
             hints: aiResult.hints,
             aiClassification: aiResult as unknown as Record<string, unknown>,
             aiConfidence: aiResult.confidence.overall,
-            aiModel: 'anthropic/claude-sonnet-4',
+            aiModel: 'anthropic/claude-sonnet-5.5',
           }
         : { description: newDoc.description || undefined };
 

@@ -40,7 +40,7 @@ import { estimateInputTokens, priceCall, type UsageEstimate } from './pricing.ts
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') || '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const MODEL = 'anthropic/claude-sonnet-4';
+const MODEL = 'anthropic/claude-sonnet-5.5';
 const MAX_REQUESTS_PER_MINUTE = 10;
 
 if (!OPENROUTER_API_KEY) {
@@ -117,8 +117,8 @@ const MAX_OUTPUT_TOKENS = 8000; // hard output cap per call (SEC-12)
 // Allowed models (if client overrides) → credit multiplier. Anything else,
 // including 1M-context variants, is rejected.
 const MODEL_COST_MULTIPLIER: Record<string, number> = {
-  'anthropic/claude-sonnet-4': 1,
-  'anthropic/claude-opus-4': 5,
+  'anthropic/claude-sonnet-5.5': 1,
+  'anthropic/claude-opus-5.5': 2, // $4/$20 per M vs Sonnet 5.5 $2/$10
 };
 
 // A call priced above this is refused (with the caps above a Sonnet call

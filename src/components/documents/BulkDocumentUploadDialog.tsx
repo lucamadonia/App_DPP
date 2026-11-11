@@ -260,7 +260,7 @@ export function BulkDocumentUploadDialog({
         hints: row.result?.hints,
         aiClassification: row.result as unknown as Record<string, unknown> | undefined,
         aiConfidence: row.result?.confidence.overall,
-        aiModel: row.result ? 'anthropic/claude-sonnet-4' : undefined,
+        aiModel: row.result ? 'anthropic/claude-sonnet-5.5' : undefined,
       });
 
       if (result.success) {
