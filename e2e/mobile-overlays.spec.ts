@@ -66,17 +66,18 @@ for (const scenario of scenarios) {
     // Measure the settled position, not a frame of the enter transition.
     await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'), undefined, { timeout: 5_000 }).catch(() => {});
     // Lazy content can remount the sheet and restart its slide-in after the
-    // check above; wait until the overlay's box is unchanged for ~250ms.
+    // check above; wait until the overlay's box is unchanged for ~400ms
+    // (sub-pixel, so an ease-out tail does not read as settled).
     await page.waitForFunction(() => {
       const el = document.querySelector('[data-slot="sheet-content"], [data-slot="dialog-content"], [data-slot="alert-dialog-content"], [role="dialog"]');
       if (!el) return false;
       const r = el.getBoundingClientRect();
-      const key = `${Math.round(r.top)},${Math.round(r.bottom)},${Math.round(r.left)},${Math.round(r.right)}`;
+      const key = [r.top, r.bottom, r.left, r.right].map(v => v.toFixed(1)).join(",");
       const w = window as unknown as { __overlayBox?: { key: string; since: number } };
       const now = performance.now();
       if (w.__overlayBox?.key !== key) { w.__overlayBox = { key, since: now }; return false; }
-      return now - w.__overlayBox.since >= 250 && document.getAnimations().every(a => a.playState !== 'running');
-    }, undefined, { timeout: 5_000, polling: 50 }).catch(() => {});
+      return now - w.__overlayBox.since >= 400 && document.getAnimations().every(a => a.playState !== 'running');
+    }, undefined, { timeout: 8_000, polling: 50 }).catch(() => {});
 
     const findings = await page.evaluate(({ safeTop, safeBottom }) => {
       const describe = (el: Element) => {
