@@ -10,6 +10,10 @@ import { test, expect, type Page, type BrowserContext } from '@playwright/test';
  * the reducer (LOOKUP_HIT), never through the wizard itself.
  */
 
+// Walking all 7 steps takes ~35s on the 2-worker CI runner, past the global
+// 30s default; a timeout there surfaces as "browser has been closed".
+test.describe.configure({ timeout: 90_000 });
+
 const SLUG = 'qa-shop';
 const TENANT_ID = '00000000-0000-4000-8000-0000000000a1';
 const RETURN_NUMBER = 'RET-20261109-QA0001';
