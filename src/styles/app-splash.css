@@ -1,58 +1,482 @@
+/*
+ * Launch splash — see src/components/splash/SplashStage.tsx for the storyboard.
+ *
+ * Rules this file keeps:
+ *  - The logo sits at 160px dead centre and does not move until the pop, so it
+ *    lines up with the #boot-splash image in index.html it takes over from.
+ *  - Motion is transform/opacity only. The two exceptions are the trace stroke
+ *    (a 160px SVG) and the per-letter blur, both dropped on the minimal budget.
+ *  - Anything that only exists mid-animation has opacity 0 as its base style,
+ *    so "animation: none" (reduced motion) leaves a clean, finished frame.
+ */
+
 .app-launch-stage {
-  --launch-duration: 1200ms;
-  --launch-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ink: #f8fafc;
+  --sky: #7dd3fc;
+  --cyan: #22d3ee;
   position: relative;
-  width: 128px;
-  height: 128px;
+  width: 160px;
+  height: 160px;
   isolation: isolate;
 }
+
+/* ── Backdrop ─────────────────────────────────────────────────────────── */
+
+.app-launch-backdrop {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150vmax;
+  height: 150vmax;
+  margin: -75vmax 0 0 -75vmax;
+  z-index: -3;
+  pointer-events: none;
+  animation: launch-bloom 1500ms var(--ease-out) both;
+}
+
+.app-launch-aurora {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 43% 45%, rgb(59 130 246 / 36%), transparent 24%),
+    radial-gradient(circle at 58% 56%, rgb(34 211 238 / 22%), transparent 26%),
+    radial-gradient(circle at 55% 40%, rgb(129 140 248 / 18%), transparent 20%);
+  animation: launch-drift 16s linear infinite;
+}
+
+.app-launch-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgb(148 163 184 / 26%) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+  background-position: center;
+  -webkit-mask-image: radial-gradient(circle at center, #000 4%, transparent 30%);
+  mask-image: radial-gradient(circle at center, #000 4%, transparent 30%);
+  animation: launch-fade 1100ms ease-out 180ms both;
+}
+
+/* ── Orbits and signal rings ──────────────────────────────────────────── */
+
+.app-launch-orbit {
+  position: absolute;
+  z-index: -2;
+  border-radius: 50%;
+  border: 1px solid rgb(148 163 184 / 11%);
+  animation: launch-orbit-in 1300ms var(--ease-out) both;
+}
+
+.app-launch-orbit-near { inset: -44px; animation-delay: 80ms; }
+.app-launch-orbit-far { inset: -92px; border-color: rgb(148 163 184 / 7%); animation-delay: 200ms; }
+
+.app-launch-satellite {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: launch-spin 7s linear infinite;
+}
+
+.app-launch-orbiter {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  color: #cffafe;
+  filter: drop-shadow(0 0 6px rgb(34 211 238 / 90%));
+}
+
+/* The plane flies its orbit nose-first: the icon points up-right, so 45deg
+   turns it onto the tangent. */
+.app-launch-satellite-plane .app-launch-orbiter { transform: rotate(45deg); }
+.app-launch-satellite-plane svg { fill: currentColor; }
+
+/* The parcel goes the other way round and counter-rotates so it never tips
+   over: a box travelling, not tumbling. */
+.app-launch-satellite-parcel { animation: launch-spin-back 11s linear infinite; }
+.app-launch-satellite-parcel .app-launch-orbiter {
+  color: var(--sky);
+  opacity: 0.85;
+  animation: launch-spin-back-counter 11s linear infinite;
+}
+
+.app-launch-ping {
+  position: absolute;
+  inset: -24px;
+  z-index: -1;
+  border-radius: 50%;
+  border: 1.5px solid rgb(125 211 252 / 70%);
+  opacity: 0;
+  animation: launch-ping 1150ms var(--ease-out) 1080ms both;
+}
+
+.app-launch-ping-late { border-width: 1px; animation-delay: 1240ms; }
+
+/* ── Logo ─────────────────────────────────────────────────────────────── */
 
 .app-launch-mark {
   position: relative;
   width: 160px;
   height: 160px;
-  filter: drop-shadow(0 18px 40px rgb(14 165 233 / 18%));
+  filter: drop-shadow(0 18px 40px rgb(14 165 233 / 22%));
+  animation: launch-pop 560ms var(--ease-out) 1060ms both;
 }
 
 .app-launch-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
-.app-launch-aura {
+/* The QR face of the box, as a parallelogram in the artwork's own skew. */
+.app-launch-scan {
   position: absolute;
-  inset: -150px;
-  z-index: -2;
-  background: radial-gradient(ellipse at 30% 35%, rgb(59 130 246 / 30%), transparent 55%), radial-gradient(ellipse at 70% 65%, rgb(34 211 238 / 20%), transparent 60%);
-  animation: launch-aura var(--launch-duration) var(--launch-ease) both;
+  inset: 0;
+  clip-path: polygon(5.6% 33.7%, 34% 45.7%, 34% 80.6%, 5.6% 68.6%);
 }
 
-.app-launch-orbit {
+.app-launch-scan-beam {
   position: absolute;
-  inset: -58px;
-  z-index: -1;
-  border: 1px solid rgb(125 211 252 / 14%);
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 22%;
+  transform-origin: 5.6% 50%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgb(14 165 233 / 14%) 30%,
+    rgb(6 182 212 / 62%) 86%,
+    #0284c7 90%,
+    #0284c7 97%,
+    transparent 100%
+  );
+  opacity: 0;
+  animation: launch-scan 640ms var(--ease-in-out) 120ms both;
+}
+
+.app-launch-scan-flash {
+  position: absolute;
+  inset: 0;
+  background: #ecfeff;
+  opacity: 0;
+  animation: launch-flash 420ms ease-out 700ms both;
+}
+
+.app-launch-glint {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: url(/icons/splash-mark.png) center / contain no-repeat;
+  mask: url(/icons/splash-mark.png) center / contain no-repeat;
+}
+
+/* The sweep is a child: transforming the masked element itself would drag the
+   mask along and show a second, displaced logo. */
+.app-launch-glint::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 22%, rgb(255 255 255 / 45%) 48%, transparent 68%);
+  opacity: 0;
+  animation: launch-glint 760ms var(--ease-in-out) 1120ms both;
+}
+
+.app-launch-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 3px rgb(255 255 255 / 85%)) drop-shadow(0 0 10px rgb(34 211 238 / 95%));
+}
+
+.app-launch-overlay path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.app-launch-viewfinder {
+  stroke: #ecfeff;
+  stroke-width: 14;
+  transform-origin: 202px 585px;
+  opacity: 0;
+  animation: launch-viewfinder 820ms var(--ease-out) 60ms both;
+}
+
+/* A comet: soft cyan tail, white head, both riding the same path. The head's
+   offsets are the tail's minus 0.2 so their leading ends stay together. */
+.app-launch-trace-tail {
+  stroke: #a5f3fc;
+  stroke-opacity: 0.9;
+  stroke-width: 26;
+  stroke-dasharray: 0.3 1.4;
+  stroke-dashoffset: 0.3;
+  animation: launch-trace-tail 600ms cubic-bezier(0.45, 0, 0.25, 1) 580ms both;
+}
+
+.app-launch-trace-head {
+  stroke: #fff;
+  stroke-width: 15;
+  stroke-dasharray: 0.1 1.4;
+  stroke-dashoffset: 0.1;
+  animation: launch-trace-head 600ms cubic-bezier(0.45, 0, 0.25, 1) 580ms both;
+}
+
+/* Leaves from the plane's nose, along its heading. */
+.app-launch-contrail {
+  position: absolute;
+  left: 91%;
+  top: 19%;
+  width: 64px;
+  height: 2px;
+  margin: -1px 0 0 -64px;
+  border-radius: 2px;
+  transform-origin: 100% 50%;
+  background: linear-gradient(90deg, transparent, rgb(103 232 249 / 85%) 70%, #fff);
+  box-shadow: 0 0 10px rgb(34 211 238 / 70%);
+  opacity: 0;
+  animation: launch-contrail 680ms cubic-bezier(0.3, 0, 0.2, 1) 1100ms both;
+}
+
+/* ── Wordmark ─────────────────────────────────────────────────────────── */
+
+.app-launch-wordmark {
+  position: absolute;
+  top: calc(100% + 52px);
+  left: -90px;
+  right: -90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.app-launch-name {
+  color: var(--ink);
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+}
+
+.app-launch-letter {
+  display: inline-block;
+  animation: launch-letter 640ms var(--ease-out) calc(520ms + var(--i) * 34ms) both;
+}
+
+.app-launch-letter[data-accent="true"] { color: var(--sky); }
+
+.app-launch-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  white-space: nowrap;
+}
+
+.app-launch-subtitle span {
+  /* Trailing letter-spacing would push the text off-centre between the rules. */
+  margin-right: -0.24em;
+  animation: launch-fade 620ms ease-out 1000ms both;
+}
+
+.app-launch-subtitle::before,
+.app-launch-subtitle::after {
+  content: '';
+  width: 22px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(148 163 184 / 60%));
+  transform-origin: 100% 50%;
+  animation: launch-rule 700ms var(--ease-out) 1060ms both;
+}
+
+.app-launch-subtitle::after {
+  background: linear-gradient(270deg, transparent, rgb(148 163 184 / 60%));
+  transform-origin: 0 50%;
+}
+
+/* Supply chain route. Five stations 52px apart; a parcel of light travels the
+   line and each station wakes as it passes (one --step apart, like the fill). */
+.app-launch-chain {
+  --step: 260ms;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  width: 226px;
+  margin-top: 28px;
+  padding-bottom: 14px;
+  color: var(--sky);
+}
+
+.app-launch-chain-track {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 2px;
+  height: 1px;
+  background: rgb(148 163 184 / 20%);
+  animation: launch-fade 400ms ease-out 100ms both;
+}
+
+.app-launch-chain-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #3b82f6, var(--cyan));
+  transform-origin: 0 50%;
+  animation: launch-progress calc(var(--step) * 4) linear var(--step) both;
+}
+
+.app-launch-chain-parcel {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: #ecfeff;
+  box-shadow: 0 0 12px 2px rgb(34 211 238 / 85%);
+  opacity: 0;
+  animation: launch-parcel calc(var(--step) * 4) linear var(--step) both;
+}
+
+.app-launch-station {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  animation: launch-station 520ms var(--ease-out) calc(var(--step) * (var(--i) + 1)) both;
+}
+
+.app-launch-station::after {
+  content: '';
+  position: absolute;
+  left: 6.5px;
+  bottom: -14px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  animation: launch-orbit var(--launch-duration) var(--launch-ease) both;
+  background: var(--cyan);
 }
 
-.app-launch-orbit-inner { position: absolute; inset: 20px; border: 1px solid rgb(165 180 252 / 10%); border-radius: 50%; }
-.app-launch-orbit-light { position: absolute; left: calc(50% - 3px); top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #a5f3fc; box-shadow: 0 0 18px #22d3ee; }
-.app-launch-glint { position: absolute; inset: 0; -webkit-mask: url(/icons/splash-mark.png) center / contain no-repeat; mask: url(/icons/splash-mark.png) center / contain no-repeat; background: linear-gradient(115deg, transparent 20%, rgb(255 255 255 / 24%) 48%, transparent 70%); animation: launch-glint var(--launch-duration) var(--launch-ease) both; }
+.app-launch-station:last-of-type { color: var(--ink); }
 
-.app-launch-wordmark { position: absolute; top: calc(100% + 78px); left: -90px; right: -90px; text-align: center; color: #f8fafc; font-size: 28px; line-height: 1.2; font-weight: 650; letter-spacing: -0.035em; animation: launch-wordmark var(--launch-duration) var(--launch-ease) both; }
-.app-launch-subtitle { display: block; margin-top: 12px; color: #94a3b8; font-size: 9px; font-weight: 500; letter-spacing: 0.24em; }
-.app-launch-stage[data-active="false"] * { animation-play-state: paused; }
+/* Held until the native and HTML splash layers have actually handed over. */
+.app-launch-stage[data-active="false"] *,
+.app-launch-stage[data-active="false"] *::before,
+.app-launch-stage[data-active="false"] *::after { animation-play-state: paused; }
 
-@keyframes launch-aura { from { opacity: 0.2; transform: scale(0.75); } to { opacity: 1; transform: scale(1); } }
-@keyframes launch-orbit { from { opacity: 0; transform: scale(0.8) rotate(-70deg); } to { opacity: 1; transform: scale(1) rotate(35deg); } }
-@keyframes launch-glint { 0%, 15% { opacity: 0; transform: translateX(-100%); } 35% { opacity: 1; } 100% { opacity: 0; transform: translateX(100%); } }
-@keyframes launch-wordmark { 0%, 10% { opacity: 0; transform: translateY(10px); } 65%, 100% { opacity: 1; transform: translateY(0); } }
+/* ── Keyframes ────────────────────────────────────────────────────────── */
 
-.app-launch-stage[data-reduced="true"] * { animation: none; transform: none; }
-.app-launch-stage[data-reduced="true"] .app-launch-glint { display: none; }
+@keyframes launch-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes launch-bloom { from { opacity: 0; transform: scale(0.72); } to { opacity: 1; transform: scale(1); } }
+@keyframes launch-drift { to { transform: rotate(360deg); } }
+@keyframes launch-spin { from { transform: rotate(-50deg); } to { transform: rotate(310deg); } }
+@keyframes launch-spin-back { from { transform: rotate(150deg); } to { transform: rotate(-210deg); } }
+@keyframes launch-spin-back-counter { from { transform: rotate(-150deg); } to { transform: rotate(210deg); } }
+@keyframes launch-orbit-in { from { opacity: 0; transform: scale(0.84); } to { opacity: 1; transform: scale(1); } }
+
+@keyframes launch-ping {
+  0% { opacity: 0; transform: scale(0.6); }
+  14% { opacity: 0.55; }
+  100% { opacity: 0; transform: scale(2.7); }
+}
+
+@keyframes launch-pop {
+  0% { transform: scale(1); }
+  38% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes launch-scan {
+  0% { opacity: 0; transform: translateY(25%) skewY(23deg); }
+  14%, 82% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(245%) skewY(23deg); }
+}
+
+@keyframes launch-flash { 0% { opacity: 0; } 30% { opacity: 0.42; } 100% { opacity: 0; } }
+
+@keyframes launch-viewfinder {
+  0% { opacity: 0; transform: scale(1.16); }
+  32%, 74% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+@keyframes launch-trace-tail { to { stroke-dashoffset: -1.02; } }
+@keyframes launch-trace-head { to { stroke-dashoffset: -1.22; } }
+
+@keyframes launch-contrail {
+  0% { opacity: 0; transform: rotate(-30deg) translateX(0) scaleX(0.2); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(-30deg) translateX(250px) scaleX(1.7); }
+}
+
+@keyframes launch-glint {
+  0% { opacity: 0; transform: translateX(-90%); }
+  25%, 70% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(90%); }
+}
+
+@keyframes launch-letter {
+  from { opacity: 0; transform: translateY(16px); filter: blur(8px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes launch-letter-lite {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes launch-rule { from { opacity: 0; transform: scaleX(0); } to { opacity: 1; transform: scaleX(1); } }
+@keyframes launch-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+@keyframes launch-parcel {
+  0% { opacity: 0; transform: translateX(0); }
+  6%, 90% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(208px); }
+}
+
+@keyframes launch-station {
+  0% { opacity: 0.26; transform: scale(1); }
+  40% { opacity: 1; transform: scale(1.22); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ── Budgets ──────────────────────────────────────────────────────────── */
+
+/* Low-end hardware: same story, minus blur, glow filters and endless loops. */
+.app-launch-stage[data-budget="minimal"] .app-launch-letter { animation-name: launch-letter-lite; }
+.app-launch-stage[data-budget="minimal"] .app-launch-overlay,
+.app-launch-stage[data-budget="minimal"] .app-launch-orbiter,
+.app-launch-stage[data-budget="minimal"] .app-launch-mark { filter: none; }
+.app-launch-stage[data-budget="minimal"] .app-launch-aurora,
+.app-launch-stage[data-budget="minimal"] .app-launch-satellite,
+.app-launch-stage[data-budget="minimal"] .app-launch-satellite .app-launch-orbiter { animation: none; }
+
+/* Reduced motion: the finished composition, no travel. */
+.app-launch-stage[data-reduced="true"] *,
+.app-launch-stage[data-reduced="true"] *::before,
+.app-launch-stage[data-reduced="true"] *::after { animation: none; }
+.app-launch-stage[data-reduced="true"] .app-launch-glint,
+.app-launch-stage[data-reduced="true"] .app-launch-satellite { display: none; }
+
 @media (prefers-reduced-motion: reduce) {
-  .app-launch-stage * { animation: none; transform: none; }
-  .app-launch-glint { display: none; }
+  .app-launch-stage *,
+  .app-launch-stage *::before,
+  .app-launch-stage *::after { animation: none; }
+  .app-launch-glint,
+  .app-launch-satellite { display: none; }
 }
+
 @media (max-height: 430px) {
-  .app-launch-wordmark { top: calc(100% + 24px); font-size: 23px; }
+  .app-launch-wordmark { top: calc(100% + 20px); }
+  .app-launch-name { font-size: 23px; }
   .app-launch-subtitle { margin-top: 6px; }
+  .app-launch-chain { display: none; }
 }

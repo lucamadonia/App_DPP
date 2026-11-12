@@ -6,8 +6,13 @@ import { SplashStage } from './SplashStage';
 import { hideNativeSplash, removeBootSplash } from '@/lib/native-init';
 import { isNative } from '@/lib/platform';
 
-const MIN_VISIBLE_MS = 1200;
-const MAX_VISIBLE_MS = 1800;
+// The choreography lands its last beat (logo pop + contrail) at ~1.75 s; the
+// floor lets it finish, the ceiling keeps a slow start from feeling stuck.
+// Tapping skips either.
+const MIN_VISIBLE_MS = 1750;
+const MAX_VISIBLE_MS = 2500;
+// Exit is a short push "through" the splash into the app, not a plain fade.
+const EXIT_EASE = [0.4, 0, 0.2, 1] as const;
 
 interface AppSplashProps {
   /** True once the app has everything it needs to render the first screen. */
@@ -103,9 +108,13 @@ export function AppSplash({ ready, budget, children }: AppSplashProps) {
             data-revealed={revealed}
             aria-hidden="true"
             style={{ background: '#0F172A' }}
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: prefersReduced ? timing.micro : timing.normal, ease: 'easeOut' }}
+            initial={{ opacity: 1, scale: 1 }}
+            exit={prefersReduced ? { opacity: 0 } : { opacity: 0, scale: 1.08 }}
+            transition={
+              prefersReduced
+                ? { duration: timing.micro, ease: 'easeOut' }
+                : { duration: 0.42, ease: EXIT_EASE }
+            }
             onClick={() => setSkipped(true)}
           >
             <SplashStage
