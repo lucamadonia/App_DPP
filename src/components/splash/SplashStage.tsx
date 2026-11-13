@@ -36,10 +36,11 @@ const WORDMARK = [
  * The launch choreography tells the product in one breath:
  * scan the code -> verified -> shipped.
  *
- *   0.10s  viewfinder locks onto the QR face, a beam sweeps it
- *   0.58s  light runs along the check mark and up the swoosh
- *   1.06s  it reaches the plane: logo pops, signal rings, contrail leaves
- *   0.52s+ wordmark resolves letter by letter underneath
+ *   0.1s  viewfinder locks onto the QR face, a beam sweeps it twice
+ *   1.6s  light runs along the check mark and up the swoosh
+ *   2.7s  it reaches the plane: logo pops, signal rings, contrail leaves
+ *   0.9s+ wordmark resolves letter by letter underneath
+ *   3.4s  the shipment below arrives at its last station: delivered
  *
  * Around that, the chain itself: a parcel and a plane circle the logo, and
  * under the wordmark a shipment travels factory -> warehouse -> truck ->

@@ -33,7 +33,7 @@
   margin: -75vmax 0 0 -75vmax;
   z-index: -3;
   pointer-events: none;
-  animation: launch-bloom 1500ms var(--ease-out) both;
+  animation: launch-bloom 2600ms var(--ease-out) both;
 }
 
 .app-launch-aurora {
@@ -54,7 +54,7 @@
   background-position: center;
   -webkit-mask-image: radial-gradient(circle at center, #000 4%, transparent 30%);
   mask-image: radial-gradient(circle at center, #000 4%, transparent 30%);
-  animation: launch-fade 1100ms ease-out 180ms both;
+  animation: launch-fade 1900ms ease-out 250ms both;
 }
 
 /* ── Orbits and signal rings ──────────────────────────────────────────── */
@@ -64,17 +64,19 @@
   z-index: -2;
   border-radius: 50%;
   border: 1px solid rgb(148 163 184 / 11%);
-  animation: launch-orbit-in 1300ms var(--ease-out) both;
+  animation: launch-orbit-in 2200ms var(--ease-out) both;
 }
 
-.app-launch-orbit-near { inset: -44px; animation-delay: 80ms; }
-.app-launch-orbit-far { inset: -92px; border-color: rgb(148 163 184 / 7%); animation-delay: 200ms; }
+.app-launch-orbit-near { inset: -44px; animation-delay: 120ms; }
+.app-launch-orbit-far { inset: -92px; border-color: rgb(148 163 184 / 7%); animation-delay: 380ms; }
 
 .app-launch-satellite {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  animation: launch-spin 7s linear infinite;
+  /* Slow enough that the plane stays on the upper arc for the whole intro and
+     never crosses the wordmark. */
+  animation: launch-spin 13s linear infinite;
 }
 
 .app-launch-orbiter {
@@ -111,10 +113,10 @@
   border-radius: 50%;
   border: 1.5px solid rgb(125 211 252 / 70%);
   opacity: 0;
-  animation: launch-ping 1150ms var(--ease-out) 1080ms both;
+  animation: launch-ping 1700ms var(--ease-out) 2720ms both;
 }
 
-.app-launch-ping-late { border-width: 1px; animation-delay: 1240ms; }
+.app-launch-ping-late { border-width: 1px; animation-delay: 3020ms; }
 
 /* ── Logo ─────────────────────────────────────────────────────────────── */
 
@@ -123,7 +125,7 @@
   width: 160px;
   height: 160px;
   filter: drop-shadow(0 18px 40px rgb(14 165 233 / 22%));
-  animation: launch-pop 560ms var(--ease-out) 1060ms both;
+  animation: launch-pop 800ms var(--ease-out) 2680ms both;
 }
 
 .app-launch-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
@@ -152,7 +154,8 @@
     transparent 100%
   );
   opacity: 0;
-  animation: launch-scan 640ms var(--ease-in-out) 120ms both;
+  /* Two passes: a scanner reads the code, it does not blink at it. */
+  animation: launch-scan 720ms var(--ease-in-out) 260ms 2 both;
 }
 
 .app-launch-scan-flash {
@@ -160,7 +163,7 @@
   inset: 0;
   background: #ecfeff;
   opacity: 0;
-  animation: launch-flash 420ms ease-out 700ms both;
+  animation: launch-flash 560ms ease-out 1700ms both;
 }
 
 .app-launch-glint {
@@ -178,7 +181,7 @@
   inset: 0;
   background: linear-gradient(115deg, transparent 22%, rgb(255 255 255 / 45%) 48%, transparent 68%);
   opacity: 0;
-  animation: launch-glint 760ms var(--ease-in-out) 1120ms both;
+  animation: launch-glint 1100ms var(--ease-in-out) 2820ms both;
 }
 
 .app-launch-overlay {
@@ -201,7 +204,7 @@
   stroke-width: 14;
   transform-origin: 202px 585px;
   opacity: 0;
-  animation: launch-viewfinder 820ms var(--ease-out) 60ms both;
+  animation: launch-viewfinder 2000ms var(--ease-out) 80ms both;
 }
 
 /* A comet: soft cyan tail, white head, both riding the same path. The head's
@@ -212,7 +215,7 @@
   stroke-width: 26;
   stroke-dasharray: 0.3 1.4;
   stroke-dashoffset: 0.3;
-  animation: launch-trace-tail 600ms cubic-bezier(0.45, 0, 0.25, 1) 580ms both;
+  animation: launch-trace-tail 1150ms cubic-bezier(0.45, 0, 0.25, 1) 1560ms both;
 }
 
 .app-launch-trace-head {
@@ -220,7 +223,7 @@
   stroke-width: 15;
   stroke-dasharray: 0.1 1.4;
   stroke-dashoffset: 0.1;
-  animation: launch-trace-head 600ms cubic-bezier(0.45, 0, 0.25, 1) 580ms both;
+  animation: launch-trace-head 1150ms cubic-bezier(0.45, 0, 0.25, 1) 1560ms both;
 }
 
 /* Leaves from the plane's nose, along its heading. */
@@ -236,7 +239,7 @@
   background: linear-gradient(90deg, transparent, rgb(103 232 249 / 85%) 70%, #fff);
   box-shadow: 0 0 10px rgb(34 211 238 / 70%);
   opacity: 0;
-  animation: launch-contrail 680ms cubic-bezier(0.3, 0, 0.2, 1) 1100ms both;
+  animation: launch-contrail 1050ms cubic-bezier(0.3, 0, 0.2, 1) 2740ms both;
 }
 
 /* ── Wordmark ─────────────────────────────────────────────────────────── */
@@ -263,7 +266,7 @@
 
 .app-launch-letter {
   display: inline-block;
-  animation: launch-letter 640ms var(--ease-out) calc(520ms + var(--i) * 34ms) both;
+  animation: launch-letter 900ms var(--ease-out) calc(900ms + var(--i) * 70ms) both;
 }
 
 .app-launch-letter[data-accent="true"] { color: var(--sky); }
@@ -283,7 +286,7 @@
 .app-launch-subtitle span {
   /* Trailing letter-spacing would push the text off-centre between the rules. */
   margin-right: -0.24em;
-  animation: launch-fade 620ms ease-out 1000ms both;
+  animation: launch-fade 900ms ease-out 1900ms both;
 }
 
 .app-launch-subtitle::before,
@@ -293,7 +296,7 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, rgb(148 163 184 / 60%));
   transform-origin: 100% 50%;
-  animation: launch-rule 700ms var(--ease-out) 1060ms both;
+  animation: launch-rule 1000ms var(--ease-out) 2000ms both;
 }
 
 .app-launch-subtitle::after {
@@ -304,7 +307,7 @@
 /* Supply chain route. Five stations 52px apart; a parcel of light travels the
    line and each station wakes as it passes (one --step apart, like the fill). */
 .app-launch-chain {
-  --step: 260ms;
+  --step: 680ms;
   position: relative;
   display: flex;
   justify-content: space-between;
@@ -321,7 +324,7 @@
   bottom: 2px;
   height: 1px;
   background: rgb(148 163 184 / 20%);
-  animation: launch-fade 400ms ease-out 100ms both;
+  animation: launch-fade 700ms ease-out 200ms both;
 }
 
 .app-launch-chain-fill {
@@ -351,7 +354,7 @@
   place-items: center;
   width: 18px;
   height: 18px;
-  animation: launch-station 520ms var(--ease-out) calc(var(--step) * (var(--i) + 1)) both;
+  animation: launch-station 700ms var(--ease-out) calc(var(--step) * (var(--i) + 1)) both;
 }
 
 .app-launch-station::after {
@@ -377,7 +380,7 @@
 @keyframes launch-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes launch-bloom { from { opacity: 0; transform: scale(0.72); } to { opacity: 1; transform: scale(1); } }
 @keyframes launch-drift { to { transform: rotate(360deg); } }
-@keyframes launch-spin { from { transform: rotate(-50deg); } to { transform: rotate(310deg); } }
+@keyframes launch-spin { from { transform: rotate(-95deg); } to { transform: rotate(265deg); } }
 @keyframes launch-spin-back { from { transform: rotate(150deg); } to { transform: rotate(-210deg); } }
 @keyframes launch-spin-back-counter { from { transform: rotate(-150deg); } to { transform: rotate(210deg); } }
 @keyframes launch-orbit-in { from { opacity: 0; transform: scale(0.84); } to { opacity: 1; transform: scale(1); } }
@@ -404,7 +407,7 @@
 
 @keyframes launch-viewfinder {
   0% { opacity: 0; transform: scale(1.16); }
-  32%, 74% { opacity: 1; transform: scale(1); }
+  16%, 84% { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: scale(1); }
 }
 

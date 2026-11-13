@@ -6,11 +6,11 @@ import { SplashStage } from './SplashStage';
 import { hideNativeSplash, removeBootSplash } from '@/lib/native-init';
 import { isNative } from '@/lib/platform';
 
-// The choreography lands its last beat (logo pop + contrail) at ~1.75 s; the
+// The choreography lands its last beat (shipment delivered) at ~4 s; the
 // floor lets it finish, the ceiling keeps a slow start from feeling stuck.
 // Tapping skips either.
-const MIN_VISIBLE_MS = 1750;
-const MAX_VISIBLE_MS = 2500;
+const MIN_VISIBLE_MS = 4100;
+const MAX_VISIBLE_MS = 5200;
 // Exit is a short push "through" the splash into the app, not a plain fade.
 const EXIT_EASE = [0.4, 0, 0.2, 1] as const;
 

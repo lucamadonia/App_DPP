@@ -88,7 +88,7 @@ describe('AppSplash handoff', () => {
     expect(screen.getByTestId('app-splash')).toHaveAttribute('data-revealed', 'true');
     await act(() => vi.advanceTimersByTimeAsync(700));
     expect(screen.getByTestId('app-splash')).toBeInTheDocument();
-    await act(() => vi.advanceTimersByTimeAsync(1400));
+    await act(() => vi.advanceTimersByTimeAsync(4000));
     await waitFor(() => expect(screen.queryByTestId('app-splash')).not.toBeInTheDocument());
   });
 
