@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Loader2, Save, Plus, Trash2, Mail, Pencil, MessageSquareText, ArrowRight, Settings2, Truck } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, Mail, Pencil, MessageSquareText, ArrowRight, Settings2, Truck, Clock } from 'lucide-react';
+import { FormSections, FormSection, FormGrid, FormField, InputAffix, ChoiceCards, FormToggleRow, FormActions } from '@/components/ui/form-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollableTabs } from '@/components/ui/scrollable-tabs';
@@ -293,30 +293,27 @@ export function ReturnsSettingsPage() {
           </TabsList>
         </ScrollableTabs>
 
-        <TabsContent value="general" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('General')}</CardTitle>
-              <CardDescription>{t('Basic Returns Hub configuration')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>{t('Enable Returns Hub')}</Label>
-                  <p className="text-xs text-muted-foreground">{t('Activate the Returns Hub module for your organization')}</p>
-                </div>
-                <Switch checked={settings.enabled} onCheckedChange={(v) => setSettings({ ...settings, enabled: v })} />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{t('Return Number Prefix')}</Label>
+        <TabsContent value="general" className="mt-4">
+          <FormSections>
+            <FormSection
+              title={t('General')}
+              description={t('Basic Returns Hub configuration')}
+              icon={Settings2}
+            >
+              <FormToggleRow
+                htmlFor="rh-enabled"
+                label={t('Enable Returns Hub')}
+                description={t('Activate the Returns Hub module for your organization')}
+              >
+                <Switch id="rh-enabled" checked={settings.enabled} onCheckedChange={(v) => setSettings({ ...settings, enabled: v })} />
+              </FormToggleRow>
+              <FormGrid cols={2}>
+                <FormField label={t('Return Number Prefix')}>
                   <Input value={settings.prefix} onChange={(e) => setSettings({ ...settings, prefix: e.target.value })} placeholder="RET" />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Default Solution')}</Label>
+                </FormField>
+                <FormField label={t('Default Solution')}>
                   <Select value="refund" onValueChange={() => {}}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="refund">{t('Refund')}</SelectItem>
                       <SelectItem value="exchange">{t('Exchange')}</SelectItem>
@@ -324,77 +321,79 @@ export function ReturnsSettingsPage() {
                       <SelectItem value="repair">{t('Repair')}</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-
-              <div className="flex justify-end">
+                </FormField>
+              </FormGrid>
+              <FormActions>
                 <Button onClick={handleSaveSettings} disabled={saving}>
                   {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                   {t('Save')}
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </FormActions>
+            </FormSection>
+          </FormSections>
         </TabsContent>
 
-        <TabsContent value="reasons" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('Return Reasons')}</CardTitle>
-              <CardDescription>{t('Configure return reason categories')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  placeholder={t('New reason category...')}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddReason()}
-                  className="flex-1"
-                />
-                <Button onClick={handleAddReason} disabled={!newCategory.trim()} className="w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-1" /> {t('Add Reason')}
-                </Button>
-              </div>
+        <TabsContent value="reasons" className="mt-4">
+          <FormSection
+            title={t('Return Reasons')}
+            description={t('Configure return reason categories')}
+            icon={MessageSquareText}
+            layout="stacked"
+          >
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder={t('New reason category...')}
+                aria-label={t('New reason category...')}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddReason()}
+                className="flex-1 pointer-coarse:h-11"
+              />
+              <Button onClick={handleAddReason} disabled={!newCategory.trim()} className="w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-1" /> {t('Add Reason')}
+              </Button>
+            </div>
 
-              {reasons.length === 0 ? (
-                <EmptyState
-                  icon={Settings2}
-                  title={t('No return reasons configured')}
-                  description={t('Add reason categories for your returns')}
-                />
-              ) : (
-                <div className="space-y-2">
-                  {reasons.map((reason) => (
-                    <div
-                      key={reason.id}
-                      className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg border hover:shadow-sm transition-shadow"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Switch checked={reason.active} onCheckedChange={(v) => handleToggleReason(reason.id, v)} />
-                        <div>
-                          <span className="font-medium">{reason.category}</span>
-                          {reason.subcategories.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {reason.subcategories.map(sub => (
-                                <Badge key={sub} variant="secondary" className="text-xs">{sub}</Badge>
-                              ))}
-                            </div>
-                          )}
+            {reasons.length === 0 ? (
+              <EmptyState
+                icon={Settings2}
+                title={t('No return reasons configured')}
+                description={t('Add reason categories for your returns')}
+              />
+            ) : (
+              <ul className="divide-y rounded-lg border">
+                {reasons.map((reason) => (
+                  <li key={reason.id} className="flex min-h-14 items-center gap-3 px-3 py-2.5 sm:px-4">
+                    <Switch
+                      checked={reason.active}
+                      onCheckedChange={(v) => handleToggleReason(reason.id, v)}
+                      aria-label={reason.category}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{reason.category}</span>
+                      {(reason.subcategories.length > 0 || reason.requiresPhotos) && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {reason.requiresPhotos && <Badge variant="outline" className="text-xs">{t('Requires Photos')}</Badge>}
+                          {reason.subcategories.map(sub => (
+                            <Badge key={sub} variant="secondary" className="text-xs">{sub}</Badge>
+                          ))}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-10 sm:ml-0">
-                        {reason.requiresPhotos && <Badge variant="outline" className="text-xs">{t('Requires Photos')}</Badge>}
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteReason(reason.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-11 shrink-0 text-destructive sm:size-9"
+                      onClick={() => handleDeleteReason(reason.id)}
+                      aria-label={t('Delete')}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </FormSection>
         </TabsContent>
 
         <TabsContent value="shipping" className="mt-4">
@@ -428,74 +427,68 @@ export function ReturnsSettingsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="tickets" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('SLA')}</CardTitle>
-              <CardDescription>{t('Default SLA times for new tickets')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{t('SLA First Response')} ({t('hours')})</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={slaFirstResponseHours}
-                    onChange={(e) => setSlaFirstResponseHours(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('SLA Resolution')} ({t('hours')})</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={slaResolutionHours}
-                    onChange={(e) => setSlaResolutionHours(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end">
+        <TabsContent value="tickets" className="mt-4">
+          <FormSections>
+            <FormSection title={t('SLA')} description={t('Default SLA times for new tickets')} icon={Clock}>
+              <FormGrid cols={2}>
+                <FormField label={t('SLA First Response')}>
+                  <InputAffix suffix={t('hours')}>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      value={slaFirstResponseHours}
+                      onChange={(e) => setSlaFirstResponseHours(e.target.value)}
+                    />
+                  </InputAffix>
+                </FormField>
+                <FormField label={t('SLA Resolution')}>
+                  <InputAffix suffix={t('hours')}>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      value={slaResolutionHours}
+                      onChange={(e) => setSlaResolutionHours(e.target.value)}
+                    />
+                  </InputAffix>
+                </FormField>
+              </FormGrid>
+              <FormActions>
                 <Button onClick={handleSaveSlaDefaults} disabled={saving}>
                   {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                   {t('Save')}
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </FormActions>
+            </FormSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <MessageSquareText className="h-4 w-4" />
-                {t('Canned Responses')}
-              </CardTitle>
-              <CardDescription>{t('Text templates for quick ticket replies')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
-                <div className="space-y-2">
-                  <Label>{t('Title')}</Label>
+            <FormSection
+              title={t('Canned Responses')}
+              description={t('Text templates for quick ticket replies')}
+              icon={MessageSquareText}
+            >
+              <div className="space-y-4 rounded-lg border bg-muted/30 p-3 sm:p-4">
+                <FormField label={t('Title')}>
                   <Input
                     value={newResponseTitle}
                     onChange={(e) => setNewResponseTitle(e.target.value)}
                     placeholder={t('Response title...')}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Content')}</Label>
+                </FormField>
+                <FormField label={t('Content')}>
                   <Textarea
                     value={newResponseContent}
                     onChange={(e) => setNewResponseContent(e.target.value)}
                     placeholder={t('Response text...')}
                     rows={3}
                   />
-                </div>
+                </FormField>
                 <div className="flex justify-end">
                   <Button
                     onClick={handleAddCannedResponse}
                     disabled={!newResponseTitle.trim() || !newResponseContent.trim() || savingResponses}
-                    size="sm"
+                    variant="outline"
+                    className="w-full sm:w-auto"
                   >
                     {savingResponses ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
                     {t('Add')}
@@ -510,111 +503,97 @@ export function ReturnsSettingsPage() {
                   description={t('Add templates for quick ticket replies')}
                 />
               ) : (
-                <div className="space-y-2">
+                <ul className="divide-y rounded-lg border">
                   {cannedResponses.map((resp) => (
-                    <div
-                      key={resp.id}
-                      className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between p-3 rounded-lg border hover:shadow-sm transition-shadow"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{resp.title}</p>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{resp.content}</p>
+                    <li key={resp.id} className="flex items-start gap-2 px-3 py-3 sm:px-4">
+                      <div className="min-w-0 flex-1 self-center">
+                        <p className="text-sm font-medium">{resp.title}</p>
+                        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{resp.content}</p>
                       </div>
-                      <div className="flex items-center gap-1 sm:ml-2">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenEditResponse(resp)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteCannedResponse(resp.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
+                      <Button variant="ghost" size="icon" className="size-11 shrink-0 sm:size-9" onClick={() => handleOpenEditResponse(resp)} aria-label={t('Edit')}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="size-11 shrink-0 text-destructive sm:size-9" onClick={() => handleDeleteCannedResponse(resp.id)} aria-label={t('Delete')}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
-            </CardContent>
-          </Card>
+            </FormSection>
+          </FormSections>
         </TabsContent>
 
-        <TabsContent value="notifications" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                {t('Email Notifications')}
-              </CardTitle>
-              <CardDescription>{t('Send email notifications when return status changes')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>{t('Enable email notifications')}</Label>
-                  <p className="text-xs text-muted-foreground">{t('Send email notifications when return status changes')}</p>
-                </div>
+        <TabsContent value="notifications" className="mt-4">
+          <FormSections>
+            <FormSection
+              title={t('Email Notifications')}
+              description={t('Send email notifications when return status changes')}
+              icon={Mail}
+            >
+              <FormToggleRow htmlFor="rh-email-enabled" label={t('Enable email notifications')}>
                 <Switch
+                  id="rh-email-enabled"
                   checked={settings.notifications?.emailEnabled ?? false}
                   onCheckedChange={(v) => setSettings({
                     ...settings,
                     notifications: { ...settings.notifications, emailEnabled: v },
                   })}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t('Sender Name')}</Label>
-                <Input
-                  value={settings.notifications?.senderName ?? ''}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    notifications: { ...settings.notifications, senderName: e.target.value },
-                  })}
-                  placeholder={t('Name shown as email sender')}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t('Email Language')}</Label>
-                <p className="text-xs text-muted-foreground">{t('Language used for automated email notifications sent to customers')}</p>
-                <select
-                  className="flex h-9 w-full max-w-xs rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                  value={settings.notifications?.emailLocale ?? 'en'}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    notifications: { ...settings.notifications, emailLocale: e.target.value },
-                  })}
+              </FormToggleRow>
+              <FormGrid cols={2}>
+                <FormField label={t('Sender Name')}>
+                  <Input
+                    value={settings.notifications?.senderName ?? ''}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      notifications: { ...settings.notifications, senderName: e.target.value },
+                    })}
+                    placeholder={t('Name shown as email sender')}
+                  />
+                </FormField>
+                <FormField
+                  label={t('Email Language')}
+                  hint={t('Language used for automated email notifications sent to customers')}
                 >
-                  <option value="en">English</option>
-                  <option value="de">Deutsch</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end">
+                  <ChoiceCards
+                    value={settings.notifications?.emailLocale ?? 'en'}
+                    onValueChange={(v) => setSettings({
+                      ...settings,
+                      notifications: { ...settings.notifications, emailLocale: v },
+                    })}
+                    options={[
+                      { value: 'en', label: 'English' },
+                      { value: 'de', label: 'Deutsch' },
+                    ]}
+                  />
+                </FormField>
+              </FormGrid>
+              <FormActions>
                 <Button onClick={handleSaveNotificationSettings} disabled={saving}>
                   {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                   {t('Save')}
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </FormActions>
+            </FormSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('Email Templates Configuration')}</CardTitle>
-              <CardDescription>{t('Configure email templates for different events')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border bg-muted/30">
-                <div>
-                  <p className="font-medium text-sm">{t('Email Template Editor')}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t('Visual editor with 15 templates, block editor, and live preview')}</p>
+            <FormSection
+              title={t('Email Templates Configuration')}
+              description={t('Configure email templates for different events')}
+              icon={Pencil}
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{t('Email Template Editor')}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{t('Visual editor with 15 templates, block editor, and live preview')}</p>
                 </div>
-                <Button onClick={() => navigate('/returns/email-templates')} className="gap-1.5 w-full sm:w-auto">
+                <Button onClick={() => navigate('/returns/email-templates')} className="w-full gap-1.5 sm:w-auto">
                   {t('Open Email Template Editor')}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </FormSection>
+          </FormSections>
         </TabsContent>
 
         <TabsContent value="portal" className="mt-4 space-y-4">
@@ -647,15 +626,13 @@ export function ReturnsSettingsPage() {
           <DialogHeader>
             <DialogTitle>{t('Edit')} — {editingResponse?.title}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('Title')}</Label>
+          <div className="space-y-5">
+            <FormField label={t('Title')}>
               <Input value={editResponseTitle} onChange={(e) => setEditResponseTitle(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Content')}</Label>
+            </FormField>
+            <FormField label={t('Content')}>
               <Textarea value={editResponseContent} onChange={(e) => setEditResponseContent(e.target.value)} rows={5} />
-            </div>
+            </FormField>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingResponse(null)}>{t('Cancel')}</Button>

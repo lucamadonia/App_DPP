@@ -12,13 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/adaptive-dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
   getContact, updateContact, getContactStats, getContactShipments,
@@ -26,9 +21,10 @@ import {
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { relativeTime } from '@/lib/animations';
 import { CONTACT_TYPE_CONFIG } from '@/lib/warehouse-constants';
-import { InfluencerFields } from '@/components/warehouse/InfluencerFields';
+import { ContactFormSections } from '@/components/warehouse/ContactFormFields';
+import { FormActions } from '@/components/ui/form-layout';
 import type {
-  WhContact, WhContactInput, WhContactType, ContactStats, WhShipment,
+  WhContact, WhContactInput, ContactStats, WhShipment,
 } from '@/types/warehouse';
 
 // ── Status badge colors for shipments ─────────────────────────────────
@@ -290,7 +286,7 @@ export function ContactDetailPage() {
 
       {/* ── KPI Row ───────────────────────────────────────────────────── */}
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
-        <Card className="hover:shadow-md transition-all duration-200">
+        <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
           <CardContent className="flex items-center gap-3 pt-4 sm:pt-6">
             <div className="rounded-lg bg-blue-100 p-2 sm:p-2.5 dark:bg-blue-900/30">
               <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
@@ -301,7 +297,7 @@ export function ContactDetailPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-all duration-200">
+        <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
           <CardContent className="flex items-center gap-3 pt-4 sm:pt-6">
             <div className="rounded-lg bg-green-100 p-2 sm:p-2.5 dark:bg-green-900/30">
               <Package className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
@@ -312,7 +308,7 @@ export function ContactDetailPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-all duration-200">
+        <Card className="hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
           <CardContent className="flex items-center gap-3 pt-4 sm:pt-6">
             <div className="rounded-lg bg-amber-100 p-2 sm:p-2.5 dark:bg-amber-900/30">
               <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
@@ -601,133 +597,26 @@ export function ContactDetailPage() {
 
       {/* ── Edit Dialog ───────────────────────────────────────────────── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto pb-0">
           <DialogHeader>
             <DialogTitle>{t('Edit Contact')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t('Contact Name')}</Label>
-                <Input
-                  value={editForm.contactName || ''}
-                  onChange={(e) => setEditForm({ ...editForm, contactName: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Company')}</Label>
-                <Input
-                  value={editForm.companyName || ''}
-                  onChange={(e) => setEditForm({ ...editForm, companyName: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Contact Type')}</Label>
-              <Select
-                value={editForm.type || 'b2b'}
-                onValueChange={(val) => setEditForm({ ...editForm, type: val as WhContactType })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="b2b">{t('B2B')}</SelectItem>
-                  <SelectItem value="b2c">{t('B2C')}</SelectItem>
-                  <SelectItem value="supplier">{t('Supplier')}</SelectItem>
-                  <SelectItem value="influencer">{t('Influencer')}</SelectItem>
-                  <SelectItem value="other">{t('Other')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t('Email')}</Label>
-                <Input
-                  type="email"
-                  value={editForm.email || ''}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Phone')}</Label>
-                <Input
-                  value={editForm.phone || ''}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Street')}</Label>
-              <Input
-                value={editForm.street || ''}
-                onChange={(e) => setEditForm({ ...editForm, street: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label>{t('Postal Code')}</Label>
-                <Input
-                  value={editForm.postalCode || ''}
-                  onChange={(e) => setEditForm({ ...editForm, postalCode: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('City')}</Label>
-                <Input
-                  value={editForm.city || ''}
-                  onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Country')}</Label>
-                <Input
-                  value={editForm.country || ''}
-                  onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t('Customer Number')}</Label>
-                <Input
-                  value={editForm.customerNumber || ''}
-                  onChange={(e) => setEditForm({ ...editForm, customerNumber: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('VAT ID')}</Label>
-                <Input
-                  value={editForm.vatId || ''}
-                  onChange={(e) => setEditForm({ ...editForm, vatId: e.target.value })}
-                />
-              </div>
-            </div>
-            {editForm.type === 'influencer' && (
-              <InfluencerFields
-                form={editForm}
-                onChange={(updates) => setEditForm({ ...editForm, ...updates })}
-              />
-            )}
-            <div className="space-y-2">
-              <Label>{t('Notes')}</Label>
-              <Textarea
-                value={editForm.notes || ''}
-                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>
+          <ContactFormSections
+            form={editForm}
+            onChange={(updates) => setEditForm({ ...editForm, ...updates })}
+            notesRows={3}
+          />
+          <FormActions sticky="dialog">
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>
               {t('Cancel', { ns: 'common' })}
             </Button>
             <Button onClick={handleSaveEdit} disabled={!editForm.contactName || saving}>
               {t('Save', { ns: 'common' })}
             </Button>
-          </DialogFooter>
+          </FormActions>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

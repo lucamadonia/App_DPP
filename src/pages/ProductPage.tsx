@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem, blurIn, tabContentVariants, useReducedMotion } from '@/lib/motion';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { formatDate, formatCurrency } from '@/lib/format';
+import { saveOrShare } from '@/lib/download-file';
 import { useLocale } from '@/hooks/use-locale';
 import {
   ArrowLeft,
@@ -23,7 +24,6 @@ import {
   MapPin,
   Truck,
   CheckCircle2,
-  AlertTriangle,
   Loader2,
   Layers,
   Plus,
@@ -74,6 +74,7 @@ import { useProduct, useProducts, useProductSuppliers, useBatches, useBatchCosts
 import type { ProductComponent } from '@/types/product';
 import type { ProductImage } from '@/types/database';
 import { ProductImagesGallery } from '@/components/product/ProductImagesGallery';
+import { ProductHero } from '@/components/product/ProductHero';
 import { ProductDocumentsTab } from '@/components/product/ProductDocumentsTab';
 import { ProductSupportTab } from '@/components/product/ProductSupportTab';
 import { ProductComplianceTab } from '@/components/product/ProductComplianceTab';
@@ -117,6 +118,7 @@ export function ProductPage() {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [showCreateDataRequest, setShowCreateDataRequest] = useState(false);
   const [batchToDelete, setBatchToDelete] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Ancillary data loaded via inline useQuery
   const { data: allProducts = [] } = useProducts();
@@ -217,7 +219,23 @@ export function ProductPage() {
     );
   }
 
-  const complianceScore = 95;
+  const productStatus = batchStatusConfig[product.status ?? 'draft'];
+  const publicBatch = batches.find(b => b.status === 'live') ?? batches[0];
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await saveOrShare({
+        filename: `product-${product.id}.json`,
+        mime: 'application/json',
+        content: JSON.stringify({ product, batches }, null, 2),
+        shareTitle: product.name,
+      });
+    } catch {
+      toast.error(t('Product export failed. Please try again.'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const batchColumns: ResponsiveTableColumn<(typeof batches)[number]>[] = [
     {
@@ -421,103 +439,135 @@ export function ProductPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <MotionDiv
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
-      >
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/products">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground">{product.name}</h1>
-              <Badge className="bg-success text-success-foreground">
-                <CheckCircle2 className="mr-1 h-3 w-3" />
-                {t('Live', { ns: 'common' })}
-              </Badge>
+      {/* Phones get the native header's back chevron; this is the desktop equivalent. */}
+      <Button variant="ghost" size="sm" asChild className="-ml-2 hidden px-2 text-muted-foreground hover:text-foreground md:inline-flex">
+        <Link to="/products">
+          <ArrowLeft className="h-4 w-4" />
+          {t('Products', { ns: 'common' })}
+        </Link>
+      </Button>
+
+      {/* Hero / preview */}
+      <MotionDiv {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}>
+        <ProductHero
+          name={product.name}
+          images={productImages}
+          fallbackImageUrl={product.imageUrl}
+          eyebrow={
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {product.category && <span>{product.category}</span>}
               {product.productType === 'set' && (
-                <Badge variant="outline" className="border-primary text-primary">
+                <Badge variant="outline" className="font-normal">
                   <Layers className="mr-1 h-3 w-3" />
                   {t('Set')}
                 </Badge>
               )}
-            </div>
-            <p className="text-muted-foreground">
-              {product.manufacturer} · {product.category}
+            </span>
+          }
+          meta={
+            <>
+              {product.manufacturer}
               {usedInSets.length > 0 && (
-                <span className="ml-2 text-xs">
-                  · {t('Used as component in {{count}} sets', { count: usedInSets.length })}
-                </span>
+                <span> · {t('Used as component in {{count}} sets', { count: usedInSets.length })}</span>
               )}
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link to={`/products/${id}/batches/new`}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('New Batch')}
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/dpp/qr-generator">
-              <QrCode className="mr-2 h-4 w-4" />
-              {t('QR Code')}
-            </Link>
-          </Button>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            {t('Export')}
-          </Button>
-          <Button asChild>
-            <Link to={`/products/${id}/edit`}>
-              <Edit className="mr-2 h-4 w-4" />
-              {t('Edit')}
-            </Link>
-          </Button>
-        </div>
+            </>
+          }
+          status={
+            <Badge
+              variant="outline"
+              className={product.status === 'live'
+                ? 'border-success/25 bg-success/10 text-success'
+                : 'border-border bg-muted text-muted-foreground'}
+            >
+              <productStatus.icon className="mr-1 h-3 w-3" />
+              {t(productStatus.label, { ns: 'common' })}
+            </Badge>
+          }
+          description={product.description}
+          facts={[
+            { label: t('GTIN/EAN'), value: product.gtin, mono: true },
+            { label: t('Batches'), value: batches.length },
+            ...(product.countryOfOrigin
+              ? [{ label: t('Country of Origin'), value: product.countryOfOrigin }]
+              : []),
+          ]}
+          actions={
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                <Button asChild className="h-11 sm:h-9">
+                  <Link to={`/products/${id}/edit`}>
+                    <Edit className="h-4 w-4" />
+                    {t('Edit')}
+                  </Link>
+                </Button>
+                {publicBatch ? (
+                  <Button variant="outline" asChild className="h-11 sm:h-9">
+                    <a href={`/p/${product.gtin}/${publicBatch.serialNumber}`} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                      {t('View DPP')}
+                    </a>
+                  </Button>
+                ) : (
+                  <Button variant="outline" asChild className="h-11 sm:h-9">
+                    <Link to={`/products/${id}/batches/new`}>
+                      <Plus className="h-4 w-4" />
+                      {t('New Batch')}
+                    </Link>
+                  </Button>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-1 sm:-ml-3 sm:flex sm:flex-wrap">
+                {publicBatch && (
+                  <Button variant="ghost" asChild className="h-auto min-h-11 min-w-0 flex-col gap-1 whitespace-normal px-1 py-2 text-center text-xs leading-tight text-muted-foreground sm:whitespace-nowrap hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm">
+                    <Link to={`/products/${id}/batches/new`}>
+                      <Plus className="h-4 w-4" />
+                      {t('New Batch')}
+                    </Link>
+                  </Button>
+                )}
+                <Button variant="ghost" asChild className="h-auto min-h-11 min-w-0 flex-col gap-1 whitespace-normal px-1 py-2 text-center text-xs leading-tight text-muted-foreground sm:whitespace-nowrap hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm">
+                  <Link to="/dpp/qr-generator">
+                    <QrCode className="h-4 w-4" />
+                    {t('QR Code')}
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleExport}
+                  disabled={isExporting || batchesLoading}
+                  className="h-auto min-h-11 min-w-0 flex-col gap-1 whitespace-normal px-1 py-2 text-center text-xs leading-tight text-muted-foreground sm:whitespace-nowrap hover:text-foreground sm:h-9 sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm"
+                >
+                  <Download className="h-4 w-4" />
+                  {t('Export')}
+                </Button>
+              </div>
+            </div>
+          }
+          footer={
+            <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{t('Compliance Status')}</p>
+                  <p className="text-sm text-muted-foreground">{t('Review compliance checks and documents before publishing.')}</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="h-11 shrink-0 sm:h-8" onClick={() => setActiveTab('ai-check')}>
+                {t('Open compliance check')}
+              </Button>
+            </div>
+          }
+        />
       </MotionDiv>
-
-      {/* Compliance Status Bar */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-success" />
-                <span className="font-medium">{t('Compliance Status')}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Progress value={complianceScore} className="h-2 w-48" />
-                <AnimatedCounter value={complianceScore} suffix="%" className="text-sm font-medium text-success" />
-              </div>
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-success" />
-                {t('{{count}} fulfilled', { count: 12 })}
-              </span>
-              <span className="flex items-center gap-1">
-                <AlertTriangle className="h-4 w-4 text-warning" />
-                {t('{{count}} pending', { count: 1 })}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex w-full overflow-x-auto">
-          <TabsTrigger value="stammdaten" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="stammdaten" aria-label={t('Master Data')} className="flex items-center gap-2 flex-shrink-0">
             <Package className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Master Data')}</span>
           </TabsTrigger>
-          <TabsTrigger value="batches" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="batches" aria-label={t('Batches')} className="flex items-center gap-2 flex-shrink-0">
             <Layers className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Batches')}</span>
             {batches.length > 0 && (
@@ -525,7 +575,7 @@ export function ProductPage() {
             )}
           </TabsTrigger>
           {product.productType === 'set' && (
-            <TabsTrigger value="components" className="flex items-center gap-2 flex-shrink-0">
+            <TabsTrigger value="components" aria-label={t('Components')} className="flex items-center gap-2 flex-shrink-0">
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">{t('Components')}</span>
               {components.length > 0 && (
@@ -533,39 +583,39 @@ export function ProductPage() {
               )}
             </TabsTrigger>
           )}
-          <TabsTrigger value="nachhaltigkeit" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="nachhaltigkeit" aria-label={t('Sustainability')} className="flex items-center gap-2 flex-shrink-0">
             <Leaf className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Sustainability')}</span>
           </TabsTrigger>
-          <TabsTrigger value="konformitaet" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="konformitaet" aria-label={t('Compliance')} className="flex items-center gap-2 flex-shrink-0">
             <ShieldCheck className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Compliance')}</span>
           </TabsTrigger>
-          <TabsTrigger value="dokumente" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="dokumente" aria-label={t('Documents')} className="flex items-center gap-2 flex-shrink-0">
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Documents')}</span>
           </TabsTrigger>
-          <TabsTrigger value="support" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="support" aria-label={t('Support')} className="flex items-center gap-2 flex-shrink-0">
             <Headphones className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Support')}</span>
           </TabsTrigger>
-          <TabsTrigger value="lieferanten" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="lieferanten" aria-label={t('Suppliers')} className="flex items-center gap-2 flex-shrink-0">
             <Truck className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Suppliers')}</span>
           </TabsTrigger>
-          <TabsTrigger value="qr" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="qr" aria-label={t('QR & Access')} className="flex items-center gap-2 flex-shrink-0">
             <QrCode className="h-4 w-4" />
             <span className="hidden sm:inline">{t('QR & Access')}</span>
           </TabsTrigger>
-          <TabsTrigger value="master-label" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="master-label" aria-label={t('Master Label')} className="flex items-center gap-2 flex-shrink-0">
             <Tag className="h-4 w-4" />
             <span className="hidden sm:inline">{t('Master Label')}</span>
           </TabsTrigger>
-          <TabsTrigger value="historie" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="historie" aria-label={t('History')} className="flex items-center gap-2 flex-shrink-0">
             <History className="h-4 w-4" />
             <span className="hidden sm:inline">{t('History')}</span>
           </TabsTrigger>
-          <TabsTrigger value="ai-check" className="flex items-center gap-2 flex-shrink-0">
+          <TabsTrigger value="ai-check" aria-label={t('AI Check', { ns: 'compliance' })} className="flex items-center gap-2 flex-shrink-0">
             <BrainCircuit className="h-4 w-4" />
             <span className="hidden sm:inline">{t('AI Check', { ns: 'compliance' })}</span>
           </TabsTrigger>
@@ -576,16 +626,16 @@ export function ProductPage() {
           <MotionDiv
             {...(!prefersReduced && { variants: tabContentVariants, initial: 'initial', animate: 'animate' })}
           >
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>{t('Product Information')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4 [&>div]:min-w-0">
                   <div>
                     <p className="text-sm text-muted-foreground">{t('Product Name')}</p>
-                    <p className="font-medium">{product.name}</p>
+                    <p className="font-medium break-words">{product.name}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t('Manufacturer')}</p>
@@ -593,7 +643,7 @@ export function ProductPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t('GTIN/EAN')}</p>
-                    <code className="font-mono text-sm">{product.gtin}</code>
+                    <code className="font-mono text-sm break-all">{product.gtin}</code>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t('Category')}</p>
@@ -618,26 +668,6 @@ export function ProductPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('Product Image')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {(productImages.length > 0 ? productImages.find(i => i.isPrimary)?.url || productImages[0]?.url : product.imageUrl) ? (
-                  <img
-                    src={productImages.length > 0 ? (productImages.find(i => i.isPrimary)?.url || productImages[0]?.url) : product.imageUrl}
-                    alt={product.name}
-                    className="aspect-square rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
-                    <div className="text-6xl font-bold text-muted-foreground/30">
-                      {product.name.charAt(0)}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
 
           {/* Images Gallery */}
@@ -695,8 +725,8 @@ export function ProductPage() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
                   <CardTitle className="flex items-center gap-2">
                     <Layers className="h-5 w-5 text-primary" />
                     {t('Batches')}
@@ -897,14 +927,14 @@ export function ProductPage() {
                     const cost = supplierCosts.find(c => c.supplierId === sp.supplier_id);
                     return (
                       <div key={sp.id}>
-                        <div className="flex items-center justify-between p-4 rounded-lg border">
-                          <div className="flex items-center gap-4">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <div className="flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 rounded-lg border">
+                          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                               <Truck className="h-5 w-5 text-primary" />
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium">{sp.supplier_name}</p>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <p className="font-medium break-words">{sp.supplier_name}</p>
                                 {sp.is_primary && (
                                   <Badge variant="secondary">{t('Primary Supplier')}</Badge>
                                 )}
@@ -914,7 +944,7 @@ export function ProductPage() {
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-6 text-sm">
+                          <div className="flex items-center gap-4 sm:gap-6 text-sm">
                             {sp.lead_time_days != null && (
                               <div className="text-right">
                                 <p className="text-muted-foreground">{t('Lead Time')}</p>
@@ -932,7 +962,7 @@ export function ProductPage() {
                           </div>
                         </div>
                         {cost && (
-                          <div className="ml-14 mt-1 grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg bg-muted/50 text-sm">
+                          <div className="sm:ml-14 mt-1 grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg bg-muted/50 text-sm">
                             <div>
                               <p className="text-xs text-muted-foreground">{t('Total Batches')}</p>
                               <p className="font-medium">{cost.totalBatches}</p>
@@ -967,7 +997,7 @@ export function ProductPage() {
           {/* Supplier Data Requests */}
           <Card className="mt-6">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <ExternalLink className="h-5 w-5 text-primary" />
@@ -1039,8 +1069,8 @@ export function ProductPage() {
                 {batches.length > 0 ? (
                   batches.slice(0, 5).map((batch) => (
                     <div key={batch.id} className="p-3 rounded-lg border space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{batch.serialNumber}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium min-w-0 break-all">{batch.serialNumber}</span>
                         <Badge variant="secondary" className={batchStatusConfig[batch.status].className}>
                           {batchStatusConfig[batch.status].label}
                         </Badge>
@@ -1106,9 +1136,9 @@ export function ProductPage() {
                       <div key={index} className="relative pl-10">
                         <div className="absolute left-2 w-5 h-5 bg-primary rounded-full border-4 border-background" />
                         <div className="p-4 rounded-lg border">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium">
-                              Step {entry.step}: {entry.description}
+                          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-2">
+                            <span className="font-medium min-w-0 break-words">
+                              {t('Step', { ns: 'settings' })} {entry.step}: {entry.description}
                             </span>
                             <span className="text-sm text-muted-foreground">
                               {formatDate(entry.date, locale)}

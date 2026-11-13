@@ -89,7 +89,7 @@ export function StatsCard({ stats }: StatsCardProps) {
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-green-600 transition-all"
+                className="h-full bg-green-600 transition-[width] duration-300"
                 style={{ width: `${(stats.consumerVisible / stats.totalFields) * 100}%` }}
               />
             </div>
@@ -104,7 +104,7 @@ export function StatsCard({ stats }: StatsCardProps) {
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-amber-500 transition-all"
+                className="h-full bg-amber-500 transition-[width] duration-300"
                 style={{ width: `${(stats.customsVisible / stats.totalFields) * 100}%` }}
               />
             </div>

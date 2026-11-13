@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, History, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/adaptive-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/adaptive-dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChoiceCards, FormActions, FormField, FormGrid, OptionalDisclosure } from '@/components/ui/form-layout';
 import { countShopifyOrders, syncShopifyOrdersBackfill, type BackfillParams } from '@/services/supabase/shopify-integration';
 import { toast } from 'sonner';
 
@@ -90,7 +89,7 @@ export function ShopifyBackfillDialog({ onCompleted }: Props) {
           {t('Import historical orders')}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto pb-0">
         <DialogHeader>
           <DialogTitle>{t('Import historical orders')}</DialogTitle>
           <DialogDescription>
@@ -99,58 +98,59 @@ export function ShopifyBackfillDialog({ onCompleted }: Props) {
         </DialogHeader>
 
         {step === 'form' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="from">{t('From')}</Label>
+          <div className="space-y-5">
+            <FormGrid cols={2}>
+              <FormField label={t('From')} htmlFor="from">
                 <Input id="from" type="date" value={createdAtMin} onChange={e => setCreatedAtMin(e.target.value)} />
-              </div>
-              <div>
-                <Label htmlFor="to">{t('To')}</Label>
+              </FormField>
+              <FormField label={t('To')} htmlFor="to">
                 <Input id="to" type="date" value={createdAtMax} onChange={e => setCreatedAtMax(e.target.value)} />
-              </div>
-            </div>
-            <div>
-              <Label>{t('Order status')}</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as 'any' | 'open' | 'closed' | 'cancelled')}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">{t('Any')}</SelectItem>
-                  <SelectItem value="open">{t('Open')}</SelectItem>
-                  <SelectItem value="closed">{t('Closed')}</SelectItem>
-                  <SelectItem value="cancelled">{t('Cancelled')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>{t('Fulfillment status')}</Label>
-              <Select value={fulfillmentStatus} onValueChange={(v) => setFulfillmentStatus(v as 'any' | 'unfulfilled' | 'partial' | 'shipped')}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">{t('Any')}</SelectItem>
-                  <SelectItem value="unfulfilled">{t('Unfulfilled')}</SelectItem>
-                  <SelectItem value="partial">{t('Partial')}</SelectItem>
-                  <SelectItem value="shipped">{t('Shipped')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="fs">{t('Financial statuses (comma-separated or "any")')}</Label>
-              <Input id="fs" value={financialStatus} onChange={e => setFinancialStatus(e.target.value)} placeholder="paid,refunded,..." />
-            </div>
+              </FormField>
+            </FormGrid>
+            <FormField label={t('Order status')}>
+              <ChoiceCards
+                value={status}
+                onValueChange={(v) => setStatus(v)}
+                columns={4}
+                options={[
+                  { value: 'any', label: t('Any') },
+                  { value: 'open', label: t('Open') },
+                  { value: 'closed', label: t('Closed') },
+                  { value: 'cancelled', label: t('Cancelled') },
+                ]}
+              />
+            </FormField>
+            <FormField label={t('Fulfillment status')}>
+              <ChoiceCards
+                value={fulfillmentStatus}
+                onValueChange={(v) => setFulfillmentStatus(v)}
+                columns={4}
+                options={[
+                  { value: 'any', label: t('Any') },
+                  { value: 'unfulfilled', label: t('Unfulfilled') },
+                  { value: 'partial', label: t('Partial') },
+                  { value: 'shipped', label: t('Shipped') },
+                ]}
+              />
+            </FormField>
+            <OptionalDisclosure description={financialStatus}>
+              <FormField label={t('Financial statuses (comma-separated or "any")')} htmlFor="fs">
+                <Input id="fs" value={financialStatus} onChange={e => setFinancialStatus(e.target.value)} placeholder="paid,refunded,..." />
+              </FormField>
+            </OptionalDisclosure>
           </div>
         )}
 
         {step === 'preview' && (
           <div className="space-y-3">
             <div className="rounded-lg border p-4 text-center">
-              <div className="text-3xl font-bold">{estimatedCount?.toLocaleString()}</div>
+              <div className="text-3xl font-bold tabular-nums">{estimatedCount?.toLocaleString()}</div>
               <div className="text-sm text-muted-foreground">{t('Orders will be imported')}</div>
             </div>
             {(estimatedCount ?? 0) > 1000 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex gap-2">
-                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-sm text-amber-900">
+              <div role="status" className="rounded-lg border bg-muted/40 p-3 flex gap-2">
+                <AlertCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <div className="text-sm text-foreground">
                   {t('Large import — this may take several minutes. The backend paginates 250 orders at a time with rate-limit safety.')}
                 </div>
               </div>
@@ -167,6 +167,9 @@ export function ShopifyBackfillDialog({ onCompleted }: Props) {
               value={confirmText}
               onChange={e => setConfirmText(e.target.value)}
               placeholder="IMPORTIEREN"
+              aria-label={t('Importing {{count}} orders. Type IMPORTIEREN to confirm.', { count: estimatedCount ?? 0 })}
+              autoCapitalize="characters"
+              autoComplete="off"
               className="font-mono"
             />
           </div>
@@ -186,9 +189,9 @@ export function ShopifyBackfillDialog({ onCompleted }: Props) {
             <div className="rounded-lg border p-4">
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>{t('Total fetched')}:</div><div className="font-mono">{result.counts?.total}</div>
-                <div>{t('Created')}:</div><div className="font-mono text-green-700">{result.counts?.created}</div>
+                <div>{t('Created')}:</div><div className="font-mono text-primary">{result.counts?.created}</div>
                 <div>{t('Skipped')}:</div><div className="font-mono">{result.counts?.skipped}</div>
-                <div>{t('Failed')}:</div><div className="font-mono text-red-700">{result.counts?.failed}</div>
+                <div>{t('Failed')}:</div><div className="font-mono text-destructive">{result.counts?.failed}</div>
                 <div>{t('Unmapped variants')}:</div><div className="font-mono">{result.unmappedVariants ?? 0}</div>
                 <div>{t('Pages processed')}:</div><div className="font-mono">{result.pagesCompleted}</div>
               </div>
@@ -196,10 +199,10 @@ export function ShopifyBackfillDialog({ onCompleted }: Props) {
           </div>
         )}
 
-        <DialogFooter>
+        <FormActions sticky="dialog">
           {step === 'form' && (
             <>
-              <Button variant="outline" onClick={() => setOpen(false)}>{t('Cancel')}</Button>
+              <Button variant="ghost" onClick={() => setOpen(false)}>{t('Cancel')}</Button>
               <Button onClick={handlePreview} disabled={busy}>
                 {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t('Estimate count')}
@@ -208,7 +211,7 @@ export function ShopifyBackfillDialog({ onCompleted }: Props) {
           )}
           {step === 'preview' && (
             <>
-              <Button variant="outline" onClick={() => setStep('form')}>{t('Back')}</Button>
+              <Button variant="ghost" onClick={() => setStep('form')}>{t('Back')}</Button>
               <Button onClick={() => setStep('confirm')} disabled={(estimatedCount ?? 0) === 0}>
                 {t('Proceed')}
               </Button>
@@ -216,7 +219,7 @@ export function ShopifyBackfillDialog({ onCompleted }: Props) {
           )}
           {step === 'confirm' && (
             <>
-              <Button variant="outline" onClick={() => setStep('preview')}>{t('Back')}</Button>
+              <Button variant="ghost" onClick={() => setStep('preview')}>{t('Back')}</Button>
               <Button onClick={handleConfirm} disabled={busy || confirmText !== 'IMPORTIEREN'}>
                 {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t('Start import')}
@@ -226,7 +229,7 @@ export function ShopifyBackfillDialog({ onCompleted }: Props) {
           {step === 'done' && (
             <Button onClick={() => setOpen(false)}>{t('Close')}</Button>
           )}
-        </DialogFooter>
+        </FormActions>
       </DialogContent>
     </Dialog>
   );

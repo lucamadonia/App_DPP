@@ -350,7 +350,7 @@ export function AdminTenantsPage() {
       <Card>
         <CardContent className="p-3">
           <div className="flex flex-wrap gap-2 items-center">
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative min-w-0 basis-full sm:basis-auto sm:flex-1 sm:min-w-[200px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
@@ -360,7 +360,7 @@ export function AdminTenantsPage() {
               />
             </div>
             <Select value={planFilter} onValueChange={setPlanFilter}>
-              <SelectTrigger className="w-[130px] h-9"><SelectValue placeholder="Plan" /></SelectTrigger>
+              <SelectTrigger className="h-9 min-w-[8.5rem] flex-1 sm:w-[130px] sm:flex-none"><SelectValue placeholder="Plan" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('Alle Pläne')}</SelectItem>
                 <SelectItem value="free">Free</SelectItem>
@@ -369,7 +369,7 @@ export function AdminTenantsPage() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger className="h-9 min-w-[8.5rem] flex-1 sm:w-[140px] sm:flex-none"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('Alle Status')}</SelectItem>
                 <SelectItem value="active">{t('Aktiv')}</SelectItem>
@@ -378,7 +378,7 @@ export function AdminTenantsPage() {
               </SelectContent>
             </Select>
             <Select value={healthFilter} onValueChange={setHealthFilter}>
-              <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="Health" /></SelectTrigger>
+              <SelectTrigger className="h-9 min-w-[8.5rem] flex-1 sm:w-[140px] sm:flex-none"><SelectValue placeholder="Health" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('Alle Health')}</SelectItem>
                 <SelectItem value="top">{t('Top (80+)')}</SelectItem>

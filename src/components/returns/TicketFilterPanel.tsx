@@ -43,7 +43,7 @@ export function TicketFilterPanel({ open, onOpenChange, filter, onFilterChange }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-80 overflow-y-auto">
+      <SheetContent className="w-[min(20rem,90vw)] overflow-y-auto overscroll-contain">
         <SheetHeader>
           <SheetTitle>{t('Advanced Filters')}</SheetTitle>
         </SheetHeader>

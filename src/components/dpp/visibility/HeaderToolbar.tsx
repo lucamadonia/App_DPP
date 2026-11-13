@@ -112,7 +112,7 @@ export function HeaderToolbar({
               </SheetContent>
             </Sheet>
           ) : (
-            <div className="relative w-[300px]">
+            <div className="relative w-full max-w-[300px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={searchQuery}

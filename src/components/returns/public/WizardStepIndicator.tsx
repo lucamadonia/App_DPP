@@ -19,7 +19,7 @@ export function WizardStepIndicator({ currentStep, totalSteps, labels }: WizardS
       {/* Desktop: full labels */}
       <div className="hidden sm:flex items-center justify-between relative">
         {/* Progress line background */}
-        <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200" />
+        <div className="absolute top-5 left-0 right-0 h-0.5 bg-border" />
         {/* Progress line fill */}
         <motion.div
           className="absolute top-5 left-0 h-0.5 bg-primary"
@@ -36,12 +36,12 @@ export function WizardStepIndicator({ currentStep, totalSteps, labels }: WizardS
             <div key={i} className="flex flex-col items-center relative z-10" style={{ width: `${100 / totalSteps}%` }}>
               <div className="relative">
                 <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-[border-color,background-color,color] duration-200 ${
                     isCompleted
                       ? 'bg-primary border-primary text-primary-foreground'
                       : isCurrent
-                      ? 'bg-white border-primary text-primary'
-                      : 'bg-white border-gray-200 text-gray-400'
+                      ? 'bg-background border-primary text-primary'
+                      : 'bg-background border-border text-muted-foreground'
                   }`}
                 >
                   {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
@@ -77,14 +77,9 @@ export function WizardStepIndicator({ currentStep, totalSteps, labels }: WizardS
         </div>
         <div className="flex gap-1">
           {Array.from({ length: totalSteps }, (_, i) => (
-            <motion.div
+            <div
               key={i}
-              className="flex-1 h-1.5 rounded-full"
-              animate={{
-                backgroundColor: i <= currentStep
-                  ? 'hsl(var(--primary))' : 'rgb(229 231 235)',
-              }}
-              transition={prefersReduced ? { duration: 0 } : { duration: 0.3 }}
+              className={`flex-1 h-1.5 rounded-full transition-colors duration-200 ease-out ${i <= currentStep ? 'bg-primary' : 'bg-border'}`}
             />
           ))}
         </div>

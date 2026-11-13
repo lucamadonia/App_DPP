@@ -52,7 +52,7 @@ export function PlatformBreakdown({ entries }: PlatformBreakdownProps) {
               <Link
                 to={`/commerce?platform=${e.platform}`}
                 className={cn(
-                  'flex flex-col gap-3 px-4 py-3.5 sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-4 sm:px-5',
+                  'flex flex-col gap-3 px-4 py-3.5 sm:grid sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:px-5',
                   'transition-colors hover:bg-white/[0.03] active:bg-white/[0.04]',
                 )}
               >

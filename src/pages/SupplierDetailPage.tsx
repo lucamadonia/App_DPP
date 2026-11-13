@@ -368,7 +368,7 @@ export function SupplierDetailPage() {
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-8 w-8">
+              <Button variant="outline" size="icon" className="h-8 w-8 pointer-coarse:size-11" aria-label={t('Actions', { ns: 'common' })}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -398,12 +398,12 @@ export function SupplierDetailPage() {
         {kpiCards.map((kpi, idx) => (
           <Card
             key={kpi.label}
-            className={`transition-all duration-300 ${kpiVisible[idx] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            className={`transition duration-300 ${kpiVisible[idx] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
           >
             <CardContent className="pt-4 pb-3 px-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-muted-foreground">{kpi.label}</p>
-                <div className={`h-7 w-7 rounded-md flex items-center justify-center ${kpi.color}`}>
+              <div className="flex items-center justify-between gap-2">
+                <p className="min-w-0 text-xs font-medium text-muted-foreground">{kpi.label}</p>
+                <div className={`h-7 w-7 shrink-0 rounded-md flex items-center justify-center ${kpi.color}`}>
                   <kpi.icon className="h-3.5 w-3.5" />
                 </div>
               </div>
@@ -908,9 +908,9 @@ export function SupplierDetailPage() {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-right">{value}</span>
+    <div className="flex items-start justify-between gap-3">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="min-w-0 font-medium text-right [overflow-wrap:anywhere]">{value}</span>
     </div>
   );
 }

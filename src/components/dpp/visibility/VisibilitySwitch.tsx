@@ -8,6 +8,7 @@ import { Users, ShieldCheck } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { useId } from 'react';
 
 interface VisibilitySwitchProps {
   level: 'consumer' | 'customs';
@@ -17,6 +18,7 @@ interface VisibilitySwitchProps {
 }
 
 export function VisibilitySwitch({ level, checked, onChange, label }: VisibilitySwitchProps) {
+  const id = useId();
   const Icon = level === 'consumer' ? Users : ShieldCheck;
   const accentClass =
     level === 'consumer'
@@ -31,10 +33,10 @@ export function VisibilitySwitch({ level, checked, onChange, label }: Visibility
           level === 'consumer' ? 'text-green-600' : 'text-amber-600'
         )}
       />
-      <Label htmlFor={`${level}-switch`} className="text-sm cursor-pointer flex-1">
+      <Label htmlFor={id} className="text-sm cursor-pointer flex-1">
         {label}
       </Label>
-      <Switch id={`${level}-switch`} checked={checked} onCheckedChange={onChange} className={accentClass} />
+      <Switch id={id} checked={checked} onCheckedChange={onChange} className={accentClass} />
     </div>
   );
 }

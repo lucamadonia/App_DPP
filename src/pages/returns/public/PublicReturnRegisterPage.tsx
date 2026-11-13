@@ -1,8 +1,8 @@
 import { useReducer, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowLeft, User, Package, HelpCircle, Camera, Lightbulb, Truck, ClipboardCheck } from 'lucide-react';
+import { FormWizard, type WizardStep } from '@/components/ui/form-wizard';
 import { Card, CardContent } from '@/components/ui/card';
 import { useReturnsPortal } from '@/hooks/useReturnsPortal';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
@@ -14,8 +14,6 @@ import {
 } from '@/services/supabase/shipment-tracking';
 import type { DesiredSolution, ItemCondition } from '@/types/returns-hub';
 
-import { WizardStepIndicator } from '@/components/returns/public/WizardStepIndicator';
-import { WizardStepTransition } from '@/components/returns/public/WizardStepTransition';
 import { WizardSuccessPage } from '@/components/returns/public/WizardSuccessPage';
 import { IdentificationStep } from '@/components/returns/public/steps/IdentificationStep';
 import { SelectItemsStep } from '@/components/returns/public/steps/SelectItemsStep';
@@ -28,6 +26,8 @@ import type { ShippingAddress } from '@/components/returns/public/steps/Shipping
 import { ConfirmationStep } from '@/components/returns/public/steps/ConfirmationStep';
 
 const STEP_LABELS = ['Identification', 'Select Items', 'Return Reason', 'Photos', 'Preferred Solution', 'Shipping', 'Confirmation'];
+const STEP_IDS = ['identify', 'items', 'reason', 'photos', 'solution', 'shipping', 'confirm'];
+const STEP_ICONS = [User, Package, HelpCircle, Camera, Lightbulb, Truck, ClipboardCheck];
 
 // State
 export type LookupState = 'idle' | 'loading' | 'hit' | 'miss';
@@ -105,17 +105,17 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, step: action.step, direction: action.step < state.step ? 'backward' : 'forward' };
     case 'SET_ORDER_NUMBER':
       // Editing identification fields invalidates a previous lookup result
-      // so the customer gets a fresh chance instead of stuck on a stale miss.
+      // (miss or hit) so the next "Next" looks the order up again.
       return {
         ...state,
         orderNumber: action.value,
-        lookupState: state.lookupState === 'miss' ? 'idle' : state.lookupState,
+        lookupState: action.value === state.orderNumber ? state.lookupState : 'idle',
       };
     case 'SET_EMAIL':
       return {
         ...state,
         email: action.value,
-        lookupState: state.lookupState === 'miss' ? 'idle' : state.lookupState,
+        lookupState: action.value === state.email ? state.lookupState : 'idle',
       };
     case 'SET_ITEMS':
       return { ...state, items: action.items };
@@ -221,8 +221,12 @@ export function PublicReturnRegisterPage() {
   // Step-0 → step-1 transition: try to look up the shipment with the supplied
   // order number + email. On hit the reducer advances; on miss the reducer
   // surfaces the help block and the button stays disabled.
-  const advanceFromIdentification = async () => {
-    if (state.lookupState === 'loading') return;
+  // Returns true when the wizard itself may advance: only when an earlier hit
+  // for the unchanged order/email still stands — re-running the lookup would
+  // reset the customer's item selection (LOOKUP_HIT re-seeds the items).
+  const advanceFromIdentification = async (): Promise<boolean> => {
+    if (state.lookupState === 'hit') return true;
+    if (state.lookupState === 'loading') return false;
     dispatch({ type: 'LOOKUP_START' });
     const result = await lookupShipmentWithItemsByOrderAndEmail(
       state.orderNumber,
@@ -230,7 +234,7 @@ export function PublicReturnRegisterPage() {
     );
     if (!result || result.items.length === 0) {
       dispatch({ type: 'LOOKUP_MISS' });
-      return;
+      return false;
     }
     dispatch({
       type: 'LOOKUP_HIT',
@@ -238,6 +242,7 @@ export function PublicReturnRegisterPage() {
       shipmentNumber: result.shipmentNumber,
       items: result.items,
     });
+    return false;
   };
 
   const handleSubmit = async () => {
@@ -369,6 +374,14 @@ export function PublicReturnRegisterPage() {
 
   const portalPath = isEmbed ? `/embed/portal/${tenantSlug}` : `/returns/portal/${tenantSlug}`;
 
+  const steps: WizardStep[] = STEP_LABELS.map((label, i) => ({
+    id: STEP_IDS[i],
+    title: t(label),
+    icon: STEP_ICONS[i],
+    // canProceed() only knows the current step; other steps are never shown.
+    canNext: i === state.step ? canProceed() : undefined,
+  }));
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
       {/* Back to Portal */}
@@ -380,65 +393,38 @@ export function PublicReturnRegisterPage() {
         {t('Back to Overview')}
       </button>
 
-      {/* Step Indicator */}
-      <div className="mb-6 sm:mb-8">
-        <WizardStepIndicator
-          currentStep={state.step}
-          totalSteps={STEP_LABELS.length}
-          labels={STEP_LABELS}
-        />
-      </div>
-
-      {/* Step Content */}
       <Card>
-        <CardContent className="p-6">
-          <WizardStepTransition direction={state.direction} stepKey={state.step}>
-            {renderStep()}
-          </WizardStepTransition>
+        <CardContent className="p-4 sm:p-6">
+          <FormWizard
+            variant={isEmbed ? 'embedded' : 'page'}
+            steps={steps}
+            step={state.step}
+            onStepChange={(_, index) => dispatch({ type: 'GO_TO_STEP', step: index })}
+            onNext={async (id) => {
+              // Step 0 runs the shipment lookup; the reducer advances on a fresh
+              // hit (LOOKUP_HIT) and stays on a miss, so the wizard only moves
+              // itself when a previous hit is reused.
+              if (id === 'identify') return advanceFromIdentification();
+              return true;
+            }}
+            onFinish={handleSubmit}
+            finishing={submitting}
+            finishLabel={t('Submit Return')}
+            showStepHeader={false}
+          >
+            {() => (
+              <>
+                {renderStep()}
+                {submitError && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {submitError}
+                  </p>
+                )}
+              </>
+            )}
+          </FormWizard>
         </CardContent>
       </Card>
-
-      {submitError && (
-        <p role="alert" className="mt-4 text-sm text-destructive">
-          {submitError}
-        </p>
-      )}
-
-      {/* Navigation */}
-      <div className="flex justify-between mt-6">
-        <Button
-          variant="outline"
-          onClick={() => dispatch({ type: 'PREV_STEP' })}
-          disabled={state.step === 0}
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          {t('Previous')}
-        </Button>
-
-        {state.step < STEP_LABELS.length - 1 ? (
-          <Button
-            onClick={() => {
-              if (state.step === 0) {
-                void advanceFromIdentification();
-              } else {
-                dispatch({ type: 'NEXT_STEP' });
-              }
-            }}
-            disabled={!canProceed()}
-          >
-            {state.lookupState === 'loading' && state.step === 0 ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            ) : null}
-            {t('Next')}
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        ) : (
-          <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {t('Submit Return')}
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

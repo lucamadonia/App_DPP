@@ -218,7 +218,7 @@ export function TrainingGuidePage() {
   };
 
   return (
-    <div className="-m-4 sm:-m-6">
+    <div className="-m-4 pb-[calc(var(--bottom-nav-h)+var(--safe-bottom))] sm:-m-6 md:pb-0">
       <GuideProgress percentage={stats.percentage} />
       <TrainingGuideHero
         completedCount={stats.completedCount}

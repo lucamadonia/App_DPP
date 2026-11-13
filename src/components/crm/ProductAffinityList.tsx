@@ -65,7 +65,7 @@ export function ProductAffinityList({ customerId, limit = 5 }: ProductAffinityLi
                   </div>
                   <div className="relative h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
-                      className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-500 ease-out rounded-full"
+                      className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-300 ease-out rounded-full"
                       style={{ width: `${pct}%` }}
                     />
                   </div>

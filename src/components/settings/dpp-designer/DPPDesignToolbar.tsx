@@ -30,12 +30,14 @@ export function DPPDesignToolbar({
   const { t } = useTranslation('settings');
 
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-20">
+    <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-20">
       {/* View Toggle */}
       <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
         <button
+          type="button"
+          aria-pressed={viewMode === 'consumer'}
           onClick={() => onViewModeChange('consumer')}
-          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`min-h-9 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ease-out pointer-coarse:min-h-11 ${
             viewMode === 'consumer'
               ? 'bg-background shadow-sm text-foreground'
               : 'text-muted-foreground hover:text-foreground'
@@ -44,8 +46,10 @@ export function DPPDesignToolbar({
           {t('Consumer')}
         </button>
         <button
+          type="button"
+          aria-pressed={viewMode === 'customs'}
           onClick={() => onViewModeChange('customs')}
-          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`min-h-9 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ease-out pointer-coarse:min-h-11 ${
             viewMode === 'customs'
               ? 'bg-background shadow-sm text-foreground'
               : 'text-muted-foreground hover:text-foreground'
@@ -65,7 +69,10 @@ export function DPPDesignToolbar({
           <button
             key={v}
             onClick={() => onViewportChange(v)}
-            className={`p-1.5 rounded-md transition-colors ${
+            type="button"
+            aria-pressed={viewport === v}
+            aria-label={t(v.charAt(0).toUpperCase() + v.slice(1))}
+            className={`inline-flex size-9 items-center justify-center rounded-md transition-colors duration-150 ease-out pointer-coarse:size-11 ${
               viewport === v
                 ? 'bg-background shadow-sm text-foreground'
                 : 'text-muted-foreground hover:text-foreground'

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormField } from '@/components/ui/form-layout';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/adaptive-dialog';
@@ -496,15 +496,15 @@ export function TicketDetailPage() {
             <DialogTitle>{t('Close Ticket')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>{t('Resolution Reason')}</Label>
+            <FormField label={t('Resolution Reason')} htmlFor="ticket-resolution-reason" required>
               <Textarea
+                id="ticket-resolution-reason"
                 value={resolutionReason}
                 onChange={(e) => setResolutionReason(e.target.value)}
                 placeholder={t('Describe the resolution...')}
                 rows={3}
               />
-            </div>
+            </FormField>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCloseDialogOpen(false)}>{t('Cancel')}</Button>
@@ -522,17 +522,21 @@ export function TicketDetailPage() {
             <DialogTitle>{t('Merge Tickets')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>{t('Enter ticket number to merge')}</Label>
+            <FormField
+              label={t('Enter ticket number to merge')}
+              htmlFor="ticket-merge-number"
+              required
+              hint={t('The selected ticket will be closed and its messages moved to this ticket.')}
+            >
               <Input
+                id="ticket-merge-number"
                 value={mergeTicketNumber}
                 onChange={(e) => setMergeTicketNumber(e.target.value)}
                 placeholder="TKT-..."
+                autoCapitalize="characters"
+                autoComplete="off"
               />
-              <p className="text-xs text-muted-foreground">
-                {t('The selected ticket will be closed and its messages moved to this ticket.')}
-              </p>
-            </div>
+            </FormField>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setMergeDialogOpen(false)}>{t('Cancel')}</Button>

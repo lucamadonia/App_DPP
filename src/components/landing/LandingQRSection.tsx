@@ -108,7 +108,7 @@ export function LandingQRSection() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-[background-color,border-color,color] ${
                   activeTab === tab
                     ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200'
@@ -185,7 +185,7 @@ URL: ecowear.de`}
                     <button
                       key={c.hex}
                       onClick={() => setQrColor(c.hex)}
-                      className={`h-8 w-8 rounded-full border-2 transition-all ${
+                      className={`h-8 w-8 rounded-full border-2 transition-[scale,border-color] ${
                         qrColor === c.hex ? 'border-blue-400 scale-110' : 'border-slate-600 hover:border-slate-400'
                       }`}
                       style={{ backgroundColor: c.hex }}
@@ -223,7 +223,7 @@ URL: ecowear.de`}
                     <button
                       key={level}
                       onClick={() => setEcLevel(level)}
-                      className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${
+                      className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-[background-color,color] ${
                         ecLevel === level
                           ? 'bg-blue-500 text-white'
                           : 'bg-slate-700 text-slate-400 hover:bg-slate-600'

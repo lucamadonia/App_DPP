@@ -44,7 +44,7 @@ function transformRow(row: Record<string, unknown>): SavedComplianceCheck {
     recommendations: (row.recommendations as Recommendation[]) || [],
     rawResponses: (row.raw_responses as string[]) || undefined,
     inputDataSnapshot: (row.input_data_snapshot as Record<string, unknown>) || undefined,
-    modelUsed: (row.model_used as string) || 'anthropic/claude-sonnet-4',
+    modelUsed: (row.model_used as string) || 'anthropic/claude-sonnet-5.5',
     createdBy: (row.created_by as string) || undefined,
     createdAt: row.created_at as string,
   };
@@ -71,7 +71,7 @@ export async function saveComplianceCheck(input: SaveComplianceCheckInput): Prom
       recommendations: input.recommendations,
       raw_responses: input.rawResponses || null,
       input_data_snapshot: input.inputDataSnapshot || null,
-      model_used: input.modelUsed || 'anthropic/claude-sonnet-4',
+      model_used: input.modelUsed || 'anthropic/claude-sonnet-5.5',
       created_by: user?.id || null,
     })
     .select()

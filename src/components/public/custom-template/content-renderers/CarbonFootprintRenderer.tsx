@@ -164,7 +164,7 @@ function InfographicMode({ product, ratingVisualization, primaryColor, t }: Omit
         <RatingBadge rating={cf.rating} style={ratingVisualization} primaryColor={primaryColor} />
         <p className="text-sm text-muted-foreground">{t(RATING_DESCRIPTIONS[cf.rating])}</p>
       </div>
-      <div className="flex-1 grid grid-cols-3 gap-3 text-center">
+      <div className="w-full min-w-0 flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
         <div className="p-3 rounded-lg border">
           <p className="text-xl font-bold">{cf.totalKgCO2}</p>
           <p className="text-xs text-muted-foreground">{t('Total')}</p>

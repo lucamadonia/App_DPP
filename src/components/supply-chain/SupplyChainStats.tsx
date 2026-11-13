@@ -73,7 +73,7 @@ export function SupplyChainStats({ entries }: SupplyChainStatsProps) {
         <p className="text-2xl font-bold">
           <AnimatedCounter value={stats.total} />
         </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{t('Supply Chain Steps')}</p>
+        <p className="mt-0.5 min-w-0 text-xs text-muted-foreground break-words hyphens-auto">{t('Supply Chain Steps')}</p>
       </div>
 
       {/* Countries */}

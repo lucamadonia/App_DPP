@@ -40,6 +40,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
 import { useBillingOptional } from '@/contexts/BillingContext';
 import { useTheme } from '@/hooks/use-theme';
+import { originFromElement } from '@/lib/appearance-transition';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -512,8 +513,8 @@ export function AppSidebar() {
             </Link>
           </motion.div>
         )}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <motion.div
               whileHover={prefersReduced ? undefined : { scale: 1.08 }}
               whileTap={prefersReduced ? undefined : { scale: 0.95 }}
@@ -525,20 +526,20 @@ export function AppSidebar() {
                 </AvatarFallback>
               </Avatar>
             </motion.div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-sidebar-foreground">
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-medium text-sidebar-foreground">
                 {userName}
               </span>
-              <span className="text-xs text-sidebar-foreground/60 max-w-[min(60vw,200px)] truncate">
+              <span className="truncate text-xs text-sidebar-foreground/60">
                 {userEmail}
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-0.5">
             <Button
               variant="ghost"
               size="icon"
-              onClick={toggleTheme}
+              onClick={(e) => toggleTheme(originFromElement(e.currentTarget))}
               className="h-10 w-10 sm:h-8 sm:w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
               title={resolvedTheme === 'dark' ? t('Light Mode') : t('Dark Mode')}
               aria-label={resolvedTheme === 'dark' ? t('Switch to light mode') : t('Switch to dark mode')}
@@ -549,11 +550,12 @@ export function AppSidebar() {
             <Button
               variant="ghost"
               onClick={handleSignOut}
-              className="h-10 sm:h-8 gap-1.5 px-2 text-sidebar-foreground/60 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/30"
+              size="icon"
+              className="h-10 w-10 sm:h-8 sm:w-8 text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10"
               title={t('Sign Out')}
+              aria-label={t('Sign Out')}
             >
               <LogOut className="h-4 w-4" />
-              <span className="text-xs">{t('Sign Out')}</span>
             </Button>
           </div>
         </div>

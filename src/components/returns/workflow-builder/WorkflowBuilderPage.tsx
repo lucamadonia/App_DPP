@@ -424,14 +424,14 @@ export function WorkflowBuilderPage() {
       {showValidationBanner && validationErrors.length > 0 && (
         <div className="bg-destructive/10 border-b border-destructive/20 px-3 py-2 flex items-center gap-2 shrink-0">
           <AlertTriangle size={14} className="text-destructive shrink-0" />
-          <div className="flex-1 text-xs text-destructive">
+          <div className="flex-1 min-w-0 break-words text-xs text-destructive">
             <span className="font-medium">{t('Cannot save')}:</span>{' '}
             {validationErrors.map((e) => e.message).join('; ')}
           </div>
           <Button
             variant="ghost"
             size="sm"
-            className="h-5 w-5 p-0 text-destructive"
+            className="h-5 w-5 shrink-0 p-0 text-destructive touch-hit"
             onClick={() => setShowValidationBanner(false)}
           >
             <X size={12} />
@@ -443,13 +443,13 @@ export function WorkflowBuilderPage() {
       {saveError && (
         <div className="bg-destructive/10 border-b border-destructive/20 px-3 py-2 flex items-center gap-2 shrink-0">
           <AlertTriangle size={14} className="text-destructive shrink-0" />
-          <div className="flex-1 text-xs text-destructive">
+          <div className="flex-1 min-w-0 break-words text-xs text-destructive">
             <span className="font-medium">{t('Save failed')}:</span> {saveError}
           </div>
           <Button
             variant="ghost"
             size="sm"
-            className="h-5 w-5 p-0 text-destructive"
+            className="h-5 w-5 shrink-0 p-0 text-destructive touch-hit"
             onClick={() => setSaveError(null)}
           >
             <X size={12} />
@@ -463,14 +463,14 @@ export function WorkflowBuilderPage() {
           mobileShowGraph ? (
             <div className="flex-1 relative overflow-hidden flex flex-col" ref={containerRef}>
               <div className="px-3 py-2 border-b bg-warning/5 flex items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground">
+                <span className="min-w-0 text-xs text-muted-foreground">
                   {t('Read-only view — edit on desktop or in linear view')}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setMobileShowGraph(false)}
-                  className="h-7 text-xs"
+                  className="h-7 shrink-0 text-xs"
                 >
                   {t('Back to linear view')}
                 </Button>

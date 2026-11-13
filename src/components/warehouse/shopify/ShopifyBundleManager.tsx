@@ -323,7 +323,7 @@ export function ShopifyBundleManager() {
               )}
 
               {components.map((c, i) => (
-                <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2 items-center border rounded-md p-2">
+                <div key={i} className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] gap-2 items-center border rounded-md p-2">
                   <Select value={c.componentProductId} onValueChange={v => void setComponentProduct(i, v)}>
                     <SelectTrigger><SelectValue placeholder={t('Product')} /></SelectTrigger>
                     <SelectContent>

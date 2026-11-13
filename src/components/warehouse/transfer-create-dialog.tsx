@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight, ArrowRightLeft, Loader2, AlertTriangle, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { FormField } from '@/components/ui/form-layout';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/adaptive-dialog';
@@ -237,12 +237,12 @@ export function TransferCreateDialog({ open, onOpenChange, onCreated }: Transfer
               {/* Check pulse */}
               <motion.div
                 {...(prefersReduced ? {} : microInteraction.successPulse)}
-                className="relative mx-auto mb-4 mt-2 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-950"
+                className="relative mx-auto mb-4 mt-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10"
               >
                 {!prefersReduced && (
-                  <span className="absolute inset-0 rounded-full bg-green-200/60 dark:bg-green-900/40 animate-pulse-ring" />
+                  <span className="absolute inset-0 rounded-full bg-primary/15 animate-pulse-ring" />
                 )}
-                <svg className="h-8 w-8 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path className={prefersReduced ? '' : 'animate-check-draw'} strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </motion.div>
@@ -301,7 +301,7 @@ export function TransferCreateDialog({ open, onOpenChange, onCreated }: Transfer
                 </div>
               ) : refsError ? (
                 <div className="flex flex-col items-center justify-center gap-3 px-6 py-10 text-center">
-                  <AlertTriangle className="h-6 w-6 text-amber-500" />
+                  <AlertTriangle className="h-6 w-6 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">{t('Failed to load locations or products')}</p>
                   <Button variant="outline" size="sm" onClick={loadRefs}>
                     {t('Retry')}
@@ -311,16 +311,14 @@ export function TransferCreateDialog({ open, onOpenChange, onCreated }: Transfer
                 <>
                   <div className="space-y-4 px-4 sm:px-6 pb-4">
                     {/* Product + batch */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {t('Product')}
-                        </Label>
+                    {/* minmax(0,1fr): a long product name truncates instead of widening the column. */}
+                    <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-[repeat(2,minmax(0,1fr))] gap-3">
+                      <FormField label={t('Product')} htmlFor="transfer-product" required>
                         <Select
                           value={productId}
                           onValueChange={(v) => { setProductId(v); setBatchId(''); }}
                         >
-                          <SelectTrigger className="h-11 w-full">
+                          <SelectTrigger id="transfer-product" className="h-11 w-full">
                             <SelectValue placeholder={t('Select Product')} />
                           </SelectTrigger>
                           <SelectContent>
@@ -329,13 +327,10 @@ export function TransferCreateDialog({ open, onOpenChange, onCreated }: Transfer
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {t('Batch')}
-                        </Label>
+                      </FormField>
+                      <FormField label={t('Batch')} htmlFor="transfer-batch" required>
                         <Select value={batchId} onValueChange={setBatchId} disabled={!productId || loadingBatches}>
-                          <SelectTrigger className="h-11 w-full">
+                          <SelectTrigger id="transfer-batch" className="h-11 w-full">
                             <SelectValue
                               placeholder={
                                 !productId
@@ -352,7 +347,7 @@ export function TransferCreateDialog({ open, onOpenChange, onCreated }: Transfer
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
+                      </FormField>
                     </div>
 
                     {/* From → To journey */}
@@ -371,11 +366,11 @@ export function TransferCreateDialog({ open, onOpenChange, onCreated }: Transfer
                     />
 
                     {/* Quantity */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-baseline justify-between">
-                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <div className="space-y-2">
+                      <div className="flex min-h-5 items-center justify-between">
+                        <span className="text-sm font-medium leading-5">
                           {t('Quantity')}
-                        </Label>
+                        </span>
                         {available != null && available > 0 && (
                           <span className="text-xs text-muted-foreground tabular-nums">
                             {t('max')}: {available}
@@ -388,7 +383,6 @@ export function TransferCreateDialog({ open, onOpenChange, onCreated }: Transfer
                           onChange={setQuantity}
                           min={1}
                           max={available != null && available > 0 ? available : undefined}
-                          variant="orange"
                         />
                       </div>
                       <AnimatePresence>
@@ -397,7 +391,8 @@ export function TransferCreateDialog({ open, onOpenChange, onCreated }: Transfer
                             initial={prefersReduced ? false : { opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400"
+                            role="alert"
+                            className="flex items-center gap-1.5 text-xs font-medium text-destructive"
                           >
                             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                             {noStock
@@ -409,18 +404,15 @@ export function TransferCreateDialog({ open, onOpenChange, onCreated }: Transfer
                     </div>
 
                     {/* Notes */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {t('Notes')}
-                      </Label>
+                    <FormField label={t('Notes')} htmlFor="transfer-notes" optional>
                       <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-                    </div>
+                    </FormField>
                   </div>
 
                   {/* Sticky submit bar */}
-                  <div className="sticky bottom-0 z-10 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t bg-background/95 backdrop-blur px-4 sm:px-6 py-3">
+                  <div className="sticky bottom-0 z-10 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t bg-background/95 backdrop-blur px-4 sm:px-6 pt-3 pb-[max(0.75rem,var(--safe-bottom))]">
                     <motion.div whileTap={prefersReduced ? undefined : { scale: 0.97 }}>
-                      <Button variant="outline" className="w-full sm:w-auto h-11" onClick={() => onOpenChange(false)} disabled={saving}>
+                      <Button variant="ghost" className="w-full sm:w-auto h-11" onClick={() => onOpenChange(false)} disabled={saving}>
                         {t('Cancel', { ns: 'common' })}
                       </Button>
                     </motion.div>

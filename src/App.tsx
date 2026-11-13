@@ -17,6 +17,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import { useCustomDomainDetection } from '@/hooks/useCustomDomainDetection';
 import { useTheme } from '@/hooks/use-theme';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { CustomDomainPortal } from '@/components/CustomDomainPortal';
 import { DomainNotFoundPage } from '@/pages/DomainNotFoundPage';
 import { PageTransition } from '@/components/ui/page-transition';
@@ -286,7 +287,7 @@ function AppLayout() {
         <ImpersonationBanner />
         <PendingInvitationsBanner />
         <AppHeader onSearch={() => setPaletteOpen(true)} />
-        <main className="flex-1 overflow-auto overscroll-contain p-4 sm:p-6 pb-app">
+        <main className="app-content min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 sm:p-6 pb-app">
           <SwipeBackLayer>
             {/* A crashing page keeps the sidebar/header usable. */}
             <RouteErrorBoundary name="app" variant="section">
@@ -647,6 +648,26 @@ function NormalAppRoutes() {
   );
 }
 
+/**
+ * Phones: top-center below the status bar / notch, where a native banner
+ * appears, and swipe-up to dismiss follows from the top position. Desktop
+ * keeps the top-right stack.
+ */
+function AppToaster() {
+  const isMobile = useIsMobile();
+  return (
+    <Toaster
+      position={isMobile ? 'top-center' : 'top-right'}
+      mobileOffset={{ top: 'calc(var(--safe-top) + 8px)' }}
+      richColors
+      closeButton
+      toastOptions={{
+        className: 'font-sans',
+      }}
+    />
+  );
+}
+
 function ThemeInitializer({ children }: { children: React.ReactNode }) {
   // Initialize theme on mount (applies .dark class to <html>)
   useTheme();
@@ -697,14 +718,7 @@ function App() {
         <AuthProvider>
           <BrandingProvider>
             <AppShellBootstrap />
-            <Toaster
-              position="top-right"
-              richColors
-              closeButton
-              toastOptions={{
-                className: 'font-sans',
-              }}
-            />
+            <AppToaster />
           </BrandingProvider>
         </AuthProvider>
       </ThemeInitializer>

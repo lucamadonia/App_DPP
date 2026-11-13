@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { BlockInsertSidebarContent } from './BlockInsertSidebar';
 import type { EmailBlockType } from './emailEditorTypes';
@@ -57,6 +59,7 @@ export function ResponsiveEditorLayout({
   showMobileRightPane: boolean;
   onMobileRightPaneChange: (open: boolean) => void;
 }) {
+  const { t } = useTranslation('returns');
   return (
     <>
       <EditorLayout
@@ -67,10 +70,10 @@ export function ResponsiveEditorLayout({
 
       {/* Mobile block sidebar sheet — left side */}
       <Sheet open={showMobileBlockSidebar} onOpenChange={onMobileBlockSidebarChange}>
-        <SheetContent side="left" className="w-[260px] sm:w-[300px] p-0">
+        <SheetContent side="left" className="w-[min(18rem,85vw)] sm:w-[300px] p-0">
           <SheetHeader className="px-4 pt-4 pb-2">
-            <SheetTitle className="text-sm">Add Block</SheetTitle>
-            <SheetDescription className="text-xs">Tap a block to add it to your email</SheetDescription>
+            <SheetTitle className="text-sm">{t('Add Block')}</SheetTitle>
+            <SheetDescription className="text-xs">{t('Tap a block to add it to your email')}</SheetDescription>
           </SheetHeader>
           <div className="overflow-y-auto flex-1">
             <BlockInsertSidebarContent
@@ -87,14 +90,14 @@ export function ResponsiveEditorLayout({
 
       {/* Mobile right pane sheet — right side */}
       <Sheet open={showMobileRightPane} onOpenChange={onMobileRightPaneChange}>
-        <SheetContent side="right" className="w-[340px] sm:w-[380px] p-0 overflow-y-auto" showCloseButton={false}>
+        <SheetContent side="right" className="w-[min(23.75rem,92vw)] p-0 overflow-y-auto overscroll-contain" showCloseButton={false}>
           <div className="relative">
             <button
               onClick={() => onMobileRightPaneChange(false)}
-              className="absolute top-3 right-3 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="absolute top-1 right-1 z-10 flex h-11 w-11 items-center justify-center rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              aria-label={t('Close')}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-              <span className="sr-only">Close</span>
+              <X className="h-4 w-4" />
             </button>
             {rightPane}
           </div>

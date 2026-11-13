@@ -96,7 +96,7 @@ function RetailConsumerView({ data, product, tenantId }: ConsumerViewProps) {
           </div>
           <span className="text-2xl font-bold text-green-700">{product.carbonFootprint!.rating}</span>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-white rounded-xl p-3 text-center">
             <p className="text-xl font-bold text-green-700">{product.carbonFootprint!.totalKgCO2}</p>
             <p className="text-xs text-green-600">{t('kg CO2 Total')}</p>
@@ -662,7 +662,7 @@ function RetailCustomsView({ data }: ViewProps) {
             </div>
             <span className="text-2xl font-bold text-green-700">{product.carbonFootprint.rating}</span>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-white rounded-xl p-3 text-center">
               <p className="text-xl font-bold text-green-700">{product.carbonFootprint.totalKgCO2}</p>
               <p className="text-xs text-green-600">{t('kg CO2 Total')}</p>

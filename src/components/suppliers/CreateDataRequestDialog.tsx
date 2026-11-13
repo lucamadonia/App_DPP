@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye, EyeOff, Loader2, Copy, Check, Search, X, Package } from 'lucide-react';
+import { Copy, Check, Search, X, Package, ListChecks, KeyRound } from 'lucide-react';
 import { MIN_PASSWORD_LENGTH } from '@/lib/security';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { FormField, ChoiceCards, SecretInput, FormToggleRow, FormActions } from '@/components/ui/form-layout';
+import { FormWizard } from '@/components/ui/form-wizard';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +18,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/adaptive-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { FieldGroupPicker } from './FieldGroupPicker';
@@ -55,7 +56,6 @@ export function CreateDataRequestDialog({
   const [productSearch, setProductSearch] = useState('');
   const [supplierId, setSupplierId] = useState<string>('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [expiresInDays, setExpiresInDays] = useState(30);
   const [allowedProductFields, setAllowedProductFields] = useState<string[]>(ALL_PRODUCT_FIELD_KEYS);
@@ -152,9 +152,177 @@ export function CreateDataRequestDialog({
     }, 300);
   };
 
+  const productsStep = (
+    <div className="space-y-5">
+      <FormField
+        label={t('Products')}
+        required
+        labelAside={selectedProducts.length > 0 ? (
+          <span className="tabular-nums">{t('{{count}} products selected', { count: selectedProducts.length })}</span>
+        ) : undefined}
+      >
+        <div className="space-y-2">
+          {selectedProducts.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {selectedProducts.map(p => (
+                <Badge key={p.id} variant="secondary" className="h-8 gap-1 pr-0.5">
+                  {p.name}
+                  <button
+                    type="button"
+                    aria-label={t('Remove', { ns: 'common' })}
+                    onClick={() => toggleProduct(p)}
+                    className="flex size-7 items-center justify-center rounded-full hover:bg-muted-foreground/20"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {allProducts.length > 1 && (
+            <div className="overflow-hidden rounded-lg border">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Input
+                  type="search"
+                  value={productSearch}
+                  onChange={e => setProductSearch(e.target.value)}
+                  placeholder={t('Search products...')}
+                  aria-label={t('Search products...')}
+                  className="rounded-none border-0 border-b pl-9 shadow-none focus-visible:ring-0"
+                />
+              </div>
+              <div className="max-h-56 overflow-y-auto overscroll-contain">
+                {filteredProducts.length === 0 ? (
+                  <p className="p-3 text-center text-sm text-muted-foreground">{t('No products found')}</p>
+                ) : (
+                  filteredProducts.map(p => (
+                    <label
+                      key={p.id}
+                      className="flex min-h-11 cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-muted/50"
+                    >
+                      <Checkbox
+                        checked={isProductSelected(p.id)}
+                        onCheckedChange={() => toggleProduct(p)}
+                      />
+                      <Package className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                      <span className="truncate">{p.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </FormField>
+
+      {suppliers.length > 0 && (
+        <FormField label={t('Supplier')} optional htmlFor="dr-supplier">
+          <Select value={supplierId} onValueChange={setSupplierId}>
+            <SelectTrigger id="dr-supplier" className="w-full">
+              <SelectValue placeholder={t('Select a supplier (optional)')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{t('No specific supplier')}</SelectItem>
+              {suppliers.map(s => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+      )}
+    </div>
+  );
+
+  const fieldsStep = (
+    <div className="space-y-5">
+      <Tabs defaultValue="product">
+        <TabsList className="w-full">
+          <TabsTrigger value="product" className="flex-1">{t('Product Fields')}</TabsTrigger>
+          <TabsTrigger value="batch" className="flex-1">{t('Batch Fields')}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="product" className="mt-4">
+          <FieldGroupPicker
+            groups={PRODUCT_FIELD_GROUPS}
+            selectedFields={allowedProductFields}
+            onFieldsChange={setAllowedProductFields}
+          />
+        </TabsContent>
+        <TabsContent value="batch" className="mt-4">
+          <FieldGroupPicker
+            groups={BATCH_FIELD_GROUPS}
+            selectedFields={allowedBatchFields}
+            onFieldsChange={setAllowedBatchFields}
+          />
+        </TabsContent>
+      </Tabs>
+
+      <div className="space-y-2">
+        <FormToggleRow
+          label={t('Allow Batch Creation')}
+          description={t('Supplier can create new batches')}
+          htmlFor="allow-batch-create"
+        >
+          <Switch aria-describedby="allow-batch-create-description"
+            id="allow-batch-create"
+            checked={allowBatchCreate}
+            onCheckedChange={(c) => setAllowBatchCreate(!!c)}
+          />
+        </FormToggleRow>
+        <FormToggleRow
+          label={t('Allow Batch Editing')}
+          description={t('Supplier can edit existing batches')}
+          htmlFor="allow-batch-edit"
+        >
+          <Switch aria-describedby="allow-batch-edit-description"
+            id="allow-batch-edit"
+            checked={allowBatchEdit}
+            onCheckedChange={(c) => setAllowBatchEdit(!!c)}
+          />
+        </FormToggleRow>
+      </div>
+    </div>
+  );
+
+  const accessStep = (
+    <div className="space-y-5">
+      <FormField label={t('Password')} htmlFor="dr-password" required>
+        <SecretInput
+          id="dr-password"
+          autoComplete="new-password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder={t('Set a password for the supplier portal access')}
+        />
+      </FormField>
+
+      <FormField label={t('Expiry Date')}>
+        <ChoiceCards
+          value={String(expiresInDays)}
+          onValueChange={v => setExpiresInDays(Number(v))}
+          columns={3}
+          options={['7', '14', '30', '60', '90'].map(d => ({
+            value: d,
+            label: <span className="tabular-nums">{d} {t('days', { ns: 'common' })}</span>,
+          }))}
+        />
+      </FormField>
+
+      <FormField label={t('Message to Supplier')} optional>
+        <Textarea
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          placeholder={t('Optional message shown to the supplier')}
+          rows={3}
+        />
+      </FormField>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto pb-0">
         <DialogHeader>
           <DialogTitle>{t('Create Data Request')}</DialogTitle>
           <DialogDescription>
@@ -163,215 +331,32 @@ export function CreateDataRequestDialog({
         </DialogHeader>
 
         {generatedLink ? (
-          <div className="space-y-4 py-4">
-            <div className="rounded-lg border p-4 bg-muted/50">
-              <Label className="text-sm font-medium">{t('Supplier Data Request')}</Label>
-              <div className="flex items-center gap-2 mt-2">
-                <Input value={generatedLink} readOnly className="text-xs" />
-                <Button variant="outline" size="icon" onClick={handleCopyLink}>
+          <div className="space-y-4 py-2">
+            <FormField label={t('Supplier Data Request')} htmlFor="dr-link">
+              <div className="flex items-center gap-2">
+                <Input id="dr-link" value={generatedLink} readOnly className="font-mono text-xs" />
+                <Button variant="outline" size="icon" className="shrink-0 pointer-coarse:size-11" aria-label={t('Copy', { ns: 'common' })} onClick={handleCopyLink}>
                   {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
-            </div>
-            <DialogFooter>
+            </FormField>
+            <FormActions sticky="dialog">
               <Button onClick={handleClose}>{t('Close', { ns: 'common' })}</Button>
-            </DialogFooter>
+            </FormActions>
           </div>
         ) : (
-          <div className="space-y-6 py-2">
-            {/* Product Selection */}
-            <div className="space-y-2">
-              <Label>{t('Products')}</Label>
-
-              {/* Selected products badges */}
-              {selectedProducts.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedProducts.map(p => (
-                    <Badge key={p.id} variant="secondary" className="gap-1 pr-1">
-                      {p.name}
-                      <button
-                        type="button"
-                        onClick={() => toggleProduct(p)}
-                        className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              {/* Product search + list */}
-              {allProducts.length > 1 && (
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      value={productSearch}
-                      onChange={e => setProductSearch(e.target.value)}
-                      placeholder={t('Search products...')}
-                      className="border-0 border-b rounded-none pl-8 focus-visible:ring-0"
-                    />
-                  </div>
-                  <div className="max-h-40 overflow-y-auto">
-                    {filteredProducts.length === 0 ? (
-                      <p className="p-3 text-sm text-muted-foreground text-center">{t('No products found')}</p>
-                    ) : (
-                      filteredProducts.map(p => (
-                        <label
-                          key={p.id}
-                          className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 cursor-pointer text-sm"
-                        >
-                          <Checkbox
-                            checked={isProductSelected(p.id)}
-                            onCheckedChange={() => toggleProduct(p)}
-                          />
-                          <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <span className="truncate">{p.name}</span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {selectedProducts.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {t('{{count}} products selected', { count: selectedProducts.length })}
-                </p>
-              )}
-            </div>
-
-            {/* Supplier (optional) */}
-            {suppliers.length > 0 && (
-              <div className="space-y-2">
-                <Label>{t('Supplier')}</Label>
-                <Select value={supplierId} onValueChange={setSupplierId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('Select a supplier (optional)')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t('No specific supplier')}</SelectItem>
-                    {suppliers.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Password */}
-            <div className="space-y-2">
-              <Label>{t('Password')}</Label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder={t('Set a password for the supplier portal access')}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-
-            {/* Expiry */}
-            <div className="space-y-2">
-              <Label>{t('Expiry Date')}</Label>
-              <Select value={String(expiresInDays)} onValueChange={v => setExpiresInDays(Number(v))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">7 {t('days', { ns: 'common' })}</SelectItem>
-                  <SelectItem value="14">14 {t('days', { ns: 'common' })}</SelectItem>
-                  <SelectItem value="30">30 {t('days', { ns: 'common' })}</SelectItem>
-                  <SelectItem value="60">60 {t('days', { ns: 'common' })}</SelectItem>
-                  <SelectItem value="90">90 {t('days', { ns: 'common' })}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Message */}
-            <div className="space-y-2">
-              <Label>{t('Message to Supplier')}</Label>
-              <Textarea
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-                placeholder={t('Optional message shown to the supplier')}
-                rows={3}
-              />
-            </div>
-
-            {/* Field Selection */}
-            <Tabs defaultValue="product">
-              <TabsList className="w-full">
-                <TabsTrigger value="product" className="flex-1">{t('Product Fields')}</TabsTrigger>
-                <TabsTrigger value="batch" className="flex-1">{t('Batch Fields')}</TabsTrigger>
-              </TabsList>
-              <TabsContent value="product" className="mt-4">
-                <FieldGroupPicker
-                  groups={PRODUCT_FIELD_GROUPS}
-                  selectedFields={allowedProductFields}
-                  onFieldsChange={setAllowedProductFields}
-                />
-              </TabsContent>
-              <TabsContent value="batch" className="mt-4">
-                <FieldGroupPicker
-                  groups={BATCH_FIELD_GROUPS}
-                  selectedFields={allowedBatchFields}
-                  onFieldsChange={setAllowedBatchFields}
-                />
-              </TabsContent>
-            </Tabs>
-
-            {/* Batch permissions */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="allow-batch-create"
-                  checked={allowBatchCreate}
-                  onCheckedChange={(c) => setAllowBatchCreate(!!c)}
-                />
-                <div>
-                  <Label htmlFor="allow-batch-create" className="cursor-pointer">
-                    {t('Allow Batch Creation')}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">{t('Supplier can create new batches')}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="allow-batch-edit"
-                  checked={allowBatchEdit}
-                  onCheckedChange={(c) => setAllowBatchEdit(!!c)}
-                />
-                <div>
-                  <Label htmlFor="allow-batch-edit" className="cursor-pointer">
-                    {t('Allow Batch Editing')}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">{t('Supplier can edit existing batches')}</p>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
-                {t('Cancel', { ns: 'common' })}
-              </Button>
-              <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSubmitting ? t('Creating...') : t('Create & Copy Link')}
-              </Button>
-            </DialogFooter>
-          </div>
+          <FormWizard
+            variant="dialog"
+            steps={[
+              { id: 'products', title: t('Choose products'), description: t('Which products the supplier may fill in'), icon: Package, canNext: selectedProducts.length > 0, content: productsStep },
+              { id: 'fields', title: t('Fields'), description: t('Which data the supplier may edit'), icon: ListChecks, canNext: allowedProductFields.length > 0 || allowedBatchFields.length > 0, content: fieldsStep },
+              { id: 'access', title: t('Access'), description: t('Password, validity and a note for the supplier'), icon: KeyRound, canNext: canSubmit, content: accessStep },
+            ]}
+            onCancel={handleClose}
+            onFinish={handleSubmit}
+            finishing={isSubmitting}
+            finishLabel={isSubmitting ? t('Creating...') : t('Create & Copy Link')}
+          />
         )}
       </DialogContent>
     </Dialog>

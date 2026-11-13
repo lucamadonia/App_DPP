@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Ticket, Plus, Copy, RefreshCw, Trash2, Ban, Check } from 'lucide-react';
+import { Ticket, Plus, Copy, RefreshCw, Trash2, Ban, Check, Percent, Euro, CalendarClock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormGrid, FormField, InputAffix, ChoiceCards } from '@/components/ui/form-layout';
+import { FormWizard, WizardReview, ReviewSection, ReviewRow } from '@/components/ui/form-wizard';
 import {
   ResponsiveTable, type ResponsiveTableColumn,
 } from '@/components/ui/responsive-table';
@@ -13,7 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/adaptive-dialog';
 import { listCoupons, createCoupon, updateCoupon, deleteCoupon } from '@/services/supabase/admin';
 import type { AdminCoupon, CreateCouponInput } from '@/types/admin';
@@ -203,7 +204,7 @@ export function AdminCouponsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Ticket className="h-6 w-6" /> {t('Coupons')}
@@ -217,7 +218,7 @@ export function AdminCouponsPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base">{t('Coupons')} ({filtered.length})</CardTitle>
             <div className="flex items-center gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -253,90 +254,143 @@ export function AdminCouponsPage() {
         </CardContent>
       </Card>
 
-      {/* Create Coupon Dialog */}
+      {/* Create Coupon Wizard */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto pb-0">
           <DialogHeader><DialogTitle>{t('Create New Coupon')}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>{t('Coupon Name')}</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>{t('Discount Type')}</Label>
-                <Select value={form.discountType} onValueChange={(v) => setForm({ ...form, discountType: v as 'percent' | 'amount' })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="percent">{t('Percentage')}</SelectItem>
-                    <SelectItem value="amount">{t('Fixed Amount')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>{t('Discount Value')}</Label>
-                <Input
-                  type="number"
-                  value={form.discountValue}
-                  onChange={(e) => setForm({ ...form, discountValue: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>{t('Duration')}</Label>
-                <Select value={form.duration} onValueChange={(v) => setForm({ ...form, duration: v as 'once' | 'repeating' | 'forever' })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="once">{t('once')}</SelectItem>
-                    <SelectItem value="repeating">{t('repeating')}</SelectItem>
-                    <SelectItem value="forever">{t('forever')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {form.duration === 'repeating' && (
-                <div>
-                  <Label>{t('Duration in Months')}</Label>
-                  <Input
-                    type="number"
-                    value={form.durationInMonths || ''}
-                    onChange={(e) => setForm({ ...form, durationInMonths: Number(e.target.value) || undefined })}
-                  />
-                </div>
-              )}
-            </div>
-            <div>
-              <Label>{t('Promotion Code')}</Label>
-              <Input
-                value={form.promoCode || ''}
-                onChange={(e) => setForm({ ...form, promoCode: e.target.value })}
-                placeholder={t('optional, auto-generated if empty')}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>{t('Max Redemptions')}</Label>
-                <Input
-                  type="number"
-                  value={form.maxRedemptions || ''}
-                  onChange={(e) => setForm({ ...form, maxRedemptions: Number(e.target.value) || undefined })}
-                  placeholder={t('leave empty for unlimited')}
-                />
-              </div>
-              <div>
-                <Label>{t('Expiry Date')}</Label>
-                <Input
-                  type="date"
-                  value={form.expiresAt || ''}
-                  onChange={(e) => setForm({ ...form, expiresAt: e.target.value || undefined })}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>{t('Cancel')}</Button>
-            <Button onClick={handleCreate} disabled={saving || !form.name}>{t('Create')}</Button>
-          </DialogFooter>
+          <FormWizard
+            variant="dialog"
+            onCancel={() => setCreateDialogOpen(false)}
+            onFinish={handleCreate}
+            finishing={saving}
+            finishLabel={t('Create')}
+            steps={[
+              {
+                id: 'discount',
+                title: t('Discount'),
+                shortTitle: t('Discount'),
+                icon: Percent,
+                canNext: !!form.name && !!form.discountValue,
+                content: (
+                  <FormGrid cols={2}>
+                    <FormField label={t('Coupon Name')} htmlFor="coupon-name" required span="full">
+                      <Input id="coupon-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                    </FormField>
+                    <FormField label={t('Discount Type')} span="full">
+                      <ChoiceCards
+                        value={form.discountType}
+                        onValueChange={(v) => setForm({ ...form, discountType: v })}
+                        columns={2}
+                        options={[
+                          { value: 'percent' as const, label: t('Percentage'), icon: Percent },
+                          { value: 'amount' as const, label: t('Fixed Amount'), icon: Euro },
+                        ]}
+                      />
+                    </FormField>
+                    <FormField label={t('Discount Value')} htmlFor="coupon-value" required>
+                      <InputAffix suffix={form.discountType === 'percent' ? '%' : '€'}>
+                        <Input
+                          id="coupon-value"
+                          type="number"
+                          inputMode="decimal"
+                          value={form.discountValue}
+                          onChange={(e) => setForm({ ...form, discountValue: Number(e.target.value) })}
+                          className="tabular-nums"
+                        />
+                      </InputAffix>
+                    </FormField>
+                  </FormGrid>
+                ),
+              },
+              {
+                id: 'validity',
+                title: t('Validity'),
+                shortTitle: t('Validity'),
+                icon: CalendarClock,
+                content: (
+                  <FormGrid cols={2}>
+                    <FormField label={t('Duration')} span="full">
+                      <ChoiceCards
+                        value={form.duration}
+                        onValueChange={(v) => setForm({ ...form, duration: v })}
+                        columns={3}
+                        options={[
+                          { value: 'once' as const, label: t('once') },
+                          { value: 'repeating' as const, label: t('repeating') },
+                          { value: 'forever' as const, label: t('forever') },
+                        ]}
+                      />
+                    </FormField>
+                    {form.duration === 'repeating' && (
+                      <FormField label={t('Duration in Months')} htmlFor="coupon-months">
+                        <Input
+                          id="coupon-months"
+                          type="number"
+                          inputMode="numeric"
+                          value={form.durationInMonths || ''}
+                          onChange={(e) => setForm({ ...form, durationInMonths: Number(e.target.value) || undefined })}
+                          className="tabular-nums"
+                        />
+                      </FormField>
+                    )}
+                    <FormField label={t('Expiry Date')} htmlFor="coupon-expiry" optional>
+                      <Input
+                        id="coupon-expiry"
+                        type="date"
+                        value={form.expiresAt || ''}
+                        onChange={(e) => setForm({ ...form, expiresAt: e.target.value || undefined })}
+                      />
+                    </FormField>
+                    <FormField label={t('Max Redemptions')} htmlFor="coupon-max" optional hint={t('leave empty for unlimited')}>
+                      <Input
+                        id="coupon-max"
+                        type="number"
+                        inputMode="numeric"
+                        value={form.maxRedemptions || ''}
+                        onChange={(e) => setForm({ ...form, maxRedemptions: Number(e.target.value) || undefined })}
+                        className="tabular-nums"
+                      />
+                    </FormField>
+                  </FormGrid>
+                ),
+              },
+              {
+                id: 'code',
+                title: t('Code & review'),
+                shortTitle: t('Code'),
+                icon: Ticket,
+                content: (
+                  <>
+                    <FormField label={t('Promotion Code')} htmlFor="coupon-code" optional hint={t('optional, auto-generated if empty')}>
+                      <Input
+                        id="coupon-code"
+                        value={form.promoCode || ''}
+                        onChange={(e) => setForm({ ...form, promoCode: e.target.value })}
+                        className="font-mono uppercase"
+                        autoCapitalize="characters"
+                        spellCheck={false}
+                      />
+                    </FormField>
+                    <WizardReview>
+                      <ReviewSection title={t('Discount')} step="discount">
+                        <ReviewRow label={t('Coupon Name')}>{form.name}</ReviewRow>
+                        <ReviewRow label={t('Discount Value')}>
+                          {form.discountType === 'percent' ? `${form.discountValue}%` : `€${form.discountValue}`}
+                        </ReviewRow>
+                      </ReviewSection>
+                      <ReviewSection title={t('Validity')} step="validity">
+                        <ReviewRow label={t('Duration')}>
+                          {t(form.duration)}{form.duration === 'repeating' && form.durationInMonths ? ` · ${form.durationInMonths}` : ''}
+                        </ReviewRow>
+                        {form.expiresAt && <ReviewRow label={t('Expiry Date')}>{form.expiresAt}</ReviewRow>}
+                        {form.maxRedemptions && <ReviewRow label={t('Max Redemptions')}>{form.maxRedemptions}</ReviewRow>}
+                      </ReviewSection>
+                    </WizardReview>
+                  </>
+                ),
+              },
+            ]}
+          />
         </DialogContent>
       </Dialog>
     </div>

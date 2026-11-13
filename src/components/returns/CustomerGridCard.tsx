@@ -34,7 +34,7 @@ export function CustomerGridCard({ customer }: CustomerGridCardProps) {
 
   return (
     <Card
-      className="group cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+      className="group cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-[translate,box-shadow] duration-200"
       onClick={() => navigate(`/returns/customers/${customer.id}`)}
     >
       <CardContent className="pt-5 pb-4 px-4">
@@ -65,7 +65,7 @@ export function CustomerGridCard({ customer }: CustomerGridCardProps) {
                 strokeDasharray={circumference}
                 strokeDashoffset={offset}
                 strokeLinecap="round"
-                className={`${riskColor} transition-all duration-700`}
+                className={`${riskColor} transition-[stroke-dashoffset] duration-300 ease-out`}
               />
             </svg>
             <span className={`absolute text-xs font-bold ${riskColor}`}>{customer.riskScore}</span>

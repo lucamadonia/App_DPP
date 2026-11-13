@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Gift, FlaskConical, HeartHandshake, Home, Trash2, AlertOctagon, Loader2, MinusCircle, Box, X,
+  type LucideIcon,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { ChoiceCards, FormActions, FormField } from '@/components/ui/form-layout';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { createStockAdjustment } from '@/services/supabase/wh-stock';
 import type { WhStockLevel } from '@/types/warehouse';
@@ -25,7 +28,7 @@ export type WriteOffCategory =
 
 interface ReasonDef {
   key: WriteOffCategory;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  icon: LucideIcon;
   /** Hex used for accent (border + icon color). */
   color: string;
   /** Tailwind background tint. */
@@ -104,6 +107,7 @@ export function StockWriteOffDialog({ open, onOpenChange, stocks, onSaved }: Pro
   }, [open]);
 
   const isBulk = activeStocks.length > 1;
+  const isMobile = useIsMobile();
   const selectedReason = useMemo(() => REASONS.find(r => r.key === reason) || null, [reason]);
   const requiresRecipient = reason === 'giveaway' || reason === 'tester' || reason === 'donation';
   const requiresNotes = reason === 'other' || reason === 'damage' || reason === 'expired';
@@ -210,7 +214,7 @@ export function StockWriteOffDialog({ open, onOpenChange, stocks, onSaved }: Pro
       <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
         <DialogHeader className="px-4 sm:px-6 pt-5 pb-3 border-b">
           <DialogTitle className="flex items-center gap-2 min-w-0">
-            <MinusCircle className="h-5 w-5 shrink-0 text-red-600" />
+            <MinusCircle className="h-5 w-5 shrink-0 text-destructive" />
             <span className="truncate">
               {isBulk
                 ? t('{{n}} Positionen ausbuchen', { n: activeStocks.length })
@@ -225,24 +229,24 @@ export function StockWriteOffDialog({ open, onOpenChange, stocks, onSaved }: Pro
         <div className="space-y-5 px-4 sm:px-6 py-4 min-w-0">
           {/* Selected items list */}
           <div className="space-y-2 min-w-0">
-            <Label className="flex items-center justify-between gap-2">
-              <span>{isBulk ? t('Ausgewählte Positionen') : t('Position')}</span>
+            <div className="flex min-h-5 items-center justify-between gap-2">
+              <h3 className="text-sm font-medium leading-5">{isBulk ? t('Ausgewählte Positionen') : t('Position')}</h3>
               {isBulk && (
-                <span className="text-xs font-normal text-muted-foreground">
-                  {t('Summe')}: <span className="font-semibold tabular-nums">{totalQty}</span>
+                <span className="text-xs text-muted-foreground">
+                  {t('Summe')}: <span className="font-semibold text-foreground tabular-nums">{totalQty}</span>
                 </span>
               )}
-            </Label>
-            <div className="rounded-lg border divide-y max-h-64 overflow-y-auto">
+            </div>
+            <div className="rounded-lg border divide-y max-h-56 overflow-y-auto">
               {activeStocks.map(s => {
                 const q = quantities[s.id] || 0;
                 const max = s.quantityAvailable;
                 const invalid = q < 1 || q > max;
                 return (
-                  <div key={s.id} className={`flex items-center gap-3 p-3 ${invalid ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`}>
-                    <Box className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div key={s.id} className={cn('flex items-center gap-3 p-3', invalid && 'bg-destructive/5')}>
+                    <Box className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm leading-tight break-words">
+                      <div className="font-medium text-sm leading-tight truncate">
                         {s.productName || s.productId.slice(0, 8)}
                       </div>
                       <div className="text-xs text-muted-foreground truncate">
@@ -255,22 +259,24 @@ export function StockWriteOffDialog({ open, onOpenChange, stocks, onSaved }: Pro
                     </div>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       min={1}
                       max={max}
                       value={q}
                       onChange={e => updateQty(s.id, parseInt(e.target.value, 10) || 0)}
-                      className="w-16 sm:w-20 h-8 text-center tabular-nums"
+                      className="w-16 sm:w-20 text-center tabular-nums pointer-coarse:h-11"
                       aria-label={t('Menge')}
+                      aria-invalid={invalid || undefined}
                     />
                     {isBulk && (
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => removeRow(s.id)}
-                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-red-600"
+                        className="size-9 shrink-0 text-muted-foreground hover:text-destructive pointer-coarse:size-11"
                         aria-label={t('Position entfernen')}
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
@@ -280,47 +286,34 @@ export function StockWriteOffDialog({ open, onOpenChange, stocks, onSaved }: Pro
           </div>
 
           {/* Reason picker */}
-          <div className="space-y-2 min-w-0">
-            <Label>{t('Grund auswählen')}</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {REASONS.map(r => {
-                const Icon = r.icon;
-                const active = reason === r.key;
-                return (
-                  <button
-                    key={r.key}
-                    type="button"
-                    onClick={() => setReason(r.key)}
-                    className={`group relative flex items-start gap-3 rounded-lg border p-3 text-left transition-all cursor-pointer min-w-0 ${
-                      active
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                        : 'hover:border-foreground/30 hover:bg-muted/40'
-                    }`}
-                    aria-pressed={active}
-                  >
-                    <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${r.bg}`}
-                      style={{ color: r.color }}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium leading-tight break-words">{t(r.labelKey)}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5 break-words">{t(r.descKey)}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <FormField
+            label={t('Grund auswählen')}
+            required
+            hint={selectedReason && isMobile ? t(selectedReason.descKey) : undefined}
+          >
+            <ChoiceCards
+              value={reason ?? ''}
+              onValueChange={(v) => setReason(v)}
+              columns={2}
+              options={REASONS.map(r => ({
+                value: r.key,
+                label: t(r.labelKey),
+                icon: r.icon,
+                // Phones: label-only grid (no deep scroll); the chosen reason's
+                // description shows as the field hint instead.
+                description: isMobile ? undefined : t(r.descKey),
+              }))}
+            />
+          </FormField>
 
           {/* Recipient (conditional) */}
           {selectedReason && requiresRecipient && (
-            <div className="space-y-2 min-w-0">
-              <Label htmlFor="wo-recipient">
-                {t('Empfänger')}{' '}
-                <span className="text-xs font-normal text-red-600">*</span>
-              </Label>
+            <FormField
+              label={t('Empfänger')}
+              htmlFor="wo-recipient"
+              required
+              hint={isBulk ? t('Empfänger gilt für alle {{n}} Positionen.', { n: activeStocks.length }) : undefined}
+            >
               <Input
                 id="wo-recipient"
                 value={recipient}
@@ -334,25 +327,17 @@ export function StockWriteOffDialog({ open, onOpenChange, stocks, onSaved }: Pro
                 }
                 className="w-full"
               />
-              {isBulk && (
-                <p className="text-xs text-muted-foreground">
-                  {t('Empfänger gilt für alle {{n}} Positionen.', { n: activeStocks.length })}
-                </p>
-              )}
-            </div>
+            </FormField>
           )}
 
           {/* Notes (conditional or optional) */}
           {selectedReason && (
-            <div className="space-y-2 min-w-0">
-              <Label htmlFor="wo-notes">
-                {t('Notiz')}{' '}
-                {requiresNotes ? (
-                  <span className="text-xs font-normal text-red-600">*</span>
-                ) : (
-                  <span className="text-xs font-normal text-muted-foreground">({t('optional')})</span>
-                )}
-              </Label>
+            <FormField
+              label={t('Notiz')}
+              htmlFor="wo-notes"
+              required={requiresNotes}
+              optional={!requiresNotes}
+            >
               <Textarea
                 id="wo-notes"
                 value={notes}
@@ -367,14 +352,14 @@ export function StockWriteOffDialog({ open, onOpenChange, stocks, onSaved }: Pro
                 rows={2}
                 className="w-full resize-none"
               />
-            </div>
+            </FormField>
           )}
 
           {/* Summary */}
           {selectedReason && totalQty > 0 && !anyInvalidQty && (
-            <div className={`rounded-lg border p-3 text-sm ${selectedReason.bg}`}>
+            <div role="status" className="rounded-lg border bg-muted/40 p-3 text-sm">
               <div className="flex items-start gap-2">
-                <selectedReason.icon className="h-4 w-4 shrink-0 mt-0.5" style={{ color: selectedReason.color }} />
+                <selectedReason.icon className="h-4 w-4 shrink-0 mt-0.5 text-primary" aria-hidden="true" />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium break-words">
                     {isBulk
@@ -397,27 +382,28 @@ export function StockWriteOffDialog({ open, onOpenChange, stocks, onSaved }: Pro
           )}
         </div>
 
-        <DialogFooter className="sticky bottom-0 bg-background border-t px-4 sm:px-6 py-3 flex-col-reverse sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={submitting}
-            className="w-full sm:w-auto"
-          >
-            {t('Abbrechen')}
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
-          >
-            {submitting ? (
-              <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> {t('Speichert...')}</>
-            ) : (
-              <><MinusCircle className="mr-1 h-4 w-4" /> {t('Ausbuchen bestätigen')}</>
-            )}
-          </Button>
-        </DialogFooter>
+        <div className="sticky bottom-0 z-10 border-t bg-background/95 px-4 pt-3 pb-[max(0.75rem,var(--safe-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
+          <FormActions>
+            <Button
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}
+            >
+              {t('Abbrechen')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+            >
+              {submitting ? (
+                <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> {t('Speichert...')}</>
+              ) : (
+                <><MinusCircle className="mr-1 h-4 w-4" /> {t('Ausbuchen bestätigen')}</>
+              )}
+            </Button>
+          </FormActions>
+        </div>
       </DialogContent>
     </Dialog>
   );

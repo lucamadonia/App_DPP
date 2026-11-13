@@ -14,6 +14,7 @@ import { defaultVisibilityConfigV3, type VisibilityConfigV3 } from '@/types/visi
 function transformProduct(row: any): Product & { tenantId: string } {
   return {
     id: row.id,
+    status: row.status === 'live' || row.status === 'archived' ? row.status : 'draft',
     tenantId: row.tenant_id,
     name: row.name,
     manufacturer: row.manufacturer,
@@ -146,6 +147,18 @@ export interface ProductListItem {
   netWeight?: number;   // kg
 }
 
+type GalleryRow = { url: string | null; is_primary: boolean | null; sort_order: number | null };
+
+/** Primary gallery image, else the lowest sort_order one. */
+function primaryGalleryUrl(images: unknown): string | undefined {
+  if (!Array.isArray(images) || images.length === 0) return undefined;
+  const rows = (images as GalleryRow[]).filter((img) => img.url);
+  const primary = rows.find((img) => img.is_primary);
+  if (primary?.url) return primary.url;
+  const first = [...rows].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0];
+  return first?.url || undefined;
+}
+
 /**
  * Get all products for the current tenant
  */
@@ -158,7 +171,7 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
 
   let query = supabase
     .from('products')
-    .select('*, product_batches(id), product_components!product_components_parent_product_id_fkey(id)')
+    .select('*, product_batches(id), product_components!product_components_parent_product_id_fkey(id), product_images(url, is_primary, sort_order)')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false });
 
@@ -196,7 +209,9 @@ export async function getProducts(search?: string): Promise<ProductListItem[]> {
     serial: p.serial_number || '',
     serialNumber: p.serial_number || '',
     category: p.category,
-    imageUrl: p.image_url || undefined,
+    // Products whose photos live only in the gallery have no image_url —
+    // fall back to the gallery's primary (or first) image for the thumbnail.
+    imageUrl: p.image_url || primaryGalleryUrl(p.product_images),
     batch: p.batch_number || undefined,
     batchCount: Array.isArray(p.product_batches) ? p.product_batches.length : 0,
     status: p.status || 'draft',

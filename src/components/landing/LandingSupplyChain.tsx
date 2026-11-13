@@ -32,7 +32,7 @@ export function LandingSupplyChain() {
             {/* Connecting Line */}
             <div className="absolute top-10 left-[10%] right-[10%] h-0.5">
               <div
-                className={`h-full bg-gradient-to-r from-emerald-400 via-blue-400 to-rose-400 transition-all duration-1000 origin-left ${
+                className={`h-full bg-gradient-to-r from-emerald-400 via-blue-400 to-rose-400 transition-[scale] duration-500 ease-out origin-left ${
                   isVisible ? 'scale-x-100' : 'scale-x-0'
                 }`}
                 style={{ backgroundSize: '200% 100%' }}

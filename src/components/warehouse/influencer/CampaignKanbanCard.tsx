@@ -45,7 +45,7 @@ export function CampaignKanbanCard({ campaign, onStatusChange }: CampaignKanbanC
 
   return (
     <Card
-      className="hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer"
+      className="hover:-translate-y-0.5 hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 cursor-pointer"
       onClick={() => navigate(`/warehouse/campaigns/${campaign.id}`)}
     >
       <CardContent className="p-2.5 sm:p-3 space-y-2">

@@ -72,7 +72,7 @@ export function ComplianceReminderBanner() {
   return (
     <div
       className={cn(
-        'rounded-lg border-2 p-4 shadow-sm flex items-start gap-3 transition-all',
+        'rounded-lg border-2 p-4 shadow-sm flex items-start gap-3 transition',
         overdue
           ? 'bg-red-50 border-red-400 text-red-900 dark:bg-red-900/30 dark:border-red-700 dark:text-red-100 animate-pulse'
           : due

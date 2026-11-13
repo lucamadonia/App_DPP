@@ -176,5 +176,15 @@
   "Version restored": "Version wiederhergestellt.",
   "Version deleted": "Version gelöscht.",
   "v{{n}}": "v{{n}}",
-  "AI classification failed": "KI-Klassifizierung fehlgeschlagen"
+  "AI classification failed": "KI-Klassifizierung fehlgeschlagen",
+  "Details": "Details",
+  "Who can see this document in the product passport.": "Wer dieses Dokument im Produktpass sehen kann.",
+  "Pick the file. AI can fill in the details for you.": "Wähle die Datei. Die KI kann die Details für dich ausfüllen.",
+  "PDF, images or Word documents": "PDF, Bilder oder Word-Dokumente",
+  "Name and type of the document": "Name und Art des Dokuments",
+  "Visibility & Assignment": "Sichtbarkeit & Zuordnung",
+  "Who sees the document and where it belongs": "Wer das Dokument sieht und wohin es gehört",
+  "Choose a file or drag it here": "Datei wählen oder hierher ziehen",
+  "max. 50 MB": "max. 50 MB",
+  "Optional – you can also add a document without a file.": "Optional – du kannst ein Dokument auch ohne Datei anlegen."
 }

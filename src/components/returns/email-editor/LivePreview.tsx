@@ -64,7 +64,7 @@ export function LivePreview({ designConfig, previewText, eventType, locale, view
         </div>
       </div>
       <div
-        className="mx-auto border rounded-lg overflow-hidden bg-white shadow-sm transition-all duration-300"
+        className="mx-auto border rounded-lg overflow-hidden bg-white shadow-sm transition-[width] duration-300 ease-out"
         style={{ width: viewportMode === 'desktop' ? '100%' : 320, maxWidth: '100%' }}
       >
         <iframe

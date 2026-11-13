@@ -134,7 +134,7 @@ export function PricingPage() {
           <div className="relative inline-flex items-center rounded-full bg-slate-100 p-1 shadow-inner">
             <button
               onClick={() => setInterval('monthly')}
-              className={`relative z-10 rounded-full px-6 py-2.5 text-sm font-semibold transition-all duration-300 ${
+              className={`relative z-10 rounded-full px-6 py-2.5 text-sm font-semibold transition-[box-shadow,background-color,color] duration-300 ${
                 interval === 'monthly'
                   ? 'bg-white text-slate-900 shadow-md'
                   : 'text-slate-600 hover:text-slate-900'
@@ -144,7 +144,7 @@ export function PricingPage() {
             </button>
             <button
               onClick={() => setInterval('yearly')}
-              className={`relative z-10 rounded-full px-6 py-2.5 text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+              className={`relative z-10 rounded-full px-6 py-2.5 text-sm font-semibold transition-[box-shadow,background-color,color] duration-300 flex items-center gap-2 ${
                 interval === 'yearly'
                   ? 'bg-white text-slate-900 shadow-md'
                   : 'text-slate-600 hover:text-slate-900'
@@ -241,7 +241,7 @@ export function PricingPage() {
 
                   <button
                     onClick={() => navigate('/login')}
-                    className={`w-full rounded-xl py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2 group ${
+                    className={`w-full rounded-xl py-3 text-sm font-semibold transition-[scale,box-shadow,background-color,color] flex items-center justify-center gap-2 group ${
                       isPro
                         ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-[1.02] active:scale-[0.98]'
                         : isEnterprise
@@ -528,7 +528,7 @@ export function PricingPage() {
                   </span>
                   <ChevronDown className={`h-5 w-5 text-slate-400 shrink-0 transition-transform duration-300 ${openFaq === i ? 'rotate-180' : ''}`} />
                 </button>
-                <div className={`grid transition-all duration-300 ${openFaq === i ? 'grid-rows-[1fr] pb-5' : 'grid-rows-[0fr]'}`}>
+                <div className={`grid transition-[grid-template-rows,color] duration-300 ${openFaq === i ? 'grid-rows-[1fr] pb-5' : 'grid-rows-[0fr]'}`}>
                   <div className="overflow-hidden">
                     <p className="text-sm text-slate-600 leading-relaxed">
                       {t(`pricingPage.faq.${key}.a`)}
@@ -550,7 +550,7 @@ export function PricingPage() {
           </p>
           <button
             onClick={() => navigate('/login')}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white px-8 py-3.5 text-sm font-semibold shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all group"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white px-8 py-3.5 text-sm font-semibold shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-[1.02] active:scale-[0.98] transition-[translate,scale,box-shadow,background-color,color] group"
           >
             {t('pricingPage.bottomCta.cta')}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />

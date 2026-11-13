@@ -260,7 +260,7 @@ export function BulkDocumentUploadDialog({
         hints: row.result?.hints,
         aiClassification: row.result as unknown as Record<string, unknown> | undefined,
         aiConfidence: row.result?.confidence.overall,
-        aiModel: row.result ? 'anthropic/claude-sonnet-4' : undefined,
+        aiModel: row.result ? 'anthropic/claude-sonnet-5.5' : undefined,
       });
 
       if (result.success) {
@@ -455,7 +455,7 @@ function SelectStep({
 
       {rows.length > 0 && (
         <>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
             <span className="font-medium">
               {t('Selected: {{n}} files', { n: rows.length })}
             </span>
@@ -484,7 +484,7 @@ function SelectStep({
                 ) : (
                   <FileText className="size-4 text-muted-foreground flex-shrink-0" />
                 )}
-                <span className="flex-1 truncate" title={r.file.name}>{r.file.name}</span>
+                <span className="flex-1 min-w-0 truncate" title={r.file.name}>{r.file.name}</span>
                 <span className="text-xs text-muted-foreground tabular-nums">
                   {(r.file.size / 1024).toFixed(0)} KB
                 </span>
@@ -610,8 +610,8 @@ function RowCard({
             ) : (
               <FileText className="size-4 text-muted-foreground flex-shrink-0" />
             )}
-            <span className="font-medium text-sm truncate" title={row.file.name}>{row.file.name}</span>
-            <Badge className={cn('text-[10px]', statusColor)}>{row.status}</Badge>
+            <span className="font-medium text-sm truncate min-w-0" title={row.file.name}>{row.file.name}</span>
+            <Badge className={cn('text-[10px] shrink-0', statusColor)}>{row.status}</Badge>
             {row.result && (
               <AiSuggestionBadge confidence={row.result.confidence.overall} />
             )}

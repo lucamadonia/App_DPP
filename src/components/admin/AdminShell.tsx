@@ -9,9 +9,11 @@ import { useState } from 'react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { useTranslation } from 'react-i18next';
 
 export function AdminShell() {
+  const { t } = useTranslation('common');
   const { pathname } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -38,7 +40,7 @@ export function AdminShell() {
   })();
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
+    <div className="admin-shell min-h-dvh flex flex-col bg-slate-50 dark:bg-slate-900">
       <ImpersonationBanner />
 
       <div className="flex flex-1 min-h-0">
@@ -46,15 +48,16 @@ export function AdminShell() {
 
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top bar */}
-          <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b bg-white dark:bg-slate-950 px-4 shadow-sm">
+          <header className="sticky top-0 z-20 flex min-h-14 shrink-0 items-center gap-3 border-b bg-white dark:bg-slate-950 px-4 pt-[var(--safe-top)] shadow-sm">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden" aria-label="Menu">
+                <Button variant="ghost" size="icon" className="md:hidden" aria-label={t('Menu')}>
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-[220px] bg-slate-950 text-slate-100 border-0">
-                <AdminSidebar />
+              <SheetContent side="left" aria-describedby={undefined} className="p-0 pt-[var(--safe-top)] pb-[var(--safe-bottom)] w-[min(85vw,300px)] bg-slate-950 text-slate-100 border-0">
+                <SheetTitle className="sr-only">{t('Menu')}</SheetTitle>
+                <AdminSidebar mobile onNavigate={() => setMobileOpen(false)} />
               </SheetContent>
             </Sheet>
 
@@ -67,7 +70,7 @@ export function AdminShell() {
 
             <div className="ml-auto flex items-center gap-2">
               <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-                <Link to="/">
+                <Link to="/" aria-label={t('Back')}>
                   <ArrowLeft className="h-3.5 w-3.5 mr-1" />
                   <span className="hidden sm:inline">Zurück zur App</span>
                 </Link>
@@ -75,7 +78,7 @@ export function AdminShell() {
             </div>
           </header>
 
-          <main className="flex-1 overflow-auto">
+          <main className="app-content min-w-0 flex-1 overflow-auto pb-[var(--safe-bottom)]">
             <Outlet />
           </main>
         </div>

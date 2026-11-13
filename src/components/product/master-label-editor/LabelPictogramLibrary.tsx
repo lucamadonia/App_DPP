@@ -129,7 +129,7 @@ export function LabelPictogramLibrary({ onInsert, onInsertTenant }: LabelPictogr
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-5 px-1.5 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-5 px-1.5 text-[9px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 transition-opacity"
                   onClick={() => onInsert(pictogram)}
                 >
                   <Plus className="h-2.5 w-2.5 mr-0.5" />
@@ -195,7 +195,7 @@ export function LabelPictogramLibrary({ onInsert, onInsertTenant }: LabelPictogr
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-5 px-1.5 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-5 px-1.5 text-[9px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 transition-opacity"
                       onClick={() => onInsertTenant?.(pic)}
                     >
                       <Plus className="h-2.5 w-2.5 mr-0.5" />

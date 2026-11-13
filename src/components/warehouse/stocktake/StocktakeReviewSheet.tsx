@@ -45,12 +45,12 @@ export function StocktakeReviewSheet({ open, lines, locationName, onCommit, onCl
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-full max-w-2xl max-h-[92vh] flex flex-col animate-sheet-up rounded-t-3xl sm:rounded-3xl border border-white/10 bg-slate-900/95 backdrop-blur-xl">
+      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-var(--safe-top)-0.75rem)] sm:max-h-[92vh] flex flex-col animate-sheet-up rounded-t-3xl sm:rounded-3xl border border-white/10 bg-slate-900/95 backdrop-blur-xl">
         <div className="sm:hidden flex justify-center pt-3">
           <div className="w-12 h-1.5 rounded-full bg-white/20" />
         </div>
 
-        <div className="flex items-center gap-3 p-6 pb-4 shrink-0">
+        <div className="flex items-center gap-3 p-5 pb-4 sm:p-6 sm:pb-4 shrink-0">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20">
             <ClipboardCheck className="h-5 w-5 text-amber-400" />
           </div>
@@ -60,22 +60,22 @@ export function StocktakeReviewSheet({ open, lines, locationName, onCommit, onCl
           </div>
         </div>
 
-        <div className="px-6 grid grid-cols-3 gap-3 mb-4 shrink-0">
-          <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-2.5 text-center">
-            <div className="text-2xl font-bold text-emerald-400">{matches.length}</div>
+        <div className="px-5 sm:px-6 grid grid-cols-3 gap-2 sm:gap-3 mb-4 shrink-0">
+          <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-2 sm:px-3 py-2.5 text-center min-w-0">
+            <div className="text-xl sm:text-2xl font-bold text-emerald-400">{matches.length}</div>
             <div className="text-xs text-emerald-400/70">{t('Match')}</div>
           </div>
-          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2.5 text-center">
-            <div className="text-2xl font-bold text-amber-400">{variantLines.length}</div>
-            <div className="text-xs text-amber-400/70">{t('batches with variance')}</div>
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-2 sm:px-3 py-2.5 text-center min-w-0">
+            <div className="text-xl sm:text-2xl font-bold text-amber-400">{variantLines.length}</div>
+            <div className="text-[11px] sm:text-xs leading-tight text-amber-400/70">{t('batches with variance')}</div>
           </div>
-          <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-center">
-            <div className="text-2xl font-bold text-white">{countedLines.reduce((s, l) => s + l.counted, 0)}</div>
+          <div className="rounded-xl bg-white/5 border border-white/10 px-2 sm:px-3 py-2.5 text-center min-w-0">
+            <div className="text-xl sm:text-2xl font-bold text-white">{countedLines.reduce((s, l) => s + l.counted, 0)}</div>
             <div className="text-xs text-slate-400">{t('Items counted')}</div>
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 sm:px-6 pb-4 space-y-4">
           {variantLines.length === 0 ? (
             <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 text-center">
               <Check className="h-10 w-10 text-emerald-400 mx-auto mb-2" />
@@ -158,7 +158,7 @@ export function StocktakeReviewSheet({ open, lines, locationName, onCommit, onCl
         </div>
 
         {totalToPost > 0 && (
-          <div className="px-6 pb-2 shrink-0">
+          <div className="px-5 sm:px-6 pb-2 shrink-0">
             <label className="text-xs font-medium text-slate-400 mb-1.5 block">{t('Stocktake Reason')}</label>
             <input
               type="text"
@@ -170,7 +170,7 @@ export function StocktakeReviewSheet({ open, lines, locationName, onCommit, onCl
           </div>
         )}
 
-        <div className="flex gap-3 p-6 pt-4 shrink-0 border-t border-white/5">
+        <div className="flex gap-3 px-5 pt-4 pb-[calc(1.25rem+var(--safe-bottom))] sm:p-6 sm:pt-4 shrink-0 border-t border-white/5">
           <button
             type="button"
             onClick={onClose}
@@ -183,7 +183,7 @@ export function StocktakeReviewSheet({ open, lines, locationName, onCommit, onCl
             type="button"
             onClick={handleCommit}
             disabled={submitting}
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg shadow-amber-600/20"
+            className="flex-1 min-w-0 flex items-center justify-center gap-2 rounded-xl px-3 sm:px-4 py-3 text-sm font-bold leading-tight text-center text-white bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg shadow-amber-600/20"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : totalToPost === 0 ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
             {totalToPost === 0 ? t('Close') : `${t('Post Adjustments')} (${totalToPost})`}

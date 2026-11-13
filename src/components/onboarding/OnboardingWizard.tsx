@@ -20,6 +20,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -27,7 +28,8 @@ import {
 } from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormGrid, FormField } from '@/components/ui/form-layout';
+import { FormWizard } from '@/components/ui/form-wizard';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
@@ -54,13 +56,6 @@ interface ProductData {
   gtin: string;
   description: string;
 }
-
-const STEPS = [
-  { id: 'company', icon: Building2 },
-  { id: 'branding', icon: Palette },
-  { id: 'product', icon: Package },
-  { id: 'plan', icon: CreditCard },
-] as const;
 
 const COLOR_PRESETS = [
   '#3B82F6', '#10B981', '#8B5CF6', '#F97316',
@@ -92,7 +87,7 @@ export function OnboardingWizard({ open, onOpenChange, onComplete }: OnboardingW
   });
 
   const handleNext = () => {
-    if (step < STEPS.length - 1) {
+    if (step < 3) {
       setStep(step + 1);
     }
   };
@@ -161,92 +156,61 @@ export function OnboardingWizard({ open, onOpenChange, onComplete }: OnboardingW
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg gap-0 p-0 overflow-hidden">
-        {/* Step indicator */}
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <div className="flex items-center gap-1.5">
-            {STEPS.map((s, i) => {
-              const Icon = s.icon;
-              const isCompleted = i < step;
-              const isCurrent = i === step;
-              return (
-                <div key={s.id} className="flex items-center">
-                  <div
-                    className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors',
-                      isCompleted && 'border-primary bg-primary text-primary-foreground',
-                      isCurrent && 'border-primary bg-primary/10 text-primary',
-                      !isCompleted && !isCurrent && 'border-muted-foreground/30 text-muted-foreground/50',
-                    )}
-                  >
-                    {isCompleted ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Icon className="h-4 w-4" />
-                    )}
-                  </div>
-                  {i < STEPS.length - 1 && (
-                    <div
-                      className={cn(
-                        'mx-1.5 h-0.5 w-6 rounded',
-                        i < step ? 'bg-primary' : 'bg-muted-foreground/20',
-                      )}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <span className="text-sm text-muted-foreground">
-            {step + 1}/{STEPS.length}
-          </span>
-        </div>
-
-        {/* Step content */}
-        <div className="px-6 py-6">
-          {step === 0 && (
-            <StepCompany data={company} onChange={setCompany} t={t} />
-          )}
-          {step === 1 && (
-            <StepBranding data={branding} onChange={setBranding} t={t} />
-          )}
-          {step === 2 && (
-            <StepProduct data={product} onChange={setProduct} t={t} />
-          )}
-          {step === 3 && (
-            <StepPlan
-              t={t}
-              onContinueFree={handleComplete}
-              onUpgrade={handleUpgrade}
-              isSubmitting={isSubmitting}
-            />
-          )}
-        </div>
-
-        {/* Footer actions */}
-        {step < 3 && (
-          <div className="flex items-center justify-between border-t px-6 py-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={step === 0 ? handleSkip : handleBack}
-              disabled={isSubmitting}
-            >
-              {step === 0 ? (
-                t('Skip for now')
-              ) : (
-                <>
-                  <ArrowLeft className="mr-1 h-4 w-4" />
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto pb-0">
+        <FormWizard
+          variant="dialog"
+          step={step}
+          onStepChange={(_, index) => setStep(index)}
+          onSkip={handleSkip}
+          skipLabel={t('Skip for now')}
+          steps={[
+            {
+              id: 'company',
+              icon: Building2,
+              title: t('Company Profile'),
+              description: t('Tell us about your company to personalize your experience'),
+              nextLabel: t('Continue'),
+              content: <StepCompany data={company} onChange={setCompany} t={t} />,
+            },
+            {
+              id: 'branding',
+              icon: Palette,
+              title: t('Brand Colors'),
+              description: t('Choose a primary color for your workspace'),
+              nextLabel: t('Continue'),
+              content: <StepBranding data={branding} onChange={setBranding} t={t} />,
+            },
+            {
+              id: 'product',
+              icon: Package,
+              title: t('Create Your First Product'),
+              description: t('Add a product to start building your Digital Product Passport'),
+              nextLabel: t('Continue'),
+              content: <StepProduct data={product} onChange={setProduct} t={t} />,
+            },
+            {
+              id: 'plan',
+              icon: CreditCard,
+              title: t('Choose Your Plan'),
+              description: t('Start free or unlock all features with Pro'),
+              // The plan cards are the actions of this step.
+              footer: (
+                <Button type="button" variant="ghost" onClick={handleBack} disabled={isSubmitting}>
+                  <ArrowLeft className="h-4 w-4" />
                   {t('Back')}
-                </>
-              )}
-            </Button>
-            <Button onClick={handleNext} disabled={isSubmitting}>
-              {t('Continue')}
-              <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
-        )}
+                </Button>
+              ),
+              content: (
+                <StepPlan
+                  t={t}
+                  onContinueFree={handleComplete}
+                  onUpgrade={handleUpgrade}
+                  isSubmitting={isSubmitting}
+                />
+              ),
+            },
+          ]}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -266,64 +230,54 @@ function StepCompany({
   t: (key: string) => string;
 }) {
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold">{t('Company Profile')}</h3>
-        <p className="text-sm text-muted-foreground">
-          {t('Tell us about your company to personalize your experience')}
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        <div>
-          <Label htmlFor="ob-company">{t('Company Name')}</Label>
-          <Input
-            id="ob-company"
-            value={data.companyName}
-            onChange={(e) => onChange({ ...data, companyName: e.target.value })}
-            placeholder={t('Acme GmbH')}
-          />
-        </div>
-        <div>
-          <Label htmlFor="ob-address">{t('Address')}</Label>
-          <Input
-            id="ob-address"
-            value={data.address}
-            onChange={(e) => onChange({ ...data, address: e.target.value })}
-            placeholder={t('Street, City, Country')}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="ob-country">{t('Country')}</Label>
-            <Input
-              id="ob-country"
-              value={data.country}
-              onChange={(e) => onChange({ ...data, country: e.target.value })}
-              placeholder="DE"
-            />
-          </div>
-          <div>
-            <Label htmlFor="ob-eori">{t('EORI Number')}</Label>
-            <Input
-              id="ob-eori"
-              value={data.eori}
-              onChange={(e) => onChange({ ...data, eori: e.target.value })}
-              placeholder="DE123456789"
-            />
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="ob-industry">{t('Industry')}</Label>
-          <Input
-            id="ob-industry"
-            value={data.industry}
-            onChange={(e) => onChange({ ...data, industry: e.target.value })}
-            placeholder={t('Electronics, Textiles, Food...')}
-          />
-        </div>
-      </div>
-    </div>
+    <FormGrid cols={2}>
+      <FormField label={t('Company Name')} htmlFor="ob-company" span="full">
+        <Input
+          id="ob-company"
+          autoComplete="organization"
+          value={data.companyName}
+          onChange={(e) => onChange({ ...data, companyName: e.target.value })}
+          placeholder={t('Acme GmbH')}
+        />
+      </FormField>
+      <FormField label={t('Address')} htmlFor="ob-address" span="full">
+        <Input
+          id="ob-address"
+          autoComplete="street-address"
+          value={data.address}
+          onChange={(e) => onChange({ ...data, address: e.target.value })}
+          placeholder={t('Street, City, Country')}
+        />
+      </FormField>
+      <FormField label={t('Country')} htmlFor="ob-country">
+        <Input
+          id="ob-country"
+          autoComplete="country"
+          value={data.country}
+          onChange={(e) => onChange({ ...data, country: e.target.value })}
+          placeholder="DE"
+        />
+      </FormField>
+      <FormField label={t('EORI Number')} htmlFor="ob-eori" optional>
+        <Input
+          id="ob-eori"
+          value={data.eori}
+          onChange={(e) => onChange({ ...data, eori: e.target.value })}
+          placeholder="DE123456789"
+          className="font-mono"
+          autoCapitalize="characters"
+          spellCheck={false}
+        />
+      </FormField>
+      <FormField label={t('Industry')} htmlFor="ob-industry" optional span="full">
+        <Input
+          id="ob-industry"
+          value={data.industry}
+          onChange={(e) => onChange({ ...data, industry: e.target.value })}
+          placeholder={t('Electronics, Textiles, Food...')}
+        />
+      </FormField>
+    </FormGrid>
   );
 }
 
@@ -341,64 +295,64 @@ function StepBranding({
   t: (key: string) => string;
 }) {
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold">{t('Brand Colors')}</h3>
-        <p className="text-sm text-muted-foreground">
-          {t('Choose a primary color for your workspace')}
-        </p>
-      </div>
-
+    <div className="space-y-5">
       <div className="space-y-3">
-        <Label>{t('Primary Color')}</Label>
+        <p className="text-sm font-medium leading-5">{t('Primary Color')}</p>
         <div className="flex flex-wrap gap-2">
           {COLOR_PRESETS.map((color) => (
             <button
               key={color}
+              type="button"
               onClick={() => onChange({ ...data, primaryColor: color })}
+              aria-pressed={data.primaryColor === color}
               className={cn(
-                'h-10 w-10 rounded-lg border-2 transition-all',
+                'relative size-11 rounded-lg border-2 transition-[border-color,box-shadow,scale] duration-150 ease-out',
                 data.primaryColor === color
-                  ? 'border-foreground scale-110 ring-2 ring-foreground/20'
+                  ? 'border-foreground scale-105 ring-2 ring-foreground/20'
                   : 'border-transparent hover:scale-105',
               )}
               style={{ backgroundColor: color }}
               aria-label={color}
-            />
+            >
+              {data.primaryColor === color && <Check className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow" />}
+            </button>
           ))}
         </div>
 
         <div className="flex items-center gap-2">
           <Input
             type="color"
+            aria-label={t('Primary Color')}
             value={data.primaryColor}
             onChange={(e) => onChange({ ...data, primaryColor: e.target.value })}
-            className="h-10 w-14 cursor-pointer p-1"
+            className="h-11 w-14 cursor-pointer p-1"
           />
           <Input
+            aria-label={t('Primary Color')}
             value={data.primaryColor}
             onChange={(e) => onChange({ ...data, primaryColor: e.target.value })}
-            className="w-28 font-mono text-sm"
+            className="h-11 w-28 font-mono text-sm"
             placeholder="#3B82F6"
+            spellCheck={false}
           />
         </div>
+      </div>
 
-        {/* Preview */}
-        <div className="mt-4 rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground mb-2">{t('Preview')}</p>
-          <div className="flex gap-3">
-            <div
-              className="flex h-9 items-center rounded-md px-4 text-sm font-medium text-white"
-              style={{ backgroundColor: data.primaryColor }}
-            >
-              {t('Primary Button')}
-            </div>
-            <div
-              className="flex h-9 items-center rounded-md border px-4 text-sm font-medium"
-              style={{ color: data.primaryColor, borderColor: data.primaryColor }}
-            >
-              {t('Outline Button')}
-            </div>
+      {/* Preview */}
+      <div className="rounded-lg border bg-muted/30 p-4">
+        <p className="mb-2 text-xs text-muted-foreground">{t('Preview')}</p>
+        <div className="flex flex-wrap gap-3">
+          <div
+            className="flex h-9 items-center rounded-md px-4 text-sm font-medium text-white"
+            style={{ backgroundColor: data.primaryColor }}
+          >
+            {t('Primary Button')}
+          </div>
+          <div
+            className="flex h-9 items-center rounded-md border bg-background px-4 text-sm font-medium"
+            style={{ color: data.primaryColor, borderColor: data.primaryColor }}
+          >
+            {t('Outline Button')}
           </div>
         </div>
       </div>
@@ -420,35 +374,27 @@ function StepProduct({
   t: (key: string) => string;
 }) {
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold">{t('Create Your First Product')}</h3>
-        <p className="text-sm text-muted-foreground">
-          {t('Add a product to start building your Digital Product Passport')}
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        <div>
-          <Label htmlFor="ob-product">{t('Product Name')}</Label>
+    <>
+      <FormGrid cols={2}>
+        <FormField label={t('Product Name')} htmlFor="ob-product" span="full">
           <Input
             id="ob-product"
             value={data.name}
             onChange={(e) => onChange({ ...data, name: e.target.value })}
             placeholder={t('e.g. Premium Wireless Headphones')}
           />
-        </div>
-        <div>
-          <Label htmlFor="ob-gtin">{t('GTIN / EAN')}</Label>
+        </FormField>
+        <FormField label={t('GTIN / EAN')} htmlFor="ob-gtin" span="full">
           <Input
             id="ob-gtin"
+            inputMode="numeric"
             value={data.gtin}
             onChange={(e) => onChange({ ...data, gtin: e.target.value })}
             placeholder="4260123456789"
+            className="font-mono tabular-nums"
           />
-        </div>
-        <div>
-          <Label htmlFor="ob-desc">{t('Description')}</Label>
+        </FormField>
+        <FormField label={t('Description')} htmlFor="ob-desc" optional span="full">
           <Textarea
             id="ob-desc"
             value={data.description}
@@ -456,13 +402,13 @@ function StepProduct({
             placeholder={t('Short product description...')}
             rows={3}
           />
-        </div>
-      </div>
+        </FormField>
+      </FormGrid>
 
       <p className="text-xs text-muted-foreground">
         {t('You can add more details later in the product editor.')}
       </p>
-    </div>
+    </>
   );
 }
 
@@ -482,60 +428,52 @@ function StepPlan({
   isSubmitting: boolean;
 }) {
   return (
-    <div className="space-y-4">
-      <div className="text-center">
-        <Sparkles className="mx-auto h-10 w-10 text-primary" />
-        <h3 className="mt-3 text-lg font-semibold">{t('Choose Your Plan')}</h3>
-        <p className="text-sm text-muted-foreground">
-          {t('Start free or unlock all features with Pro')}
-        </p>
-      </div>
+    <div className="grid gap-3">
+      {/* Free */}
+      <button
+        type="button"
+        onClick={onContinueFree}
+        disabled={isSubmitting}
+        className="flex min-h-11 items-center gap-4 rounded-lg border p-4 text-left transition-colors duration-150 ease-out hover:bg-muted/50 disabled:opacity-60"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+          {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Package className="h-5 w-5 text-muted-foreground" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">{t('Continue with Free')}</p>
+          <p className="text-sm text-muted-foreground">
+            {t('5 Products, 10 Documents, 3 AI Credits')}
+          </p>
+        </div>
+        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </button>
 
-      <div className="grid gap-3">
-        {/* Free */}
-        <button
-          onClick={onContinueFree}
-          disabled={isSubmitting}
-          className="flex items-center gap-4 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
-            <Package className="h-5 w-5 text-muted-foreground" />
+      {/* Pro */}
+      <button
+        type="button"
+        onClick={onUpgrade}
+        disabled={isSubmitting}
+        className="flex min-h-11 items-center gap-4 rounded-lg border-2 border-primary p-4 text-left transition-colors duration-150 ease-out hover:bg-primary/5 disabled:opacity-60"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+          <Sparkles className="h-5 w-5 text-primary" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-medium">{t('Upgrade to Pro')}</p>
+            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+              {t('Recommended')}
+            </span>
           </div>
-          <div className="flex-1">
-            <p className="font-medium">{t('Continue with Free')}</p>
-            <p className="text-sm text-muted-foreground">
-              {t('5 Products, 10 Documents, 3 AI Credits')}
-            </p>
-          </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-        </button>
-
-        {/* Pro */}
-        <button
-          onClick={onUpgrade}
-          disabled={isSubmitting}
-          className="flex items-center gap-4 rounded-lg border-2 border-primary p-4 text-left transition-colors hover:bg-primary/5"
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Sparkles className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <p className="font-medium">{t('Upgrade to Pro')}</p>
-              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-                {t('Recommended')}
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {t('50 Products, Custom Branding, 25 AI Credits')}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-lg font-bold">{'\u20AC'}49</p>
-            <p className="text-xs text-muted-foreground">/{t('mo')}</p>
-          </div>
-        </button>
-      </div>
+          <p className="text-sm text-muted-foreground">
+            {t('50 Products, Custom Branding, 25 AI Credits')}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-lg font-bold tabular-nums">{'€'}49</p>
+          <p className="text-xs text-muted-foreground">/{t('mo')}</p>
+        </div>
+      </button>
     </div>
   );
 }

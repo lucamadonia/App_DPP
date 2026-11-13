@@ -6,6 +6,8 @@ import { motion, useReducedMotion } from 'framer-motion';
 import {
   Plus,
   Warehouse,
+  MapPin,
+  Ruler,
   Search,
   Map,
   ArrowRight,
@@ -17,10 +19,15 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/adaptive-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
+import { FormWizard } from '@/components/ui/form-wizard';
+import {
+  LocationAddressFields,
+  LocationCapacityFields,
+  LocationIdentityFields,
+  LocationNotesField,
+} from '@/components/warehouse/LocationFormFields';
 import { LocationCard } from '@/components/warehouse/location-card';
 import { getLocations, createLocation, getLocationStats } from '@/services/supabase/wh-locations';
 import { gridStagger, blurIn } from '@/lib/motion';
@@ -215,6 +222,9 @@ export function LocationsPage() {
 
   const hasActiveFilters = query.trim() !== '' || typeFilter !== 'all';
 
+  const updateForm = (updates: Partial<WhLocationInput>) =>
+    setForm((prev) => ({ ...prev, ...updates }));
+
   const openCreate = () => {
     setForm({ name: '', type: 'main' });
     setDialogOpen(true);
@@ -368,79 +378,46 @@ export function LocationsPage() {
 
         {/* Create Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto pb-0">
             <DialogHeader>
               <DialogTitle>{t('Create Location')}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t('Location Name')}</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Location Code')}</Label>
-                  <Input value={form.code || ''} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="WH-01" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Location Type')}</Label>
-                <Select value={form.type || 'main'} onValueChange={(v) => setForm({ ...form, type: v as WarehouseLocationType })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {LOCATION_TYPES.map((type) => <SelectItem key={type} value={type}>{t(type)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t('City')}</Label>
-                  <Input value={form.city || ''} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Country')}</Label>
-                  <Input value={form.country || ''} onChange={(e) => setForm({ ...form, country: e.target.value })} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Facility Identifier')}</Label>
-                <Input value={form.facilityIdentifier || ''} onChange={(e) => setForm({ ...form, facilityIdentifier: e.target.value })} placeholder="GLN" />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>{t('Capacity Units')}</Label>
-                  <Input
-                    type="number"
-                    value={form.capacityUnits || ''}
-                    onChange={(e) => setForm({ ...form, capacityUnits: e.target.value ? Number(e.target.value) : undefined })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Capacity Volume')}</Label>
-                  <Input
-                    type="number"
-                    value={form.capacityVolumeM3 || ''}
-                    onChange={(e) => setForm({ ...form, capacityVolumeM3: e.target.value ? Number(e.target.value) : undefined })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('Area (m²)')}</Label>
-                  <Input
-                    type="number"
-                    value={form.areaM2 || ''}
-                    onChange={(e) => setForm({ ...form, areaM2: e.target.value ? Number(e.target.value) : undefined })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Notes')}</Label>
-                <Textarea value={form.notes || ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
-              <Button onClick={handleSave} disabled={!form.name}>{t('Save', { ns: 'common' })}</Button>
-            </DialogFooter>
+            <FormWizard
+              variant="dialog"
+              onCancel={() => setDialogOpen(false)}
+              onFinish={handleSave}
+              finishLabel={t('Create Location')}
+              steps={[
+                {
+                  id: 'identity',
+                  title: t('Name and type'),
+                  shortTitle: t('Location'),
+                  icon: Warehouse,
+                  canNext: Boolean(form.name.trim()),
+                  content: <LocationIdentityFields form={form} onChange={updateForm} />,
+                },
+                {
+                  id: 'address',
+                  title: t('Where is it?'),
+                  shortTitle: t('Address'),
+                  icon: MapPin,
+                  content: <LocationAddressFields form={form} onChange={updateForm} />,
+                },
+                {
+                  id: 'capacity',
+                  title: t('Capacity'),
+                  shortTitle: t('Capacity'),
+                  description: t('All optional — you can add this later.'),
+                  icon: Ruler,
+                  content: (
+                    <div className="space-y-5">
+                      <LocationCapacityFields form={form} onChange={updateForm} />
+                      <LocationNotesField form={form} onChange={updateForm} />
+                    </div>
+                  ),
+                },
+              ]}
+            />
           </DialogContent>
         </Dialog>
       </div>

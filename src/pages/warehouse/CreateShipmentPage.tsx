@@ -7,8 +7,8 @@ import { toast } from 'sonner';
 import {
   Plus, Trash2, Check, Search, User, Package, Truck, ClipboardCheck,
   ArrowLeft, ArrowRight, Mail, Phone, Pencil, CreditCard, FileText,
-  Building2, Users, Warehouse, Sparkles, MapPin, Calendar,
-  Scale, Loader2, Zap, AlertTriangle, Globe, PackagePlus,
+  Building2, Users, Warehouse, Sparkles, MapPin,
+  Loader2, Zap, AlertTriangle, PackagePlus,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -38,7 +38,6 @@ import { AddressAutocompleteInput } from '@/components/warehouse/AddressAutocomp
 import { validateGoogleAddress, type GoogleValidationResult } from '@/services/supabase/address-validation';
 import { createShipment } from '@/services/supabase/wh-shipments';
 import { getCountries } from '@/services/supabase/master-data';
-import { PRIORITY_COLORS } from '@/lib/warehouse-constants';
 import { SampleMetaFields } from '@/components/warehouse/SampleMetaFields';
 import type { WhLocation, WhShipmentItemInput, RecipientType, ShipmentPriority, SampleShipmentMeta } from '@/types/warehouse';
 import { CARRIER_OPTIONS } from '@/types/warehouse';
@@ -64,10 +63,10 @@ interface ItemRow {
 }
 
 const WIZARD_STEPS = [
-  { icon: User, label: 'Recipient & Priority', short: 'Recipient', color: 'from-blue-500 to-violet-500' },
-  { icon: Package, label: 'Items', short: 'Items', color: 'from-violet-500 to-fuchsia-500' },
-  { icon: Truck, label: 'Shipping', short: 'Shipping', color: 'from-fuchsia-500 to-rose-500' },
-  { icon: ClipboardCheck, label: 'Confirmation', short: 'Confirm', color: 'from-emerald-500 to-blue-500' },
+  { label: 'Recipient & Priority', short: 'Recipient' },
+  { label: 'Items', short: 'Items' },
+  { label: 'Shipping', short: 'Shipping' },
+  { label: 'Confirmation', short: 'Confirm' },
 ];
 
 /**
@@ -75,21 +74,32 @@ const WIZARD_STEPS = [
  * on mobile and makes the most common choice (customer vs B2B vs influencer)
  * a single tap.
  */
-const RECIPIENT_TYPES: { value: 'customer' | 'b2b_partner' | 'warehouse' | 'influencer' | 'other'; icon: typeof User; labelKey: string; color: string }[] = [
-  { value: 'customer', icon: User, labelKey: 'customer', color: 'from-blue-500 to-cyan-500' },
-  { value: 'b2b_partner', icon: Building2, labelKey: 'b2b_partner', color: 'from-violet-500 to-fuchsia-500' },
-  { value: 'warehouse', icon: Warehouse, labelKey: 'warehouse', color: 'from-emerald-500 to-teal-500' },
-  { value: 'influencer', icon: Sparkles, labelKey: 'influencer', color: 'from-rose-500 to-pink-500' },
-  { value: 'other', icon: Users, labelKey: 'other', color: 'from-slate-500 to-slate-600' },
+const RECIPIENT_TYPES: { value: 'customer' | 'b2b_partner' | 'warehouse' | 'influencer' | 'other'; icon: typeof User; labelKey: string }[] = [
+  { value: 'customer', icon: User, labelKey: 'customer' },
+  { value: 'b2b_partner', icon: Building2, labelKey: 'b2b_partner' },
+  { value: 'warehouse', icon: Warehouse, labelKey: 'warehouse' },
+  { value: 'influencer', icon: Sparkles, labelKey: 'influencer' },
+  { value: 'other', icon: Users, labelKey: 'other' },
 ];
 
-/** Priority pill colors. Kept consistent with PRIORITY_COLORS for badges. */
-const PRIORITY_PILLS: { value: 'low' | 'normal' | 'high' | 'urgent'; label: string; ringColor: string; textColor: string }[] = [
-  { value: 'low', label: 'low', ringColor: 'ring-slate-400/60', textColor: 'text-slate-300' },
-  { value: 'normal', label: 'normal', ringColor: 'ring-blue-400/60', textColor: 'text-blue-300' },
-  { value: 'high', label: 'high', ringColor: 'ring-amber-400/60', textColor: 'text-amber-300' },
-  { value: 'urgent', label: 'urgent', ringColor: 'ring-rose-400/60', textColor: 'text-rose-300' },
+/**
+ * Priority options. Only the levels that carry urgency get a status dot —
+ * low/normal stay neutral so color keeps its meaning.
+ */
+const PRIORITY_PILLS: { value: 'low' | 'normal' | 'high' | 'urgent'; label: string; dot: string }[] = [
+  { value: 'low', label: 'low', dot: 'bg-muted-foreground/40' },
+  { value: 'normal', label: 'normal', dot: 'bg-muted-foreground/70' },
+  { value: 'high', label: 'high', dot: 'bg-amber-500' },
+  { value: 'urgent', label: 'urgent', dot: 'bg-destructive' },
 ];
+
+/** Shared style for single-choice option tiles (recipient type, priority, service level). */
+const optionTileClass = (selected: boolean) =>
+  `rounded-lg border text-sm transition-[background-color,border-color,color,transform] duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+    selected
+      ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
+      : 'border-border bg-card text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+  }`;
 
 /**
  * Recipient search field with portal-rendered dropdown. Rendering the results
@@ -146,18 +156,18 @@ function RecipientSearchField({
             onClick={onBrowseClick}
             aria-label={browseLabel}
             title={browseLabel}
-            className="absolute left-1.5 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white transition-colors"
+            className="absolute left-1.5 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
           >
             <Search className="h-4 w-4" />
           </button>
         ) : (
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         )}
         <Input
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="pl-10 pr-3 h-11 rounded-xl border-slate-200 dark:border-slate-700 focus-visible:ring-blue-500/50"
+          className="pl-10 pr-3 h-11 rounded-lg"
         />
       </div>
       {onBrowseClick && (
@@ -165,7 +175,7 @@ function RecipientSearchField({
           type="button"
           variant="outline"
           onClick={onBrowseClick}
-          className="h-11 rounded-xl px-3 sm:px-4 flex-shrink-0 border-slate-200 dark:border-slate-700"
+          className="h-11 rounded-lg px-3 sm:px-4 flex-shrink-0"
         >
           <Search className="h-4 w-4 sm:mr-1.5" />
           <span className="hidden sm:inline text-sm">{browseLabel}</span>
@@ -174,7 +184,7 @@ function RecipientSearchField({
       {rect && results.length > 0 && typeof document !== 'undefined' &&
         createPortal(
           <div
-            className="fixed z-[1000] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl shadow-slate-900/20 max-h-72 overflow-y-auto p-1.5"
+            className="fixed z-[1000] rounded-lg border bg-popover text-popover-foreground shadow-md max-h-72 overflow-y-auto p-1"
             style={{ top: rect.top, left: rect.left, width: rect.width }}
           >
             {results.map((r) => (
@@ -187,18 +197,15 @@ function RecipientSearchField({
                   e.preventDefault();
                   onSelect(r);
                 }}
-                className="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
+                className="w-full min-h-11 text-left px-3 py-2 text-sm rounded-md hover:bg-muted flex items-center gap-3 transition-colors duration-150"
               >
-                <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-[10px] font-bold text-white ${
-                  r.type === 'customer' ? 'bg-gradient-to-br from-blue-500 to-cyan-500' : 'bg-gradient-to-br from-violet-500 to-fuchsia-500'
-                }`}>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-medium truncate">{r.name}</span>
+                  {r.company && <span className="block text-xs text-muted-foreground truncate">{r.company}</span>}
+                </span>
+                <span className="shrink-0 rounded border px-1.5 py-0.5 text-xs text-muted-foreground">
                   {r.type === 'customer' ? 'B2C' : 'B2B'}
                 </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block font-semibold truncate text-slate-900 dark:text-white">{r.name}</span>
-                  {r.company && <span className="block text-xs text-slate-500 truncate">{r.company}</span>}
-                </span>
-                <ArrowRight className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
               </button>
             ))}
           </div>,
@@ -219,38 +226,28 @@ function Section({
   title,
   subtitle,
   children,
-  gradient = 'from-blue-500 to-violet-500',
+  action,
 }: {
-  icon: typeof User;
+  icon?: typeof User;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
-  gradient?: string;
+  action?: React.ReactNode;
 }) {
-  const reduced = useReducedMotion();
   return (
-    <motion.div
-      initial={reduced ? false : { opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut' as const }}
-      className="relative"
-    >
-      <div className={`absolute -inset-px rounded-2xl bg-gradient-to-br ${gradient} opacity-30 blur-sm pointer-events-none`} />
-      <Card className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-xl shadow-slate-900/5">
-        <div className="flex items-center gap-3 px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} shadow-lg shadow-blue-500/20 flex-shrink-0`}>
-            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">{title}</h2>
-            {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{subtitle}</p>}
-          </div>
+    <Card className="gap-0 rounded-xl border bg-card py-0 shadow-none">
+      <div className="flex items-start gap-3 px-4 pt-4 sm:px-6 sm:pt-5">
+        {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold leading-5 text-foreground">{title}</h2>
+          {subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}
         </div>
-        <CardContent className="px-4 sm:px-6 py-4 sm:py-5 space-y-4">
-          {children}
-        </CardContent>
-      </Card>
-    </motion.div>
+        {action}
+      </div>
+      <CardContent className="space-y-4 px-4 pb-4 pt-4 sm:px-6 sm:pb-6">
+        {children}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -769,112 +766,85 @@ export function CreateShipmentPage() {
   }
 
   return (
-    <div className="relative mx-auto max-w-4xl pb-28 sm:pb-12">
-      {/* Ambient gradient background — subtle decoration */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 -top-20 h-80 -z-10">
-        <div className="absolute left-1/4 top-0 h-56 w-56 rounded-full bg-blue-400/20 blur-3xl dark:bg-blue-500/10" />
-        <div className="absolute right-1/4 top-10 h-56 w-56 rounded-full bg-violet-400/20 blur-3xl dark:bg-violet-500/10" />
-      </div>
-
-      {/* Header with back button + step counter */}
-      <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6 px-1">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
-            onClick={() => step > 0 ? goToStep(step - 1) : navigate('/warehouse/shipments')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="min-w-0">
-            <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
-              {t('Create Shipment')}
-            </p>
-            <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
-              {t(WIZARD_STEPS[step].label)}
-            </h1>
-          </div>
+    <div className="mx-auto max-w-3xl pb-28 md:pb-12">
+      {/* Header: back + title + step counter */}
+      <div className="mb-6 flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-11 w-11 shrink-0 rounded-lg -ml-2 active:scale-[0.97] transition-transform duration-150 ease-out"
+          onClick={() => step > 0 ? goToStep(step - 1) : navigate('/warehouse/shipments')}
+          aria-label={t('Back', { ns: 'common' })}
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-muted-foreground">
+            {t('Create Shipment')}
+          </p>
+          <h1 className="truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            {t(WIZARD_STEPS[step].label)}
+          </h1>
         </div>
-        <span className="shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[10px] sm:text-xs font-mono font-semibold text-slate-600 dark:text-slate-300">
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
           {step + 1} / {WIZARD_STEPS.length}
         </span>
       </div>
 
-      {/* Custom step indicator — icon chips + connector bar */}
-      <div className="relative mb-6 sm:mb-8 px-1">
-        <div className="flex items-center justify-between gap-1 sm:gap-2">
-          {WIZARD_STEPS.map((s, i) => {
-            const Icon = s.icon;
-            const isActive = i === step;
-            const isDone = i < step;
-            return (
+      {/* Step indicator — numbered dots joined by a hairline */}
+      <ol className="mb-6 flex items-start sm:mb-8">
+        {WIZARD_STEPS.map((s, i) => {
+          const isActive = i === step;
+          const isDone = i < step;
+          const isLast = i === WIZARD_STEPS.length - 1;
+          return (
+            <li key={i} className={`relative flex min-w-0 ${isLast ? 'flex-none' : 'flex-1'}`}>
               <button
-                key={i}
                 type="button"
                 onClick={() => i <= step && goToStep(i)}
                 disabled={i > step}
-                className="group flex-1 flex flex-col items-center gap-1.5 min-w-0 disabled:cursor-not-allowed"
+                aria-current={isActive ? 'step' : undefined}
+                className="group flex min-h-11 min-w-0 flex-col items-center gap-1.5 disabled:cursor-default"
               >
-                <div className="relative">
-                  <div
-                    className={`
-                      flex items-center justify-center rounded-2xl transition-all duration-300
-                      ${isActive
-                        ? `h-11 w-11 sm:h-12 sm:w-12 bg-gradient-to-br ${s.color} shadow-lg shadow-blue-500/30 scale-110`
-                        : isDone
-                        ? 'h-10 w-10 sm:h-11 sm:w-11 bg-emerald-500 shadow-md shadow-emerald-500/20'
-                        : 'h-10 w-10 sm:h-11 sm:w-11 bg-slate-200 dark:bg-slate-800'
-                      }
-                    `}
-                  >
-                    {isDone ? (
-                      <Check className="h-5 w-5 text-white" strokeWidth={3} />
-                    ) : (
-                      <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
-                    )}
-                  </div>
-                  {isActive && (
-                    <motion.span
-                      className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${s.color} opacity-40 blur-md -z-10`}
-                      animate={reducedMotion ? undefined : { scale: [1, 1.15, 1] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    />
-                  )}
-                </div>
-                <span className={`text-[10px] sm:text-xs font-semibold truncate w-full text-center ${
-                  isActive
-                    ? 'text-slate-900 dark:text-white'
-                    : isDone
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-slate-400 dark:text-slate-500'
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-medium tabular-nums transition-colors duration-200 ease-out ${
+                    isActive
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : isDone
+                      ? 'border-primary bg-background text-primary group-hover:bg-primary/5'
+                      : 'border-border bg-background text-muted-foreground'
+                  }`}
+                >
+                  {isDone ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : i + 1}
+                </span>
+                <span className={`max-w-[5.5rem] truncate text-xs ${
+                  isActive ? 'font-medium text-foreground' : 'text-muted-foreground'
                 }`}>
                   {t(s.short)}
                 </span>
               </button>
-            );
-          })}
-        </div>
-        {/* Connector progress bar */}
-        <div className="absolute left-8 right-8 top-5 sm:top-6 -z-10 h-0.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-gradient-to-r from-blue-500 via-violet-500 to-fuchsia-500"
-            initial={false}
-            animate={{ width: `${(step / (WIZARD_STEPS.length - 1)) * 100}%` }}
-            transition={{ duration: 0.5, ease: 'easeOut' as const }}
-          />
-        </div>
-      </div>
+              {!isLast && (
+                <span
+                  aria-hidden="true"
+                  className={`mx-2 mt-3.5 h-px flex-1 transition-colors duration-200 ease-out ${
+                    isDone ? 'bg-primary' : 'bg-border'
+                  }`}
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
 
-      {/* Step content — animated */}
+      {/* Step content — short cross-fade, no slide theatrics */}
       <AnimatePresence mode="wait">
         <motion.div
           key={step}
-          initial={reducedMotion ? {} : { opacity: 0, x: direction === 'forward' ? 24 : -24 }}
+          initial={reducedMotion ? {} : { opacity: 0, x: direction === 'forward' ? 8 : -8 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={reducedMotion ? {} : { opacity: 0, x: direction === 'forward' ? -24 : 24 }}
-          transition={{ duration: 0.3, ease: 'easeOut' as const }}
-          className="space-y-4 sm:space-y-5"
+          exit={reducedMotion ? {} : { opacity: 0 }}
+          transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+          className="space-y-4"
         >
 
       {/* Step 0: Recipient & Priority */}
@@ -884,7 +854,6 @@ export function CreateShipmentPage() {
             icon={Search}
             title={t('Find existing recipient')}
             subtitle={t('Search by name, company, or email')}
-            gradient="from-blue-500 to-violet-500"
           >
             <RecipientSearchField
               value={recipientSearch}
@@ -899,9 +868,8 @@ export function CreateShipmentPage() {
             icon={Users}
             title={t('Recipient Type')}
             subtitle={t('Who are you shipping to?')}
-            gradient="from-violet-500 to-fuchsia-500"
           >
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
               {RECIPIENT_TYPES.map((rt) => {
                 const RTIcon = rt.icon;
                 const isSelected = recipientType === rt.value;
@@ -910,22 +878,11 @@ export function CreateShipmentPage() {
                     key={rt.value}
                     type="button"
                     onClick={() => setRecipientType(rt.value as RecipientType)}
-                    className={`relative rounded-xl border-2 p-3 text-left transition-all duration-200 ${
-                      isSelected
-                        ? 'border-transparent bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg scale-[1.02]'
-                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600 hover:-translate-y-0.5'
-                    }`}
+                    aria-pressed={isSelected}
+                    className={`${optionTileClass(isSelected)} flex min-h-11 items-center gap-2.5 px-3 py-2.5 text-left`}
                   >
-                    {isSelected && (
-                      <span className={`absolute inset-0 rounded-xl bg-gradient-to-br ${rt.color} opacity-20 pointer-events-none`} />
-                    )}
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-lg mb-2 bg-gradient-to-br ${rt.color} shadow-md`}>
-                      <RTIcon className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="block text-xs font-semibold truncate">{t(rt.labelKey)}</span>
-                    {isSelected && (
-                      <Check className="absolute top-2 right-2 h-4 w-4 text-emerald-400" strokeWidth={3} />
-                    )}
+                    <RTIcon className={`h-4 w-4 shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} aria-hidden="true" />
+                    <span className="truncate font-medium">{t(rt.labelKey)}</span>
                   </button>
                 );
               })}
@@ -936,7 +893,6 @@ export function CreateShipmentPage() {
             icon={Zap}
             title={t('Priority')}
             subtitle={t('How urgent is this shipment?')}
-            gradient="from-amber-500 to-rose-500"
           >
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {PRIORITY_PILLS.map((p) => {
@@ -946,18 +902,11 @@ export function CreateShipmentPage() {
                     key={p.value}
                     type="button"
                     onClick={() => setPriority(p.value as ShipmentPriority)}
-                    className={`relative rounded-xl border-2 py-2.5 px-3 text-center transition-all duration-200 ${
-                      isSelected
-                        ? `border-transparent bg-slate-900 dark:bg-slate-100 ring-2 ${p.ringColor} shadow-lg scale-[1.02]`
-                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600'
-                    }`}
+                    aria-pressed={isSelected}
+                    className={`${optionTileClass(isSelected)} flex min-h-11 items-center justify-center gap-2 px-3 py-2.5 font-medium`}
                   >
-                    <Badge
-                      variant="secondary"
-                      className={`${PRIORITY_COLORS[p.value as ShipmentPriority]} text-[10px] font-semibold px-2 py-0.5`}
-                    >
-                      {t(p.label)}
-                    </Badge>
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${p.dot}`} aria-hidden="true" />
+                    {t(p.label)}
                   </button>
                 );
               })}
@@ -967,52 +916,51 @@ export function CreateShipmentPage() {
           <Section
             icon={User}
             title={t('Contact details')}
-            gradient="from-blue-500 to-cyan-500"
           >
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {t('Recipient Name')} <span className="text-rose-500">*</span>
+                <Label className="text-xs font-medium text-muted-foreground">
+                  {t('Recipient Name')} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-lg"
                   placeholder={t('Full name')}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('Company')}</Label>
+                <Label className="text-xs font-medium text-muted-foreground">{t('Company')}</Label>
                 <Input
                   value={recipientCompany}
                   onChange={(e) => setRecipientCompany(e.target.value)}
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-lg"
                   placeholder={t('Optional')}
                 />
               </div>
             </div>
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5" /> {t('Email')}
+                <Label className="text-xs font-medium text-muted-foreground">
+                  {t('Email')}
                 </Label>
                 <Input
                   type="email"
                   value={recipientEmail}
                   onChange={(e) => setRecipientEmail(e.target.value)}
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-lg"
                   placeholder="name@example.com"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" /> {t('Phone')}
+                <Label className="text-xs font-medium text-muted-foreground">
+                  {t('Phone')}
                 </Label>
                 <Input
                   type="tel"
                   value={recipientPhone}
                   onChange={(e) => setRecipientPhone(e.target.value)}
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-lg"
                   placeholder="+49 …"
                 />
               </div>
@@ -1022,7 +970,6 @@ export function CreateShipmentPage() {
           <Section
             icon={MapPin}
             title={t('Shipping address')}
-            gradient="from-emerald-500 to-teal-500"
           >
             <AddressAutocompleteInput
               label={t('Street')}
@@ -1031,7 +978,7 @@ export function CreateShipmentPage() {
               onChange={setShippingStreet}
               countryHint={shippingCountry}
               placeholder={t('Street and number')}
-              className={`h-11 rounded-xl ${addressErrorFor('street') ? 'border-rose-400 focus-visible:ring-rose-500/40' : ''}`}
+              className={`h-11 rounded-lg ${addressErrorFor('street') ? 'border-destructive focus-visible:ring-destructive/30' : ''}`}
               onAddressPicked={(picked) => {
                 if (picked.street) setShippingStreet(picked.street);
                 if (picked.city) setShippingCity(picked.city);
@@ -1040,50 +987,50 @@ export function CreateShipmentPage() {
               }}
             />
             {addressErrorFor('street') && (
-              <p className="text-xs text-rose-600 dark:text-rose-400 -mt-2">
+              <p className="-mt-2 text-xs text-destructive">
                 {t(addressErrorFor('street')!.i18nKey, addressErrorFor('street')!.i18nParams)}
               </p>
             )}
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {t('Postal Code')} <span className="text-rose-500">*</span>
+                <Label className="text-xs font-medium text-muted-foreground">
+                  {t('Postal Code')} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   value={shippingPostalCode}
                   onChange={(e) => setShippingPostalCode(e.target.value)}
                   onBlur={() => setShippingPostalCode(normalizePostalCode(shippingPostalCode, shippingCountry))}
-                  className={`h-11 rounded-xl ${addressErrorFor('postalCode') ? 'border-rose-400 focus-visible:ring-rose-500/40' : ''}`}
+                  className={`h-11 rounded-lg ${addressErrorFor('postalCode') ? 'border-destructive focus-visible:ring-destructive/30' : ''}`}
                   placeholder="PLZ"
                 />
                 {addressErrorFor('postalCode') && (
-                  <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
+                  <p className="text-xs text-destructive mt-1">
                     {t(addressErrorFor('postalCode')!.i18nKey, addressErrorFor('postalCode')!.i18nParams)}
                   </p>
                 )}
               </div>
               <div className="space-y-1.5 col-span-1">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {t('City')} <span className="text-rose-500">*</span>
+                <Label className="text-xs font-medium text-muted-foreground">
+                  {t('City')} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   value={shippingCity}
                   aria-label={t('City')}
                   onChange={(e) => setShippingCity(e.target.value)}
-                  className={`h-11 rounded-xl ${addressErrorFor('city') ? 'border-rose-400 focus-visible:ring-rose-500/40' : ''}`}
+                  className={`h-11 rounded-lg ${addressErrorFor('city') ? 'border-destructive focus-visible:ring-destructive/30' : ''}`}
                 />
                 {addressErrorFor('city') && (
-                  <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
+                  <p className="text-xs text-destructive mt-1">
                     {t(addressErrorFor('city')!.i18nKey, addressErrorFor('city')!.i18nParams)}
                   </p>
                 )}
               </div>
               <div className="space-y-1.5 col-span-2">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Globe className="h-3.5 w-3.5" /> {t('Country')}
+                <Label className="text-xs font-medium text-muted-foreground">
+                  {t('Country')}
                 </Label>
                 <Select value={shippingCountry} onValueChange={setShippingCountry}>
-                  <SelectTrigger className="w-full min-w-0 h-11 rounded-xl">
+                  <SelectTrigger className="w-full min-w-0 h-11 rounded-lg">
                     <SelectValue placeholder={t('Country')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -1112,17 +1059,17 @@ export function CreateShipmentPage() {
 
               if (showSuggestion) {
                 return (
-                  <div className="mt-3 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-3 py-2.5 text-xs flex items-start gap-2">
-                    <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                  <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3 text-sm">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                      <div className="font-medium text-foreground">
                         {t('Did you mean:')}
                       </div>
-                      <div className="text-blue-800 dark:text-blue-200">
+                      <div className="mt-0.5 text-muted-foreground">
                         {googleValidation?.normalized?.formattedAddress}
                       </div>
                       {(googleValidation?.messages?.length ?? 0) > 0 && (
-                        <ul className="mt-1 space-y-0.5 text-[11px] text-blue-700/80 dark:text-blue-300/80 list-disc list-inside">
+                        <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-xs text-muted-foreground">
                           {googleValidation?.messages.slice(0, 3).map((m, i) => <li key={i}>{m}</li>)}
                         </ul>
                       )}
@@ -1132,7 +1079,7 @@ export function CreateShipmentPage() {
                       size="sm"
                       variant="outline"
                       onClick={applyGoogleSuggestion}
-                      className="h-7 px-2.5 text-[11px] rounded-lg border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/60 flex-shrink-0"
+                      className="h-9 shrink-0 rounded-md px-3 active:scale-[0.97] transition-transform duration-150 ease-out"
                     >
                       {t('Apply')}
                     </Button>
@@ -1141,31 +1088,31 @@ export function CreateShipmentPage() {
               }
               if (dhlHasIssue) {
                 return (
-                  <div className="mt-3 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5 text-xs flex items-start gap-2 text-amber-800 dark:text-amber-200">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-500" aria-hidden="true" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold mb-1">{t('DHL flagged this address')}</div>
-                      <ul className="space-y-0.5 list-disc list-inside marker:text-amber-600">
+                      <div className="font-medium text-foreground">{t('DHL flagged this address')}</div>
+                      <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-muted-foreground">
                         {dhlValidation?.messages.map((m, i) => <li key={i}>{m}</li>)}
                       </ul>
-                      <div className="mt-1.5 text-[11px] opacity-80">{t('You can still continue — DHL will re-check at label creation.')}</div>
+                      <div className="mt-1.5 text-xs text-muted-foreground">{t('You can still continue — DHL will re-check at label creation.')}</div>
                     </div>
                   </div>
                 );
               }
               if (isChecking) {
                 return (
-                  <div className="mt-3 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     <span>{t('Checking address...')}</span>
                   </div>
                 );
               }
               if (allOk) {
                 return (
-                  <div className="mt-3 text-[11px] text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-                    <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                    <span className="font-medium">{t('Address verified')}</span>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500" strokeWidth={2.5} aria-hidden="true" />
+                    <span>{t('Address verified')}</span>
                   </div>
                 );
               }
@@ -1177,7 +1124,6 @@ export function CreateShipmentPage() {
             <Section
               icon={Sparkles}
               title={t('Influencer sample details')}
-              gradient="from-rose-500 to-pink-500"
             >
               <SampleMetaFields meta={sampleMeta} onChange={setSampleMeta} />
             </Section>
@@ -1196,7 +1142,6 @@ export function CreateShipmentPage() {
                 ? t('{{items}} item(s) · {{units}} units', { items: items.length, units: totalUnits })
                 : t('Add products to this shipment')
             }
-            gradient="from-violet-500 to-fuchsia-500"
           >
             <AnimatePresence>
               {items.map((item, idx) => {
@@ -1206,53 +1151,50 @@ export function CreateShipmentPage() {
                   <motion.div
                     key={idx}
                     layout
-                    initial={reducedMotion ? {} : { opacity: 0, scale: 0.96, y: 8 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={reducedMotion ? {} : { opacity: 0, scale: 0.96, x: -40 }}
-                    transition={{ duration: 0.25 }}
-                    className={`relative rounded-2xl border p-4 space-y-3 transition-colors ${
-                      hasError
-                        ? 'border-rose-400 bg-rose-50/50 dark:bg-rose-950/20'
-                        : isComplete
-                        ? 'border-emerald-300 bg-emerald-50/50 dark:border-emerald-700/40 dark:bg-emerald-950/20'
-                        : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30'
+                    initial={reducedMotion ? {} : { opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={reducedMotion ? {} : { opacity: 0 }}
+                    transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
+                    className={`space-y-4 rounded-lg border bg-card p-4 transition-colors duration-150 ${
+                      hasError ? 'border-destructive' : 'border-border'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className={`flex h-7 w-7 items-center justify-center rounded-lg font-bold text-xs flex-shrink-0 ${
+                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium tabular-nums ${
                           isComplete
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                            ? 'border-primary text-primary'
+                            : 'border-border text-muted-foreground'
                         }`}>
-                          {isComplete ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : idx + 1}
-                        </div>
-                        <span className="text-sm font-semibold truncate text-slate-800 dark:text-slate-100">
+                          {isComplete ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : idx + 1}
+                        </span>
+                        <span className={`truncate text-sm font-medium ${item.productName ? 'text-foreground' : 'text-muted-foreground'}`}>
                           {item.productName || t('New item')}
                         </span>
                         {item.quantity > 0 && (
-                          <Badge variant="outline" className="text-[10px] font-mono">
+                          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                             ×{item.quantity}
-                          </Badge>
+                          </span>
                         )}
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg"
+                        className="-mr-2 h-11 w-11 shrink-0 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive active:scale-[0.97] transition-[background-color,color,transform] duration-150 ease-out"
                         onClick={() => removeItem(idx)}
+                        aria-label={t('Remove item')}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
 
-                    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-1">
-                        <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        <Label className="text-xs font-medium text-muted-foreground">
                           {t('Product')}
                         </Label>
                         <Select value={item.productId} onValueChange={(v) => updateItem(idx, 'productId', v)}>
-                          <SelectTrigger className="w-full min-w-0 h-10 rounded-lg">
+                          <SelectTrigger className="w-full min-w-0 h-11 rounded-lg">
                             <SelectValue placeholder={t('Select Product')} />
                           </SelectTrigger>
                           <SelectContent>
@@ -1261,11 +1203,11 @@ export function CreateShipmentPage() {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        <Label className="text-xs font-medium text-muted-foreground">
                           {t('Batch')}
                         </Label>
                         {item.loadingBatches ? (
-                          <div className="h-10 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-2 px-3 text-sm text-slate-500">
+                          <div className="flex h-11 items-center gap-2 rounded-lg border px-3 text-sm text-muted-foreground">
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             {t('Loading...', { ns: 'common' })}
                           </div>
@@ -1275,7 +1217,7 @@ export function CreateShipmentPage() {
                             onValueChange={(v) => updateItem(idx, 'batchId', v)}
                             disabled={!item.productId || item.batchOptions.length === 0}
                           >
-                            <SelectTrigger className="w-full min-w-0 h-10 rounded-lg">
+                            <SelectTrigger className="w-full min-w-0 h-11 rounded-lg">
                               <SelectValue placeholder={!item.productId ? t('Select Product first') : t('Select Batch')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -1289,13 +1231,13 @@ export function CreateShipmentPage() {
                         )}
                       </div>
                     </div>
-                    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-1">
-                        <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        <Label className="text-xs font-medium text-muted-foreground">
                           {t('Location')}
                         </Label>
                         <Select value={item.locationId} onValueChange={(v) => updateItem(idx, 'locationId', v)}>
-                          <SelectTrigger className="w-full min-w-0 h-10 rounded-lg">
+                          <SelectTrigger className="w-full min-w-0 h-11 rounded-lg">
                             <SelectValue placeholder={t('Select Warehouse')} />
                           </SelectTrigger>
                           <SelectContent>
@@ -1304,10 +1246,10 @@ export function CreateShipmentPage() {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                        <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                           {t('Quantity')}
                           {item.maxAvailable > 0 && (
-                            <span className="ml-auto normal-case font-normal text-[10px] text-slate-500">
+                            <span className="ml-auto font-normal tabular-nums">
                               {item.maxAvailable} {t('Available Stock')}
                             </span>
                           )}
@@ -1318,11 +1260,11 @@ export function CreateShipmentPage() {
                           max={item.maxAvailable || undefined}
                           value={item.quantity}
                           onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))}
-                          className={`h-10 rounded-lg font-mono ${hasError ? 'border-rose-500 ring-1 ring-rose-500' : ''}`}
+                          className={`h-11 rounded-lg tabular-nums ${hasError ? 'border-destructive focus-visible:ring-destructive/30' : ''}`}
                         />
                         {hasError && (
-                          <p className="flex items-center gap-1 text-[10px] text-rose-500 mt-1">
-                            <AlertTriangle className="h-3 w-3" />
+                          <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                            <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
                             {t('Total would exceed batch size', { batchSize: item.maxAvailable })}
                           </p>
                         )}
@@ -1333,11 +1275,11 @@ export function CreateShipmentPage() {
               })}
             </AnimatePresence>
 
-            <div className={bundles.length > 0 ? 'grid gap-3 sm:grid-cols-2' : ''}>
+            <div className={bundles.length > 0 ? 'grid gap-2 sm:grid-cols-2' : ''}>
               <button
                 type="button"
                 onClick={addItem}
-                className="w-full rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 py-4 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-all flex items-center justify-center gap-2"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-dashed py-3 text-sm font-medium text-muted-foreground transition-[background-color,border-color,color,transform] duration-150 ease-out hover:border-primary/50 hover:bg-muted/50 hover:text-foreground active:scale-[0.97]"
               >
                 <Plus className="h-4 w-4" />
                 {t('Add Item')}
@@ -1348,7 +1290,7 @@ export function CreateShipmentPage() {
                 <button
                   type="button"
                   onClick={() => setBundlePickerOpen(true)}
-                  className="w-full rounded-2xl border-2 border-dashed border-amber-300 dark:border-amber-800 py-4 text-sm font-semibold text-amber-700 dark:text-amber-400 hover:border-amber-500 hover:text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-all flex items-center justify-center gap-2"
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-dashed py-3 text-sm font-medium text-muted-foreground transition-[background-color,border-color,color,transform] duration-150 ease-out hover:border-primary/50 hover:bg-muted/50 hover:text-foreground active:scale-[0.97]"
                 >
                   <PackagePlus className="h-4 w-4" />
                   {t('Insert Set')}
@@ -1370,15 +1312,15 @@ export function CreateShipmentPage() {
                       key={b.id}
                       type="button"
                       onClick={() => void insertBundle(b)}
-                      className="w-full text-left rounded-xl border p-3 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-all"
+                      className="w-full rounded-lg border p-3 text-left transition-[background-color,border-color] duration-150 ease-out hover:border-primary/50 hover:bg-muted/50"
                     >
                       <div className="font-medium text-sm break-words">{b.shopifyProductTitle}</div>
-                      <div className="text-xs text-muted-foreground mb-2">
+                      <div className="mb-2 mt-0.5 text-xs text-muted-foreground">
                         {b.shopifyVariantTitle} · {b.components.length} {t('Components')}
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {b.components.map(c => (
-                          <span key={c.id} className="text-[11px] rounded bg-muted px-1.5 py-0.5">
+                          <span key={c.id} className="rounded bg-muted px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">
                             {c.quantity}× {c.productName}
                           </span>
                         ))}
@@ -1393,21 +1335,17 @@ export function CreateShipmentPage() {
           {/* Live totals summary — visible while building the item list */}
           {items.length > 0 && (
             <motion.div
-              initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+              initial={reducedMotion ? false : { opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-700 p-4 text-white shadow-lg"
+              transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
+              className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 sm:px-6"
             >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400">{t('Summary')}</p>
-                  <p className="text-2xl font-bold tabular-nums mt-0.5">
-                    {totalUnits} <span className="text-sm text-slate-300 font-normal">{t('Total Units')}</span>
-                  </p>
-                </div>
-                <Badge className="bg-blue-500/20 text-blue-200 border border-blue-400/40">
-                  {items.length} {t('Items')}
-                </Badge>
-              </div>
+              <p className="text-xs text-muted-foreground">{t('Summary')}</p>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium tabular-nums text-foreground">{items.length}</span> {t('Items')}
+                <span className="mx-2 text-border" aria-hidden="true">|</span>
+                <span className="font-medium tabular-nums text-foreground">{totalUnits}</span> {t('Total Units')}
+              </p>
             </motion.div>
           )}
         </>
@@ -1436,13 +1374,12 @@ export function CreateShipmentPage() {
             icon={Truck}
             title={t('Carrier & Tracking')}
             subtitle={carrier ? `${carrier}${serviceLevel ? ' · ' + serviceLevel : ''}` : t('Pick a carrier')}
-            gradient="from-fuchsia-500 to-rose-500"
           >
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('Carrier')}</Label>
+                <Label className="text-xs font-medium text-muted-foreground">{t('Carrier')}</Label>
                 <Select value={carrier} onValueChange={setCarrier}>
-                  <SelectTrigger className="w-full min-w-0 h-11 rounded-xl">
+                  <SelectTrigger className="w-full min-w-0 h-11 rounded-lg">
                     <SelectValue placeholder={t('Carrier')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -1451,17 +1388,17 @@ export function CreateShipmentPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('Tracking Number')}</Label>
+                <Label className="text-xs font-medium text-muted-foreground">{t('Tracking Number')}</Label>
                 <Input
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
-                  className="h-11 rounded-xl font-mono"
+                  className="h-11 rounded-lg"
                   placeholder="e.g. DE00123…"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('Service Level')}</Label>
+              <Label className="text-xs font-medium text-muted-foreground">{t('Service Level')}</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { v: 'standard', label: 'Standard' },
@@ -1473,11 +1410,8 @@ export function CreateShipmentPage() {
                     key={sl.v}
                     type="button"
                     onClick={() => setServiceLevel(serviceLevel === sl.v ? '' : sl.v)}
-                    className={`rounded-xl border-2 py-2.5 text-xs font-semibold transition-all ${
-                      serviceLevel === sl.v
-                        ? 'border-transparent bg-gradient-to-br from-blue-500 to-violet-500 text-white shadow-md'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
-                    }`}
+                    aria-pressed={serviceLevel === sl.v}
+                    className={`${optionTileClass(serviceLevel === sl.v)} min-h-11 px-3 py-2.5 font-medium`}
                   >
                     {sl.label}
                   </button>
@@ -1489,26 +1423,34 @@ export function CreateShipmentPage() {
           <Section
             icon={CreditCard}
             title={t('Delivery & Cost')}
-            gradient="from-emerald-500 to-blue-500"
           >
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5" /> {t('Estimated Delivery')}
-                </Label>
-                <Input
-                  type="date"
-                  value={estimatedDelivery}
-                  onChange={(e) => setEstimatedDelivery(e.target.value)}
-                  className="h-11 rounded-xl"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {t('Shipping Cost')} <span className="text-slate-400">(EUR)</span>
+                <Label className="text-xs font-medium text-muted-foreground">
+                  {t('Estimated Delivery')}
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-semibold pointer-events-none">€</span>
+                  <Input
+                    type="date"
+                    value={estimatedDelivery}
+                    onChange={(e) => setEstimatedDelivery(e.target.value)}
+                    aria-label={t('Estimated Delivery')}
+                    className={`h-11 rounded-lg ${estimatedDelivery ? '' : 'text-transparent'}`}
+                  />
+                  {!estimatedDelivery && (
+                    // iOS renders an empty date field blank; show a hint instead.
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                      {t('Select date')}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">
+                  {t('Shipping Cost')} <span className="font-normal">(EUR)</span>
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">€</span>
                   <Input
                     type="number"
                     step="0.01"
@@ -1516,13 +1458,13 @@ export function CreateShipmentPage() {
                     value={shippingCost}
                     onChange={(e) => setShippingCost(e.target.value)}
                     placeholder="0.00"
-                    className="h-11 pl-7 rounded-xl font-mono"
+                    className="h-11 pl-7 rounded-lg tabular-nums"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Scale className="h-3.5 w-3.5" /> {t('Shipping Weight (g)')}
+                <Label className="text-xs font-medium text-muted-foreground">
+                  {t('Shipping Weight (g)')}
                 </Label>
                 <div className="relative">
                   <Input
@@ -1531,10 +1473,10 @@ export function CreateShipmentPage() {
                     value={weightGrams}
                     onChange={(e) => setWeightGrams(e.target.value)}
                     placeholder="0"
-                    className="h-11 rounded-xl font-mono pr-14"
+                    className="h-11 rounded-lg tabular-nums pr-14"
                   />
                   {weightGrams && Number(weightGrams) > 0 && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-slate-500 font-mono pointer-events-none">
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground tabular-nums pointer-events-none">
                       {(Number(weightGrams) / 1000).toFixed(2)} kg
                     </span>
                   )}
@@ -1546,35 +1488,34 @@ export function CreateShipmentPage() {
           <Section
             icon={FileText}
             title={t('References & Notes')}
-            gradient="from-slate-500 to-slate-700"
           >
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('Order Reference')}</Label>
+              <Label className="text-xs font-medium text-muted-foreground">{t('Order Reference')}</Label>
               <Input
                 value={orderReference}
                 onChange={(e) => setOrderReference(e.target.value)}
-                className="h-11 rounded-xl font-mono"
+                className="h-11 rounded-lg"
                 placeholder="e.g. PO-2026-042"
               />
             </div>
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('External Notes')}</Label>
+                <Label className="text-xs font-medium text-muted-foreground">{t('External Notes')}</Label>
                 <Textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
-                  className="rounded-xl resize-none"
+                  className="rounded-lg resize-none"
                   placeholder={t('Visible to recipient')}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('Internal Notes')}</Label>
+                <Label className="text-xs font-medium text-muted-foreground">{t('Internal Notes')}</Label>
                 <Textarea
                   value={internalNotes}
                   onChange={(e) => setInternalNotes(e.target.value)}
                   rows={3}
-                  className="rounded-xl resize-none"
+                  className="rounded-lg resize-none"
                   placeholder={t('Team only')}
                 />
               </div>
@@ -1588,21 +1529,19 @@ export function CreateShipmentPage() {
         <>
           {/* Hero card: all green, this is the moment of truth */}
           <motion.div
-            initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: 'easeOut' as const }}
-            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 via-blue-500 to-violet-500 p-6 sm:p-8 text-white shadow-2xl shadow-blue-500/20"
+            transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+            className="flex items-start gap-3 rounded-xl border bg-card p-4 sm:p-6"
           >
-            <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-            <div className="absolute -left-12 -bottom-12 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-2">
-                <ClipboardCheck className="h-5 w-5" />
-                <span className="text-xs font-bold uppercase tracking-wider opacity-90">{t('Final review')}</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold">{t('Ready to ship')}</h2>
-              <p className="text-sm sm:text-base text-white/80 mt-1">
-                {items.length} {t('Items')} · {totalUnits} {t('units')} · {recipientName || '—'}
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">{t('Final review')}</p>
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">{t('Ready to ship')}</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                <span className="tabular-nums">{items.length}</span> {t('Items')} · <span className="tabular-nums">{totalUnits}</span> {t('units')} · {recipientName || '—'}
               </p>
             </div>
           </motion.div>
@@ -1610,34 +1549,40 @@ export function CreateShipmentPage() {
           <Section
             icon={User}
             title={t('Recipient')}
-            gradient="from-blue-500 to-cyan-500"
+            action={
+              <Button variant="ghost" size="sm" className="-mr-2 -my-2 h-9 shrink-0 rounded-md px-2.5 text-xs text-muted-foreground hover:text-foreground active:scale-[0.97] transition-[background-color,color,transform] duration-150 ease-out" onClick={() => goToStep(0)}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> {t('Edit step')}
+              </Button>
+            }
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <span className="text-base font-bold text-slate-900 dark:text-white">{recipientName}</span>
-                  {recipientCompany && <span className="text-sm text-slate-500">({recipientCompany})</span>}
-                  <Badge variant="secondary" className={`${PRIORITY_COLORS[priority]} text-[10px] font-semibold`}>{t(priority)}</Badge>
-                  <Badge variant="outline" className="text-[10px]">{t(recipientType)}</Badge>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-sm font-medium text-foreground">{recipientName}</span>
+                  {recipientCompany && <span className="text-sm text-muted-foreground">{recipientCompany}</span>}
                 </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                  {shippingStreet}, {shippingPostalCode} {shippingCity}, {shippingCountry}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <Badge variant="outline" className="gap-1.5 font-normal">
+                    <span className={`h-1.5 w-1.5 rounded-full ${PRIORITY_PILLS.find(p => p.value === priority)?.dot ?? 'bg-muted-foreground/70'}`} aria-hidden="true" />
+                    {t(priority)}
+                  </Badge>
+                  <Badge variant="outline" className="font-normal">{t(recipientType)}</Badge>
+                </div>
+                <p className="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span>{shippingStreet}, {shippingPostalCode} {shippingCity}, {shippingCountry}</span>
                 </p>
                 {(recipientEmail || recipientPhone) && (
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mt-1.5">
+                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                     {recipientEmail && (
-                      <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{recipientEmail}</span>
+                      <span className="flex min-w-0 items-center gap-2"><Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{recipientEmail}</span></span>
                     )}
                     {recipientPhone && (
-                      <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{recipientPhone}</span>
+                      <span className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{recipientPhone}</span>
                     )}
                   </div>
                 )}
               </div>
-              <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg flex-shrink-0" onClick={() => goToStep(0)}>
-                <Pencil className="h-3 w-3 mr-1" /> {t('Edit step')}
-              </Button>
             </div>
           </Section>
 
@@ -1645,34 +1590,38 @@ export function CreateShipmentPage() {
             icon={Package}
             title={t('Items')}
             subtitle={`${items.length} ${t('Items')} · ${totalUnits} ${t('Total Units')}`}
-            gradient="from-violet-500 to-fuchsia-500"
           >
-            <div className="-mx-2 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800/40">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto overscroll-x-contain rounded-lg border">
+              <table className="w-full table-fixed text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-700">
-                    <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('Product')}</th>
-                    <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500 hidden sm:table-cell">{t('Batch')}</th>
-                    <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500 hidden md:table-cell">{t('Location')}</th>
-                    <th className="text-right px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('Quantity')}</th>
+                  <tr className="border-b bg-muted/40">
+                    <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">{t('Product')}</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground hidden sm:table-cell">{t('Batch')}</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground hidden md:table-cell">{t('Location')}</th>
+                    <th className="w-20 text-right px-3 py-2 text-xs font-medium text-muted-foreground">{t('Quantity')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item, idx) => (
-                    <tr key={idx} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
-                      <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-slate-100">{item.productName || '—'}</td>
-                      <td className="px-3 py-2.5 hidden sm:table-cell font-mono text-xs text-slate-600 dark:text-slate-400">{item.batchSerial || '—'}</td>
-                      <td className="px-3 py-2.5 hidden md:table-cell text-slate-600 dark:text-slate-400">{item.locationName || '—'}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums font-bold text-slate-900 dark:text-slate-100">{item.quantity}</td>
+                    <tr key={idx} className="border-b last:border-0">
+                      <td className="px-3 py-2.5 font-medium text-foreground break-words [overflow-wrap:anywhere]">
+                        {item.productName || '—'}
+                        {item.batchSerial && (
+                          <span className="block truncate text-xs font-normal text-muted-foreground sm:hidden">{item.batchSerial}</span>
+                        )}
+                      </td>
+                      <td className="hidden truncate px-3 py-2.5 text-muted-foreground sm:table-cell">{item.batchSerial || '—'}</td>
+                      <td className="hidden truncate px-3 py-2.5 text-muted-foreground md:table-cell">{item.locationName || '—'}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-foreground">{item.quantity}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-slate-100 dark:bg-slate-900/50">
-                    <td className="px-3 py-2.5 font-bold text-slate-900 dark:text-slate-100">{t('Total')}</td>
+                  <tr className="border-t bg-muted/40">
+                    <td className="px-3 py-2.5 font-medium text-foreground">{t('Total')}</td>
                     <td className="hidden sm:table-cell" />
                     <td className="hidden md:table-cell" />
-                    <td className="px-3 py-2.5 text-right tabular-nums font-bold text-base text-blue-600 dark:text-blue-400">{totalUnits}</td>
+                    <td className="px-3 py-2.5 text-right font-medium tabular-nums text-foreground">{totalUnits}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -1682,59 +1631,60 @@ export function CreateShipmentPage() {
           <Section
             icon={Truck}
             title={t('Shipping')}
-            gradient="from-fuchsia-500 to-rose-500"
+            action={
+              <Button variant="ghost" size="sm" className="-mr-2 -my-2 h-9 shrink-0 rounded-md px-2.5 text-xs text-muted-foreground hover:text-foreground active:scale-[0.97] transition-[background-color,color,transform] duration-150 ease-out" onClick={() => goToStep(2)}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> {t('Edit step')}
+              </Button>
+            }
           >
             {!carrier && !trackingNumber && !serviceLevel && !estimatedDelivery && !shippingCost && !weightGrams ? (
-              <p className="text-sm text-slate-500 italic">{t('No shipping details provided')}</p>
+              <p className="text-sm text-muted-foreground">{t('No shipping details provided')}</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <dl className="grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2">
                 {carrier && (
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 px-3 py-2">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">{t('Carrier')}</span>
-                    <span className="font-semibold">{carrier}</span>
+                  <div className="flex items-center justify-between gap-3 border-b py-2.5">
+                    <dt className="text-muted-foreground">{t('Carrier')}</dt>
+                    <dd className="font-medium text-foreground">{carrier}</dd>
                   </div>
                 )}
                 {trackingNumber && (
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 px-3 py-2">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">{t('Tracking Number')}</span>
-                    <span className="font-mono text-xs truncate">{trackingNumber}</span>
+                  <div className="flex items-center justify-between gap-3 border-b py-2.5">
+                    <dt className="text-muted-foreground">{t('Tracking Number')}</dt>
+                    <dd className="truncate font-medium tabular-nums text-foreground">{trackingNumber}</dd>
                   </div>
                 )}
                 {serviceLevel && (
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 px-3 py-2">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">{t('Service Level')}</span>
-                    <span className="font-semibold capitalize">{serviceLevel}</span>
+                  <div className="flex items-center justify-between gap-3 border-b py-2.5">
+                    <dt className="text-muted-foreground">{t('Service Level')}</dt>
+                    <dd className="font-medium capitalize text-foreground">{serviceLevel}</dd>
                   </div>
                 )}
                 {estimatedDelivery && (
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 px-3 py-2">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">{t('Estimated Delivery')}</span>
-                    <span className="font-semibold">{estimatedDelivery}</span>
+                  <div className="flex items-center justify-between gap-3 border-b py-2.5">
+                    <dt className="text-muted-foreground">{t('Estimated Delivery')}</dt>
+                    <dd className="font-medium tabular-nums text-foreground">{estimatedDelivery}</dd>
                   </div>
                 )}
                 {shippingCost && (
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2">
-                    <span className="text-xs text-emerald-700 dark:text-emerald-400 uppercase font-semibold">{t('Shipping Cost')}</span>
-                    <span className="font-bold text-emerald-700 dark:text-emerald-300">€{Number(shippingCost).toFixed(2)}</span>
+                  <div className="flex items-center justify-between gap-3 border-b py-2.5">
+                    <dt className="text-muted-foreground">{t('Shipping Cost')}</dt>
+                    <dd className="font-medium tabular-nums text-foreground">€{Number(shippingCost).toFixed(2)}</dd>
                   </div>
                 )}
                 {weightGrams && (
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 px-3 py-2">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">{t('Weight')}</span>
-                    <span className="font-mono font-semibold">{(Number(weightGrams) / 1000).toFixed(2)} kg</span>
+                  <div className="flex items-center justify-between gap-3 border-b py-2.5">
+                    <dt className="text-muted-foreground">{t('Weight')}</dt>
+                    <dd className="font-medium tabular-nums text-foreground">{(Number(weightGrams) / 1000).toFixed(2)} kg</dd>
                   </div>
                 )}
                 {orderReference && (
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 px-3 py-2 sm:col-span-2">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">{t('Order Reference')}</span>
-                    <span className="font-mono text-xs">{orderReference}</span>
+                  <div className="flex items-center justify-between gap-3 border-b py-2.5 sm:col-span-2">
+                    <dt className="text-muted-foreground">{t('Order Reference')}</dt>
+                    <dd className="truncate font-medium tabular-nums text-foreground">{orderReference}</dd>
                   </div>
                 )}
-              </div>
+              </dl>
             )}
-            <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg mt-2" onClick={() => goToStep(2)}>
-              <Pencil className="h-3 w-3 mr-1" /> {t('Edit step')}
-            </Button>
           </Section>
         </>
       )}
@@ -1742,12 +1692,13 @@ export function CreateShipmentPage() {
       </AnimatePresence>
 
       {/* Portal clears transformed route ancestors and the mobile navigation. */}
+      <div className="mt-6">
       <StickyBottomBar className="bottom-[calc(var(--bottom-nav-h)+var(--safe-bottom))] pb-3">
           <Button
             variant="outline"
             size="lg"
             onClick={() => step > 0 ? goToStep(step - 1) : navigate('/warehouse/shipments')}
-            className="rounded-xl h-11"
+            className="h-11 rounded-lg active:scale-[0.97] transition-[background-color,transform] duration-150 ease-out"
             aria-label={t('Back', { ns: 'common' })}
           >
             <ArrowLeft className="mr-1.5 h-4 w-4" />
@@ -1759,7 +1710,7 @@ export function CreateShipmentPage() {
               size="lg"
               onClick={() => goToStep(step + 1)}
               disabled={!canAdvance}
-              className="rounded-xl h-11 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 disabled:from-slate-400 disabled:to-slate-400 text-white shadow-lg shadow-blue-500/30 disabled:shadow-none transition-all"
+              className="h-11 flex-1 rounded-lg shadow-none active:scale-[0.97] transition-[background-color,opacity,transform] duration-150 ease-out md:flex-none"
             >
               {t('Continue', { ns: 'common' })}
               <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -1769,17 +1720,18 @@ export function CreateShipmentPage() {
               size="lg"
               onClick={handleSubmit}
               disabled={loading}
-              className="rounded-xl h-11 bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-400 hover:to-blue-400 text-white shadow-lg shadow-emerald-500/30 transition-all"
+              className="h-11 flex-1 rounded-lg shadow-none active:scale-[0.97] transition-[background-color,opacity,transform] duration-150 ease-out md:flex-none"
             >
               {loading ? (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               ) : (
-                <Check className="mr-1.5 h-4 w-4" strokeWidth={3} />
+                <Check className="mr-1.5 h-4 w-4" strokeWidth={2.5} />
               )}
               {loading ? t('Creating...', { ns: 'common' }) : t('Create & Send')}
             </Button>
           )}
       </StickyBottomBar>
+      </div>
     </div>
   );
 }

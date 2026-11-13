@@ -5,6 +5,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -375,17 +376,19 @@ export function ScannerPage() {
   const accentColor = mode === 'in' ? 'emerald' : 'blue';
   const accent = ACCENT_CLASSES[accentColor];
 
-  return (
-    <div className="fixed inset-0 z-40 bg-slate-950 text-white flex flex-col">
+  // Portal to <body>: route wrappers create stacking contexts that would
+  // otherwise let the app header paint over this full-screen tool.
+  return createPortal(
+    <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col">
       {/* Hidden scanner input */}
       <input {...inputProps} />
 
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-slate-900/80 backdrop-blur-xl shrink-0">
+      <header className="flex items-center justify-between pl-[max(1rem,var(--safe-left))] pr-[max(1rem,var(--safe-right))] pb-3 pt-[calc(var(--safe-top)+0.75rem)] border-b border-white/5 bg-slate-900/80 backdrop-blur-xl shrink-0">
         <button
           type="button"
           onClick={() => navigate('/warehouse')}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="flex items-center justify-center gap-2 px-3 py-2 min-h-11 min-w-11 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">{t('Back')}</span>
@@ -400,7 +403,7 @@ export function ScannerPage() {
           type="button"
           onClick={() => setCameraOpen(!cameraOpen)}
           className={`
-            flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors
+            flex items-center justify-center gap-2 px-3 py-2 min-h-11 min-w-11 rounded-xl text-sm transition-colors
             ${cameraOpen
               ? accent.cameraActive
               : 'text-slate-400 hover:text-white hover:bg-white/10'
@@ -413,8 +416,8 @@ export function ScannerPage() {
       </header>
 
       {/* Main content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+      <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="max-w-2xl mx-auto pl-[max(1rem,var(--safe-left))] pr-[max(1rem,var(--safe-right))] pt-6 pb-[calc(1.5rem+var(--safe-bottom))] space-y-5">
           {/* Mode toggle */}
           <div className="flex justify-center">
             <ScannerModeToggle mode={mode} onChange={setMode} />
@@ -445,7 +448,7 @@ export function ScannerPage() {
               onClick={() => setCameraOpen(true)}
               className={`
                 w-full relative rounded-2xl border-2 border-dashed ${accent.scanArea}
-                p-12 text-center transition-all duration-500
+                p-12 text-center transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300
                 active:scale-[0.99] cursor-pointer
               `}
             >
@@ -511,7 +514,7 @@ export function ScannerPage() {
                 <button
                   type="button"
                   onClick={() => navigate(`/products/new?gtin=${encodeURIComponent(unknownGtin)}`)}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 transition-all"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 transition-[color,background-color,border-color,box-shadow,opacity,transform]"
                 >
                   <PackagePlus className="h-4 w-4" />
                   {t('Create product with this GTIN')}
@@ -609,6 +612,7 @@ export function ScannerPage() {
         }}
         onClose={() => setBulkSetupOpen(false)}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }

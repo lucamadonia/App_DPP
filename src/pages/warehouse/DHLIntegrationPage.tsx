@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Truck, Lock, CheckCircle2, Loader2, Eye, EyeOff, Mail } from 'lucide-react';
+import { Truck, Lock, CheckCircle2, Loader2, Mail, MapPin, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  ChoiceCards, FormActions, FormField, FormGrid, FormSection, FormSectionNav, FormToggleRow, OptionalDisclosure, SecretInput,
+} from '@/components/ui/form-layout';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -26,9 +27,9 @@ export function DHLIntegrationPage() {
   const [settings, setSettings] = useState<DHLSettingsPublic | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [section, setSection] = useState('connection');
   const [testingInternetmarke, setTestingInternetmarke] = useState(false);
   const [internetmarkeBalance, setInternetmarkeBalance] = useState<number | null>(null);
-  const [showPasswords, setShowPasswords] = useState(false);
 
   // Form state
   const [enabled, setEnabled] = useState(true);
@@ -212,12 +213,12 @@ export function DHLIntegrationPage() {
   const isConnected = settings?.hasCredentials;
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-4xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
-            <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 dark:text-yellow-400" />
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('DHL Integration')}</h1>
@@ -227,202 +228,156 @@ export function DHLIntegrationPage() {
           </div>
         </div>
         {isConnected && (
-          <Badge variant="secondary" className="sm:ml-auto gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-            <CheckCircle2 className="h-3 w-3" /> {t('Connected')}
+          <Badge variant="secondary" className="sm:ml-auto gap-1">
+            <CheckCircle2 className="h-3 w-3 text-primary" /> {t('Connected')}
           </Badge>
         )}
       </div>
 
-      {/* Card 1: Connection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('Connection')}</CardTitle>
-          <CardDescription>
-            DHL Parcel DE Shipping API v2
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Label className="min-w-[80px] sm:min-w-[100px] text-sm">{t('Enabled')}</Label>
-            <Switch checked={enabled} onCheckedChange={setEnabled} />
+      <FormSectionNav
+        sections={[
+          { id: 'connection', label: t('Connection'), icon: Truck },
+          { id: 'letter', label: t('Deutsche Post Brief'), icon: Mail },
+          { id: 'defaults', label: t('Default Settings'), icon: Receipt },
+          { id: 'shipper', label: t('Default Shipper'), icon: MapPin },
+        ]}
+        value={section}
+        onValueChange={setSection}
+      >
+        {/* Connection */}
+        {section === 'connection' && (
+        <FormSection
+          icon={Truck}
+          title={t('Connection')}
+          description="DHL Parcel DE Shipping API v2"
+        >
+          <div className="space-y-3">
+            <FormToggleRow htmlFor="dhl-enabled" label={t('Enabled')}>
+              <Switch id="dhl-enabled" checked={enabled} onCheckedChange={setEnabled} />
+            </FormToggleRow>
+            <FormToggleRow
+              htmlFor="dhl-sandbox"
+              label={t('Sandbox Mode')}
+              description={t('Test labels against the DHL sandbox. Turn off for real shipments.')}
+            >
+              <Switch id="dhl-sandbox" aria-describedby="dhl-sandbox-description" checked={sandbox} onCheckedChange={setSandbox} />
+            </FormToggleRow>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Label className="min-w-[80px] sm:min-w-[100px] text-sm">{t('Sandbox Mode')}</Label>
-            <Switch checked={sandbox} onCheckedChange={setSandbox} />
-            {sandbox && <Badge variant="outline" className="text-xs">Sandbox</Badge>}
-          </div>
-
-          <div className="space-y-3 border-t pt-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Label className="text-sm font-medium">API Credentials</Label>
-              <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => setShowPasswords(!showPasswords)}>
-                {showPasswords ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              </Button>
-            </div>
-
-            <div className="grid gap-3">
-              <div>
-                <Label className="text-xs text-muted-foreground">DHL API Key</Label>
-                <Input
-                  type={showPasswords ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={settings?.hasCredentials ? '••••••••' : 'Enter API key'}
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">{t('Username')}</Label>
-                  <Input
-                    type={showPasswords ? 'text' : 'password'}
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder={settings?.hasCredentials ? '••••••••' : 'Username'}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">{t('Password')}</Label>
-                  <Input
-                    type={showPasswords ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={settings?.hasCredentials ? '••••••••' : 'Password'}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-2">
-            {isConnected && (
-              <Button variant="outline" onClick={handleTestConnection} disabled={testing}>
-                {testing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                {t('Test Connection')}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Deutsche Post letter postage uses the separate INTERNETMARKE API. */}
-      <Card className="border-blue-200/70 dark:border-blue-800/60">
-        <CardHeader>
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <Mail className="h-4.5 w-4.5 text-blue-700 dark:text-blue-300" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="text-base">{t('Deutsche Post Brief')}</CardTitle>
-                {settings?.internetmarke.hasCredentials && (
-                  <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    <CheckCircle2 className="h-3 w-3" /> {t('Connected')}
-                  </Badge>
-                )}
-              </div>
-              <CardDescription className="mt-1">
-                {t('Create Standard, Compact, Large and Maxi letter stamps through Deutsche Post INTERNETMARKE and your Portokasse.')}
-              </CardDescription>
-            </div>
-            <Switch checked={internetmarkeEnabled} onCheckedChange={setInternetmarkeEnabled} aria-label={t('Enable letter postage')} />
-          </div>
-        </CardHeader>
-        {internetmarkeEnabled && (
-          <CardContent className="space-y-4">
-            <div className="rounded-lg border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
-              {t('Uses the separately activated INTERNETMARKE API. Purchases are charged directly to the connected Portokasse; available products and prices are loaded live from Deutsche Post.')}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs text-muted-foreground">INTERNETMARKE Client ID</Label>
-                <Input type={showPasswords ? 'text' : 'password'} value={internetmarkeClientId} onChange={(e) => setInternetmarkeClientId(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : 'Client ID'} />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">INTERNETMARKE Client Secret</Label>
-                <Input type={showPasswords ? 'text' : 'password'} value={internetmarkeClientSecret} onChange={(e) => setInternetmarkeClientSecret(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : 'Client Secret'} />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">{t('Portokasse Username')}</Label>
-                <Input type={showPasswords ? 'text' : 'password'} value={portokasseUsername} onChange={(e) => setPortokasseUsername(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : t('Portokasse Username')} />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">{t('Portokasse Password')}</Label>
-                <Input type={showPasswords ? 'text' : 'password'} value={portokassePassword} onChange={(e) => setPortokassePassword(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : t('Portokasse Password')} />
-              </div>
-            </div>
-            {settings?.internetmarke.hasCredentials && (
-              <div className="flex flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={handleTestInternetmarke} disabled={testingInternetmarke}>
-                  {testingInternetmarke ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                  {t('Test INTERNETMARKE')}
-                </Button>
-                {internetmarkeBalance != null && (
-                  <span className="text-sm text-muted-foreground">
-                    {t('Portokasse balance')}: <strong className="text-foreground">{(internetmarkeBalance / 100).toLocaleString(undefined, { style: 'currency', currency: 'EUR' })}</strong>
-                  </span>
-                )}
-              </div>
-            )}
-          </CardContent>
+          <FormGrid cols={2}>
+            <FormField
+              label="DHL API Key"
+              span="full"
+              hint={isConnected ? t('Leave empty to keep the saved value.') : undefined}
+            >
+              <SecretInput
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={settings?.hasCredentials ? '••••••••' : 'Enter API key'}
+              />
+            </FormField>
+            <FormField label={t('Username')}>
+              <SecretInput
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder={settings?.hasCredentials ? '••••••••' : t('Username')}
+              />
+            </FormField>
+            <FormField label={t('Password')}>
+              <SecretInput
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={settings?.hasCredentials ? '••••••••' : t('Password')}
+              />
+            </FormField>
+          </FormGrid>
+          {isConnected && (
+            <Button variant="outline" onClick={handleTestConnection} disabled={testing} className="w-full sm:w-auto">
+              {testing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+              {t('Test Connection')}
+            </Button>
+          )}
+        </FormSection>
         )}
-      </Card>
 
-      {/* Card 2: Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('Default Settings')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label className="text-xs text-muted-foreground">
-              {t('Billing Number')} <span className="opacity-70">({t('Domestic')} — V01PAK)</span>
-            </Label>
-            <Input
-              value={billingNumber}
-              onChange={(e) => setBillingNumber(e.target.value)}
-              placeholder="33333333330101"
-              maxLength={14}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('14-digit DHL billing number for domestic (V01PAK). Format: EKP(10) + 01 + Teilnahme(2).')}
-            </p>
-          </div>
+        {/* Deutsche Post letter postage uses the separate INTERNETMARKE API. */}
+        {section === 'letter' && (
+        <FormSection
+          icon={Mail}
+          title={t('Deutsche Post Brief')}
+          aside={settings?.internetmarke.hasCredentials ? (
+            <Badge variant="secondary" className="gap-1">
+              <CheckCircle2 className="h-3 w-3 text-primary" /> {t('Connected')}
+            </Badge>
+          ) : undefined}
+          description={t('Create Standard, Compact, Large and Maxi letter stamps through Deutsche Post INTERNETMARKE and your Portokasse.')}
+        >
+          <FormToggleRow
+            htmlFor="internetmarke-enabled"
+            label={t('Enable letter postage')}
+            description={internetmarkeEnabled ? t('Uses the separately activated INTERNETMARKE API. Purchases are charged directly to the connected Portokasse; available products and prices are loaded live from Deutsche Post.') : undefined}
+          >
+            <Switch id="internetmarke-enabled" aria-describedby={internetmarkeEnabled ? "internetmarke-enabled-description" : undefined} checked={internetmarkeEnabled} onCheckedChange={setInternetmarkeEnabled} />
+          </FormToggleRow>
+          {internetmarkeEnabled && (
+            <>
+              <FormGrid cols={2}>
+                <FormField label="INTERNETMARKE Client ID">
+                  <SecretInput value={internetmarkeClientId} onChange={(e) => setInternetmarkeClientId(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : 'Client ID'} />
+                </FormField>
+                <FormField label="INTERNETMARKE Client Secret">
+                  <SecretInput value={internetmarkeClientSecret} onChange={(e) => setInternetmarkeClientSecret(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : 'Client Secret'} />
+                </FormField>
+                <FormField label={t('Portokasse Username')}>
+                  <SecretInput value={portokasseUsername} onChange={(e) => setPortokasseUsername(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : t('Portokasse Username')} />
+                </FormField>
+                <FormField label={t('Portokasse Password')}>
+                  <SecretInput value={portokassePassword} onChange={(e) => setPortokassePassword(e.target.value)} placeholder={settings?.internetmarke.hasCredentials ? '••••••••' : t('Portokasse Password')} />
+                </FormField>
+              </FormGrid>
+              {settings?.internetmarke.hasCredentials && (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button variant="outline" onClick={handleTestInternetmarke} disabled={testingInternetmarke} className="w-full sm:w-auto">
+                    {testingInternetmarke ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                    {t('Test INTERNETMARKE')}
+                  </Button>
+                  {internetmarkeBalance != null && (
+                    <span className="text-sm text-muted-foreground">
+                      {t('Portokasse balance')}: <strong className="text-foreground tabular-nums">{(internetmarkeBalance / 100).toLocaleString(undefined, { style: 'currency', currency: 'EUR' })}</strong>
+                    </span>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </FormSection>
+        )}
 
-          <div>
-            <Label className="text-xs text-muted-foreground">
-              {t('International Billing Number')} <span className="opacity-70">({t('Optional')} — V53WPAK)</span>
-            </Label>
-            <Input
-              value={billingNumberInternational}
-              onChange={(e) => setBillingNumberInternational(e.target.value)}
-              placeholder="33333333335301"
-              maxLength={14}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('Required for shipments outside the home country. Format: EKP(10) + 53 + Teilnahme(2). Must be activated in your DHL business contract.')}
-            </p>
-          </div>
-
-          <div>
-            <Label className="text-xs text-muted-foreground">
-              {t('Kleinpaket Billing Number')} <span className="opacity-70">({t('Optional')} — V62KP)</span>
-            </Label>
-            <Input
-              value={billingNumberKleinpaket}
-              onChange={(e) => setBillingNumberKleinpaket(e.target.value)}
-              placeholder="33333333336201"
-              maxLength={14}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('DHL Kleinpaket billing number (successor to Warenpost national). Format: EKP(10) + 62 + Teilnahme(2). Used automatically when a shipment fits the Kleinpaket envelope (max 35.3 × 25 × 8 cm, 1 kg).')}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('Default Product')}</Label>
+        {/* Defaults */}
+        {section === 'defaults' && (
+        <FormSection
+          icon={Receipt}
+          title={t('Default Settings')}
+          description={t('Billing numbers and label defaults for new DHL shipments.')}
+        >
+          <FormGrid cols={2}>
+            <FormField
+              label={t('Billing Number')}
+              labelAside={`${t('Domestic')} · V01PAK`}
+              span="full"
+              hint={t('14-digit DHL billing number for domestic (V01PAK). Format: EKP(10) + 01 + Teilnahme(2).')}
+            >
+              <Input
+                inputMode="numeric"
+                className="font-mono tabular-nums"
+                value={billingNumber}
+                onChange={(e) => setBillingNumber(e.target.value)}
+                placeholder="33333333330101"
+                maxLength={14}
+              />
+            </FormField>
+            <FormField label={t('Default Product')} htmlFor="dhl-default-product" span="full">
               <Select value={defaultProduct} onValueChange={(v) => setDefaultProduct(v as DHLParcelProduct)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="dhl-default-product" className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {DHL_PRODUCTS.map((p) => (
                     <SelectItem key={p} value={p}>
@@ -431,82 +386,109 @@ export function DHLIntegrationPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('Label Format')}</Label>
-              <Select value={labelFormat} onValueChange={(v) => setLabelFormat(v as DHLLabelFormat)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PDF_A4">{t('A4 Standard')}</SelectItem>
-                  <SelectItem value="PDF_910-300-700">{t('A6 Thermal')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </FormField>
+            <FormField label={t('Label Format')} span="full">
+              <ChoiceCards
+                value={labelFormat}
+                onValueChange={(v) => setLabelFormat(v as DHLLabelFormat)}
+                options={[
+                  { value: 'PDF_A4', label: t('A4 Standard') },
+                  { value: 'PDF_910-300-700', label: t('A6 Thermal') },
+                ]}
+              />
+            </FormField>
+          </FormGrid>
+          <OptionalDisclosure
+            label={t('Additional billing numbers')}
+            description="V53WPAK · V62KP"
+            filledCount={[billingNumberInternational, billingNumberKleinpaket].filter(Boolean).length}
+          >
+            <FormField
+              label={t('International Billing Number')}
+              labelAside="V53WPAK"
+              optional
+              hint={t('Required for shipments outside the home country. Format: EKP(10) + 53 + Teilnahme(2). Must be activated in your DHL business contract.')}
+            >
+              <Input
+                inputMode="numeric"
+                className="font-mono tabular-nums"
+                value={billingNumberInternational}
+                onChange={(e) => setBillingNumberInternational(e.target.value)}
+                placeholder="33333333335301"
+                maxLength={14}
+              />
+            </FormField>
+            <FormField
+              label={t('Kleinpaket Billing Number')}
+              labelAside="V62KP"
+              optional
+              hint={t('DHL Kleinpaket billing number (successor to Warenpost national). Format: EKP(10) + 62 + Teilnahme(2). Used automatically when a shipment fits the Kleinpaket envelope (max 35.3 × 25 × 8 cm, 1 kg).')}
+            >
+              <Input
+                inputMode="numeric"
+                className="font-mono tabular-nums"
+                value={billingNumberKleinpaket}
+                onChange={(e) => setBillingNumberKleinpaket(e.target.value)}
+                placeholder="33333333336201"
+                maxLength={14}
+              />
+            </FormField>
+          </OptionalDisclosure>
+        </FormSection>
+        )}
 
-      {/* Card 3: Shipper Address */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('Default Shipper')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('Name')} 1 *</Label>
-              <Input value={shipperName} onChange={(e) => setShipperName(e.target.value)} placeholder="Firma GmbH" />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('Name')} 2</Label>
+        {/* Shipper Address */}
+        {section === 'shipper' && (
+        <FormSection
+          icon={MapPin}
+          title={t('Default Shipper')}
+          description={t('Printed as sender on every DHL label.')}
+        >
+          <FormGrid cols={6}>
+            <FormField label={`${t('Name')} 1`} required span={3}>
+              <Input value={shipperName} autoComplete="organization" onChange={(e) => setShipperName(e.target.value)} placeholder="Firma GmbH" />
+            </FormField>
+            <FormField label={`${t('Name')} 2`} optional span={3}>
               <Input value={shipperName2} onChange={(e) => setShipperName2(e.target.value)} placeholder="Abt. Versand" />
-            </div>
-          </div>
-          <div>
-            <Label className="text-xs text-muted-foreground">{t('Street')} *</Label>
-            <Input value={shipperStreet} onChange={(e) => setShipperStreet(e.target.value)} placeholder="Musterstr. 1" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('Postal Code')} *</Label>
-              <Input value={shipperPostal} onChange={(e) => setShipperPostal(e.target.value)} placeholder="12345" />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('City')} *</Label>
-              <Input value={shipperCity} onChange={(e) => setShipperCity(e.target.value)} placeholder="Berlin" />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('Country')}</Label>
-              <Select value={shipperCountry} onValueChange={setShipperCountry}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DEU">Deutschland (DEU)</SelectItem>
-                  <SelectItem value="AUT">&Ouml;sterreich (AUT)</SelectItem>
-                  <SelectItem value="CHE">Schweiz (CHE)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('Email')}</Label>
-              <Input value={shipperEmail} onChange={(e) => setShipperEmail(e.target.value)} placeholder="versand@firma.de" />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('Phone')}</Label>
-              <Input value={shipperPhone} onChange={(e) => setShipperPhone(e.target.value)} placeholder="+49 30 12345678" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </FormField>
+            <FormField label={t('Street')} required span="full">
+              <Input value={shipperStreet} autoComplete="street-address" onChange={(e) => setShipperStreet(e.target.value)} placeholder="Musterstr. 1" />
+            </FormField>
+            <FormField label={t('Postal Code')} required span={2}>
+              <Input value={shipperPostal} inputMode="numeric" autoComplete="postal-code" onChange={(e) => setShipperPostal(e.target.value)} placeholder="12345" />
+            </FormField>
+            <FormField label={t('City')} required span={4}>
+              <Input value={shipperCity} autoComplete="address-level2" onChange={(e) => setShipperCity(e.target.value)} placeholder="Berlin" />
+            </FormField>
+            <FormField label={t('Country')} span="full">
+              <ChoiceCards
+                value={shipperCountry}
+                onValueChange={setShipperCountry}
+                columns={3}
+                options={[
+                  { value: 'DEU', label: 'Deutschland' },
+                  { value: 'AUT', label: 'Österreich' },
+                  { value: 'CHE', label: 'Schweiz' },
+                ]}
+              />
+            </FormField>
+            <FormField label={t('Email')} optional span={3}>
+              <Input type="email" inputMode="email" autoComplete="email" value={shipperEmail} onChange={(e) => setShipperEmail(e.target.value)} placeholder="versand@firma.de" />
+            </FormField>
+            <FormField label={t('Phone')} optional span={3}>
+              <Input type="tel" inputMode="tel" autoComplete="tel" value={shipperPhone} onChange={(e) => setShipperPhone(e.target.value)} placeholder="+49 30 12345678" />
+            </FormField>
+          </FormGrid>
+        </FormSection>
+        )}
+      </FormSectionNav>
 
-      {/* Save Button */}
-      <div className="flex justify-end gap-2 pb-4 sm:pb-8">
-        <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto sm:min-w-[140px]">
+      <FormActions sticky="page">
+        <Button onClick={handleSave} disabled={saving} className="sm:min-w-[140px]">
           {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
           {t('Save', { ns: 'common' })}
         </Button>
-      </div>
+      </FormActions>
     </div>
   );
 }

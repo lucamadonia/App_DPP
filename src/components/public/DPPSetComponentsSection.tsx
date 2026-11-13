@@ -19,7 +19,7 @@ export function DPPSetComponentsSection({
   if (!components || components.length === 0) return null;
 
   return (
-    <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+    <div className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 rounded-xl bg-primary/10">
           <Package className="h-5 w-5 text-primary" />
@@ -42,7 +42,7 @@ export function DPPSetComponentsSection({
           return (
             <div
               key={comp.id}
-              className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 ring-1 ring-black/5 hover:ring-primary/20 transition-all"
+              className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 ring-1 ring-black/5 hover:ring-primary/20 transition-[box-shadow,background-color]"
             >
               {cp.imageUrl ? (
                 <img

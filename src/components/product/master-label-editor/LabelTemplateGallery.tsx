@@ -75,7 +75,7 @@ export function LabelTemplateGallery({ customTemplates, onSelect, onNewBlank, on
         {/* New Blank card */}
         <button
           onClick={onNewBlank}
-          className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-6 flex flex-col items-center justify-center gap-2 hover:border-primary/40 hover:bg-accent/30 transition-all min-h-[200px]"
+          className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-6 flex flex-col items-center justify-center gap-2 hover:border-primary/40 hover:bg-accent/30 transition min-h-[200px]"
         >
           <Plus className="h-8 w-8 text-muted-foreground/50" />
           <span className="text-sm font-medium text-muted-foreground">{t('ml.template.newBlank')}</span>
@@ -85,7 +85,7 @@ export function LabelTemplateGallery({ customTemplates, onSelect, onNewBlank, on
         {filtered.map(template => (
           <div
             key={template.id}
-            className="border rounded-lg overflow-hidden hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer group"
+            className="border rounded-lg overflow-hidden hover:shadow-md hover:scale-[1.02] transition cursor-pointer group"
             onClick={() => onSelect(template)}
           >
             {/* Mini preview */}
@@ -125,7 +125,7 @@ export function LabelTemplateGallery({ customTemplates, onSelect, onNewBlank, on
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="absolute bottom-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 hover:bg-destructive/10"
+                  className="absolute bottom-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 hover:bg-destructive/10"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(template.id);

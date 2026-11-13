@@ -50,12 +50,12 @@ export function CustomerReturnsListPage() {
   return (
     <div className="space-y-6">
       <motion.div
-        className="flex items-center justify-between"
+        className="flex flex-wrap items-start justify-between gap-3"
         initial={prefersReduced ? false : { opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={prefersReduced ? { duration: 0 } : spring.snappy}
       >
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">{t('My Returns')}</h1>
           <p className="text-muted-foreground">{t('Track and manage your returns')}</p>
         </div>
@@ -77,7 +77,7 @@ export function CustomerReturnsListPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder={t('All Statuses')} />
           </SelectTrigger>
           <SelectContent>
@@ -134,18 +134,18 @@ export function CustomerReturnsListPage() {
                   onClick={() => navigate(`/customer/${tenantSlug}/returns/${ret.id}`)}
                 >
                   <CardContent className="py-3 px-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div>
-                          <p className="font-medium text-sm">{ret.returnNumber}</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-4">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{ret.returnNumber}</p>
                           {ret.orderId && (
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground truncate">
                               {t('Order')}: {ret.orderId}
                             </p>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex shrink-0 items-center gap-3">
                         <ReturnStatusBadge status={ret.status as ReturnStatus} />
                         <span className="text-xs text-muted-foreground hidden sm:inline">
                           {new Date(ret.createdAt).toLocaleDateString()}
@@ -153,7 +153,7 @@ export function CustomerReturnsListPage() {
                       </div>
                     </div>
                     {(ret.reasonCategory || ret.desiredSolution) && (
-                      <div className="flex gap-3 mt-2 text-xs text-muted-foreground">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
                         {ret.reasonCategory && <span>{ret.reasonCategory}</span>}
                         {ret.desiredSolution && (
                           <span className="capitalize">{t(ret.desiredSolution)}</span>

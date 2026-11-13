@@ -1,11 +1,10 @@
 import * as React from "react"
 
 const MOBILE_BREAKPOINT = 768
-const MOBILE_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`
 
-function readMatches(): boolean {
+function readMatches(breakpoint: number): boolean {
   if (typeof window === "undefined") return false
-  return window.matchMedia(MOBILE_QUERY).matches
+  return window.matchMedia(`(max-width: ${breakpoint - 1}px)`).matches
 }
 
 /**
@@ -19,17 +18,17 @@ function readMatches(): boolean {
  * is already correct — previously it started `undefined`, which rendered one
  * desktop frame on every mobile load.
  */
-export function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = React.useState<boolean>(readMatches)
+export function useIsMobile(breakpoint = MOBILE_BREAKPOINT): boolean {
+  const [isMobile, setIsMobile] = React.useState<boolean>(() => readMatches(breakpoint))
 
   React.useEffect(() => {
-    const mql = window.matchMedia(MOBILE_QUERY)
+    const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
     const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mql.addEventListener("change", onChange)
     // Re-sync in case the viewport changed between first render and effect.
     setIsMobile(mql.matches)
     return () => mql.removeEventListener("change", onChange)
-  }, [])
+  }, [breakpoint])
 
   return isMobile
 }

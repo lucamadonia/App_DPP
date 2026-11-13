@@ -29,9 +29,19 @@ export interface WarehouseAIContext {
   packagingCatalog: string;
   /** Tenant compliance settings + latest report status. */
   complianceContext: string;
+  /** Complete aggregates: sales, shipments (count/kg), packaging/LUCID per material. */
+  analyticsSummary: string;
 }
 
 export async function loadWarehouseContext(): Promise<WarehouseAIContext> {
+  // Start the (heavier) full-history aggregation in parallel with the rest.
+  const analyticsPromise = import('./warehouse-analytics-context')
+    .then(m => m.loadWarehouseAnalyticsContext())
+    .catch((e) => {
+      console.warn('Failed to load analytics context for AI:', e);
+      return '';
+    });
+
   const [
     { getWarehouseStats, getStockLevelsPaginated, getPendingActions, getRecentTransactions },
     { getLocationCapacitySummaries },
@@ -254,7 +264,9 @@ export async function loadWarehouseContext(): Promise<WarehouseAIContext> {
   }
   const complianceContext = complianceLines.join('\n');
 
-  return { stockSummary, locationSummary, shipmentSummary, carrierInfo, pendingActions, recentActivity, productCatalog, packagingCatalog, complianceContext };
+  const analyticsSummary = await analyticsPromise;
+
+  return { stockSummary, locationSummary, shipmentSummary, carrierInfo, pendingActions, recentActivity, productCatalog, packagingCatalog, complianceContext, analyticsSummary };
 }
 
 // ─── System Prompts ──────────────────────────────────────────
@@ -429,6 +441,7 @@ export function buildWarehouseChatMessages(
   const system = getExpertSystemPrompt(expertId, locale);
 
   const contextParts = [
+    warehouseContext.analyticsSummary,
     warehouseContext.productCatalog,
     warehouseContext.packagingCatalog,
     warehouseContext.complianceContext,
@@ -444,10 +457,10 @@ export function buildWarehouseChatMessages(
   let assistantReady: string;
 
   if (locale === 'en') {
-    contextMessage = `Here is the current warehouse data you should use for your analysis and recommendations:\n\n${contextParts}\n\nThe user will ask questions. Analyze the data above and give specific, actionable recommendations. If you calculate something, show your work.`;
+    contextMessage = `Here is the current warehouse data you should use for your analysis and recommendations:\n\n${contextParts}\n\nThe user will ask questions. Analyze the data above and give specific, actionable recommendations. If you calculate something, show your work.\n\nAnswer quality rules:\n- For any question about quantities, sales, shipments, weights, packaging or LUCID/EAR, use the exact figures from the "AUSWERTUNGEN" section (complete aggregates over ALL records) — never estimate from the "Recent Shipments (Last 20)" sample.\n- Give a thorough evaluation: headline numbers first, then a breakdown table (per product / month / material / carrier as fitting), trends vs. previous months, and notable observations.\n- Name the period the numbers refer to. If data needed for an answer is missing (e.g. no weights recorded), say exactly what is missing and how to fix it.`;
     assistantReady = 'Understood. I have analyzed your warehouse data and I\'m ready to help. What would you like to know?';
   } else {
-    contextMessage = `Hier sind die aktuellen Lagerdaten, die du für deine Analyse und Empfehlungen verwenden sollst:\n\n${contextParts}\n\nDer Nutzer wird Fragen stellen. Analysiere die obigen Daten und gib konkrete, umsetzbare Empfehlungen. Wenn du etwas berechnest, zeige den Rechenweg.`;
+    contextMessage = `Hier sind die aktuellen Lagerdaten, die du für deine Analyse und Empfehlungen verwenden sollst:\n\n${contextParts}\n\nDer Nutzer wird Fragen stellen. Analysiere die obigen Daten und gib konkrete, umsetzbare Empfehlungen. Wenn du etwas berechnest, zeige den Rechenweg.\n\nRegeln für die Antwortqualität:\n- Bei Fragen zu Mengen, Verkäufen, Sendungen, Gewichten, Verpackungen oder LUCID/EAR nutze die exakten Zahlen aus dem Abschnitt "AUSWERTUNGEN" (vollständige Summen über ALLE Datensätze) — schätze nie aus der Stichprobe "Recent Shipments (Last 20)".\n- Liefere eine ausführliche Auswertung: zuerst die Kernzahlen, dann eine Aufschlüsselung als Tabelle (pro Produkt / Monat / Material / Carrier, je nach Frage), Entwicklung gegenüber Vormonaten und auffällige Beobachtungen.\n- Nenne immer den Zeitraum der Zahlen. Fehlen Daten für eine Antwort (z. B. keine Gewichte erfasst), sag genau, was fehlt und wie man es behebt.`;
     assistantReady = 'Verstanden. Ich habe deine Lagerdaten analysiert und bin bereit zu helfen. Was möchtest du wissen?';
   }
 

@@ -41,12 +41,12 @@ export function PublicReturnPortalPage() {
       {/* CTA Cards */}
       <section className="max-w-4xl mx-auto px-4 -mt-8 sm:-mt-12 relative z-10">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-          <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-primary/30"
+          <Card className="group hover:shadow-lg transition-[box-shadow,border-color] duration-200 cursor-pointer border-2 hover:border-primary/30"
             onClick={() => navigate(isEmbed ? `/embed/register/${tenantSlug}` : `/returns/register/${tenantSlug}`)}
           >
             <CardContent className="p-6 sm:p-8 text-center">
               <div
-                className="flex h-14 w-14 items-center justify-center rounded-2xl text-white mx-auto mb-4 group-hover:scale-110 transition-transform"
+                className="flex h-14 w-14 items-center justify-center rounded-2xl text-white mx-auto mb-4 group-hover:scale-110 transition-[scale] duration-200"
                 style={{ backgroundColor: primaryColor }}
               >
                 <PackagePlus className="h-7 w-7" />
@@ -61,11 +61,11 @@ export function PublicReturnPortalPage() {
             </CardContent>
           </Card>
 
-          <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-primary/30"
+          <Card className="group hover:shadow-lg transition-[box-shadow,border-color] duration-200 cursor-pointer border-2 hover:border-primary/30"
             onClick={() => navigate(isEmbed ? `/embed/track/${tenantSlug}` : '/returns/track')}
           >
             <CardContent className="p-6 sm:p-8 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-foreground mx-auto mb-4 group-hover:scale-110 transition-transform">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-foreground mx-auto mb-4 group-hover:scale-110 transition-[scale] duration-200">
                 <Search className="h-7 w-7" />
               </div>
               <h2 className="text-lg font-semibold mb-2">{t('Track Your Return')}</h2>
@@ -78,11 +78,11 @@ export function PublicReturnPortalPage() {
             </CardContent>
           </Card>
 
-          <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-primary/30"
+          <Card className="group hover:shadow-lg transition-[box-shadow,border-color] duration-200 cursor-pointer border-2 hover:border-primary/30"
             onClick={() => setSupportOpen(true)}
           >
             <CardContent className="p-6 sm:p-8 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-foreground mx-auto mb-4 group-hover:scale-110 transition-transform">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-foreground mx-auto mb-4 group-hover:scale-110 transition-[scale] duration-200">
                 <MessageCircle className="h-7 w-7" />
               </div>
               <h2 className="text-lg font-semibold mb-2">{t('Contact Us')}</h2>
@@ -109,7 +109,7 @@ export function PublicReturnPortalPage() {
             <div key={i} className="text-center group">
               <div className="relative mx-auto mb-4">
                 <div
-                  className="flex h-16 w-16 items-center justify-center rounded-full text-white mx-auto group-hover:scale-110 transition-transform"
+                  className="flex h-16 w-16 items-center justify-center rounded-full text-white mx-auto group-hover:scale-110 transition-[scale] duration-200"
                   style={{ backgroundColor: primaryColor }}
                 >
                   <item.Icon className="h-7 w-7" />

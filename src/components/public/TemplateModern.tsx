@@ -84,7 +84,7 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
   const renderSupport = () => {
     const sr = product.supportResources!;
     return (
-      <div key="support" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="support" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-primary/10">
             <HelpCircle className="h-5 w-5 text-primary" />
@@ -116,7 +116,7 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
               <h4 className="font-medium mb-3 flex items-center gap-2 text-sm"><Video className="h-4 w-4" />{t('Videos')}</h4>
               <div className="space-y-2">
                 {sr.videos.map((v, i) => (
-                  <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-muted/30 rounded-xl ring-1 ring-black/5 hover:ring-primary/30 transition-all text-sm font-medium" style={{ color: primaryColor }}>
+                  <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-muted/30 rounded-xl ring-1 ring-black/5 hover:ring-primary/30 transition-[box-shadow,background-color] text-sm font-medium" style={{ color: primaryColor }}>
                     <Video className="h-4 w-4 flex-shrink-0" />
                     {v.title}
                   </a>
@@ -210,7 +210,7 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
 
   const renderMaterials = () => {
     return (
-      <div key="materials" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="materials" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-primary/10">
             <Package className="h-5 w-5 text-primary" />
@@ -237,7 +237,7 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
               </div>
               <div className="h-2.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all"
+                  className="h-full rounded-full transition-[width]"
                   style={{ width: `${material.percentage}%`, background: `linear-gradient(to right, ${primaryColor}b3, ${primaryColor})` }}
                 />
               </div>
@@ -257,7 +257,7 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
   const renderPackaging = () => {
     const packagingMats = getPackagingMaterials(product);
     return (
-      <div key="packaging" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="packaging" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-primary/10">
             <Package className="h-5 w-5 text-primary" />
@@ -284,7 +284,7 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
               </div>
               <div className="h-2.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all"
+                  className="h-full rounded-full transition-[width]"
                   style={{ width: `${material.percentage}%`, background: `linear-gradient(to right, ${primaryColor}b3, ${primaryColor})` }}
                 />
               </div>
@@ -320,7 +320,7 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
 
   const renderCarbonFootprint = () => {
     return (
-      <div key="carbonFootprint" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="carbonFootprint" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-primary/10">
             <Leaf className="h-5 w-5 text-primary" />
@@ -358,7 +358,7 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
 
   const renderRecycling = () => {
     return (
-      <div key="recycling" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="recycling" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-primary/10">
             <Recycle className="h-5 w-5 text-primary" />
@@ -405,7 +405,7 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
 
   const renderCertifications = () => {
     return (
-      <div key="certifications" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="certifications" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-primary/10">
             <Award className="h-5 w-5 text-primary" />
@@ -417,7 +417,7 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {product.certifications.map((cert, index) => (
-            <div key={index} className="p-4 rounded-xl bg-muted/30 ring-1 ring-black/5 hover:ring-primary/30 transition-all flex flex-col justify-between gap-3">
+            <div key={index} className="p-4 rounded-xl bg-muted/30 ring-1 ring-black/5 hover:ring-primary/30 transition-[box-shadow,background-color,color] flex flex-col justify-between gap-3">
               <div className="flex items-start gap-3">
                 <ShieldCheck className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                 <div>
@@ -438,7 +438,7 @@ function ModernConsumerView({ data, primaryColor, tenantId }: ViewProps) {
 
   const renderSupplyChain = () => {
     return (
-      <div key="supplyChain" className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+      <div key="supplyChain" className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-xl bg-primary/10">
             <Truck className="h-5 w-5 text-primary" />
@@ -628,7 +628,7 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
 
       <div className="container mx-auto px-4 space-y-8">
         {/* Customs Data */}
-        <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+        <div className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-xl bg-primary/10">
               <ShieldCheck className="h-5 w-5 text-primary" />
@@ -702,7 +702,7 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
 
         {/* Materials Table */}
         {isFieldVisible('materials') && getProductMaterials(product).length > 0 && (
-          <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+          <div className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10">
                 <Package className="h-5 w-5 text-primary" />
@@ -742,7 +742,7 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
 
         {/* Certifications with Downloads */}
         {isFieldVisible('certifications') && product.certifications.length > 0 && (
-          <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+          <div className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10">
                 <Award className="h-5 w-5 text-primary" />
@@ -775,7 +775,7 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
 
         {/* Full Supply Chain */}
         {isFieldVisible('supplyChainFull') && product.supplyChain.length > 0 && (
-          <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+          <div className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10">
                 <Truck className="h-5 w-5 text-primary" />
@@ -819,7 +819,7 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
 
         {/* Carbon Footprint */}
         {isFieldVisible('carbonFootprint') && product.carbonFootprint && (
-          <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+          <div className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10">
                 <Leaf className="h-5 w-5 text-primary" />
@@ -849,7 +849,7 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
           const hasContent = sr.instructions || sr.assemblyGuide || (sr.videos && sr.videos.length > 0) || (sr.faq && sr.faq.length > 0) || sr.warranty || sr.repairInfo || (sr.spareParts && sr.spareParts.length > 0);
           if (!hasContent) return null;
           return (
-            <div className="backdrop-blur hover:shadow-md transition-all p-6 sm:p-8" style={cardStyle}>
+            <div className="backdrop-blur hover:shadow-md transition-[box-shadow,background-color,color] p-6 sm:p-8" style={cardStyle}>
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-xl bg-primary/10">
                   <HelpCircle className="h-5 w-5 text-primary" />
@@ -881,7 +881,7 @@ function ModernCustomsView({ data, primaryColor }: ViewProps) {
                     <h4 className="font-medium mb-3 flex items-center gap-2 text-sm"><Video className="h-4 w-4" />{t('Videos')}</h4>
                     <div className="space-y-2">
                       {sr.videos.map((v, i) => (
-                        <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-muted/30 rounded-xl ring-1 ring-black/5 hover:ring-primary/30 transition-all text-sm font-medium" style={{ color: primaryColor }}>
+                        <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-muted/30 rounded-xl ring-1 ring-black/5 hover:ring-primary/30 transition-[box-shadow,background-color] text-sm font-medium" style={{ color: primaryColor }}>
                           <Video className="h-4 w-4 flex-shrink-0" />
                           {v.title}
                         </a>

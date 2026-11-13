@@ -295,7 +295,7 @@ export function AdminDashboardPage() {
                     <span className="text-muted-foreground tabular-nums">{count} <span className="opacity-60">· {pct}%</span></span>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div className={`h-full ${planColor} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                    <div className={`h-full ${planColor} transition-[width,background-color] duration-300`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );

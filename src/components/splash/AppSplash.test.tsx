@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { hideNativeSplash } from '@/lib/native-init';
 
 /**
  * Guards the splash handoff order.
@@ -73,8 +74,34 @@ describe('AppSplash handoff', () => {
     );
 
     // The splash is an overlay, never a gate. If children only rendered after
-    // it cleared, the 550 ms floor would become 550 ms of dead time.
+    // it cleared, the intro would become dead time before loading could start.
     expect(screen.getByText('app content')).toBeInTheDocument();
+  });
+
+  it('plays the intro after a slow native handoff instead of behind it', async () => {
+    let finishHandoff!: () => void;
+    vi.mocked(hideNativeSplash).mockImplementationOnce(() => new Promise<void>((resolve) => { finishHandoff = resolve; }));
+    render(<AppSplash ready budget="full"><div>app</div></AppSplash>);
+    await act(() => vi.advanceTimersByTimeAsync(1400));
+    expect(screen.getByTestId('app-splash')).toHaveAttribute('data-revealed', 'false');
+    await act(async () => { finishHandoff(); });
+    expect(screen.getByTestId('app-splash')).toHaveAttribute('data-revealed', 'true');
+    await act(() => vi.advanceTimersByTimeAsync(700));
+    expect(screen.getByTestId('app-splash')).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(4000));
+    await waitFor(() => expect(screen.queryByTestId('app-splash')).not.toBeInTheDocument());
+  });
+
+  it('hands off even when font loading never settles', async () => {
+    const original = Object.getOwnPropertyDescriptor(document, 'fonts');
+    Object.defineProperty(document, 'fonts', { configurable: true, value: { ready: new Promise(() => {}) } });
+    try {
+      render(<AppSplash ready budget="full"><div>app</div></AppSplash>);
+      await waitFor(() => expect(calls).toContain('removeBootSplash'));
+    } finally {
+      if (original) Object.defineProperty(document, 'fonts', original);
+      else Reflect.deleteProperty(document, 'fonts');
+    }
   });
 
   it('does not tear anything down synchronously on mount', () => {

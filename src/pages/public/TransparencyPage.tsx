@@ -87,6 +87,7 @@ const T: Record<string, Record<string, string>> = {
     orderNumberPlaceholder: 'e.g. FB20240301-001',
     accessButton: 'View Products',
     accessError: 'Invalid order number. Please check and try again.',
+    close: 'Close',
   },
   de: {
     loading: 'Produkte werden geladen\u2026',
@@ -138,6 +139,7 @@ const T: Record<string, Record<string, string>> = {
     orderNumber: 'Bestellnummer',
     orderNumberPlaceholder: 'z.B. FB20240301-001',
     accessButton: 'Produkte anzeigen',
+    close: 'Schließen',
     accessError: 'Ung\u00fcltige Bestellnummer. Bitte pr\u00fcfen und erneut versuchen.',
   },
 };
@@ -530,7 +532,7 @@ export function TransparencyPage() {
             <button
               type="submit"
               disabled={!orderInput.trim()}
-              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100 flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-[opacity,scale,color] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100 flex items-center justify-center gap-2"
               style={{ backgroundColor: primary }}
             >
               <Lock className="h-4 w-4" />
@@ -562,19 +564,20 @@ export function TransparencyPage() {
       <style>{`
         .tp-heading { font-family: ${fontConfig.heading}; }
         .tp-body { font-family: ${fontConfig.body}; }
-        .tp-card { transition: transform 0.35s cubic-bezier(.4,0,.2,1), box-shadow 0.35s cubic-bezier(.4,0,.2,1); }
-        .tp-card:hover { transform: translateY(-6px); box-shadow: 0 20px 60px -12px rgba(0,0,0,0.12); }
+        .tp-card { transition: transform 0.25s cubic-bezier(.23,1,.32,1), box-shadow 0.25s cubic-bezier(.23,1,.32,1); }
+        @media (hover: hover) and (pointer: fine) { .tp-card:hover { transform: translateY(-6px); box-shadow: 0 20px 60px -12px rgba(0,0,0,0.12); } }
         .tp-fade-in { animation: tpFadeIn 0.5s ease both; }
-        .tp-slide-up { animation: tpSlideUp 0.45s cubic-bezier(.4,0,.2,1) both; }
+        .tp-slide-up { animation: tpSlideUp 0.3s cubic-bezier(.4,0,.2,1) both; }
         @keyframes tpFadeIn { from { opacity:0; } to { opacity:1; } }
         @keyframes tpSlideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
         .tp-bar { transition: width 0.8s cubic-bezier(.4,0,.2,1); }
         .tp-ring-anim { animation: tpRingGrow 1s cubic-bezier(.4,0,.2,1) both; }
         @keyframes tpRingGrow { from { stroke-dashoffset: 283; } }
-        .tp-overlay { animation: tpOverlay 0.3s ease both; }
+        .tp-overlay { animation: tpOverlay 0.2s ease-out both; }
         @keyframes tpOverlay { from { opacity:0; } to { opacity:1; } }
-        .tp-modal { animation: tpModal 0.35s cubic-bezier(.22,1,.36,1) both; }
-        @keyframes tpModal { from { opacity:0; transform:translateY(40px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+        .tp-modal { animation: tpModal 0.3s cubic-bezier(.23,1,.32,1) both; }
+        @keyframes tpModal { from { opacity:0; transform:translateY(24px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @media (prefers-reduced-motion: reduce) { .tp-card, .tp-bar { transition: none; } .tp-fade-in, .tp-slide-up, .tp-overlay, .tp-modal, .tp-ring-anim { animation: none; } }
         .tp-stagger-1 { animation-delay: 0.05s; }
         .tp-stagger-2 { animation-delay: 0.10s; }
         .tp-stagger-3 { animation-delay: 0.15s; }
@@ -587,7 +590,7 @@ export function TransparencyPage() {
       {/* HEADER (hidden in embed) */}
       {/* ================================================================== */}
       {!isEmbed && (
-        <header className="tp-body sticky top-0 z-40 backdrop-blur-xl border-b" style={{ backgroundColor: isDark ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.8)', borderColor: borderColor }}>
+        <header className="tp-body sticky top-0 z-40 backdrop-blur-xl border-b pt-[var(--safe-top)]" style={{ backgroundColor: isDark ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.8)', borderColor: borderColor }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {branding.logo ? (
@@ -873,7 +876,7 @@ function ProductDetail({
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
       {/* Panel */}
-      <div className="relative h-full flex items-start justify-center overflow-y-auto pt-8 pb-8 px-4" onClick={(e) => e.stopPropagation()}>
+      <div className="relative h-full flex items-start justify-center overflow-y-auto overscroll-contain pt-[calc(1rem+var(--safe-top))] pb-[calc(1rem+var(--safe-bottom))] pl-[calc(0.75rem+var(--safe-left))] pr-[calc(0.75rem+var(--safe-right))] sm:pt-[calc(2rem+var(--safe-top))] sm:pb-[calc(2rem+var(--safe-bottom))] sm:px-4" onClick={(e) => e.stopPropagation()}>
         <div
           ref={detailRef}
           className="tp-modal tp-body relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden"
@@ -882,7 +885,8 @@ function ProductDetail({
           {/* Close */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 h-9 w-9 rounded-full bg-black/10 backdrop-blur-sm text-white hover:bg-black/20 flex items-center justify-center transition-colors"
+            aria-label={t('close')}
+            className="absolute top-3 right-3 z-10 h-11 w-11 rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/40 active:scale-[0.96] flex items-center justify-center transition-[background-color,scale] duration-150"
           >
             <X className="h-4 w-4" />
           </button>

@@ -52,7 +52,7 @@ export function HealthGauge({ score, size = 96, strokeWidth = 10, showLabel = tr
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={hasValue ? offset : circumference}
-            className={`${tone} transition-[stroke-dashoffset] duration-700 ease-out motion-reduce:duration-0`}
+            className={`${tone} transition-[stroke-dashoffset] duration-300 ease-out motion-reduce:duration-0`}
             style={{ transformOrigin: 'center' }}
           />
         </svg>

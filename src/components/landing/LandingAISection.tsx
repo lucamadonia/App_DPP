@@ -94,7 +94,7 @@ export function LandingAISection() {
                     <span className="text-[10px] font-medium text-slate-500 w-20 truncate">{t(`ai.phase.${phase.key}`)}</span>
                     <div className="flex-1 h-1.5 rounded-full bg-slate-100">
                       <div
-                        className={`h-1.5 rounded-full ${phase.color} transition-all duration-1000`}
+                        className={`h-1.5 rounded-full ${phase.color} transition-[width] duration-300`}
                         style={{ width: isVisible ? `${phase.progress}%` : '0%' }}
                       />
                     </div>

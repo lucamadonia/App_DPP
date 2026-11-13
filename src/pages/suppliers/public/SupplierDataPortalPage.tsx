@@ -452,7 +452,7 @@ function CategoryCard({ group, filledCount, totalCount, isOpen, onToggle, childr
   const { t } = useTranslation('supplier-data-portal');
 
   return (
-    <Card className="overflow-hidden transition-all">
+    <Card className="overflow-hidden transition-[color,background-color,border-color,box-shadow]">
       <div
         className="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg"
         style={{ backgroundColor: allFilled ? '#22c55e' : primaryColor }}
@@ -526,7 +526,7 @@ function ProductTabBar({ products, activeProductId, onSelect, primaryColor, prod
               type="button"
               onClick={() => onSelect(product.id)}
               className={`
-                flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap
+                flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-[box-shadow,background-color,color] whitespace-nowrap
                 ${isActive
                   ? 'text-white shadow-sm'
                   : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
@@ -1205,7 +1205,7 @@ export function SupplierDataPortalPage() {
                   </div>
                   <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-white transition-all duration-500"
+                      className="h-full rounded-full bg-white transition-[width] duration-300"
                       style={{ width: `${overallProgress.percentage}%` }}
                     />
                   </div>
@@ -1301,8 +1301,8 @@ export function SupplierDataPortalPage() {
         {(visibleBatchGroups.length > 0 || dataRequest.allowBatchCreate) && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <div
                     className="flex h-9 w-9 items-center justify-center rounded-lg"
                     style={{ backgroundColor: `${primaryColor}15` }}
@@ -1399,7 +1399,7 @@ export function SupplierDataPortalPage() {
               {newBatches.map((newBatch, index) => (
                 <Card key={`new-${index}`} className="mt-4 border-dashed border-2">
                   <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <CardTitle className="text-base">{t('New Batch')} #{index + 1}</CardTitle>
                       <Button
                         variant="ghost"

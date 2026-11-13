@@ -182,10 +182,10 @@ export function ComplianceWidget({ className }: ComplianceWidgetProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Gauge + summary */}
-        <div className="flex items-center gap-4 sm:gap-5">
-          <ComplianceGauge rate={rate} />
-          <div className="min-w-0 space-y-1.5">
-            <p className="text-sm font-medium text-foreground">
+        <div className="flex items-center gap-3 sm:gap-5">
+          <div className="shrink-0"><ComplianceGauge rate={rate} /></div>
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <p className="text-sm font-medium text-foreground break-words hyphens-auto">
               {t('overall compliance')}
             </p>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">

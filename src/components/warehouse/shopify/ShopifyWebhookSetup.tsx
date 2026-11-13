@@ -118,8 +118,8 @@ export function ShopifyWebhookSetup() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div>
+          <div className="flex items-center justify-between gap-3 rounded-lg border p-3 sm:p-4">
+            <div className="min-w-0">
               <div className="font-medium">{t('Status')}</div>
               <div className="text-sm text-muted-foreground">
                 {registeredCount === REQUIRED_TOPICS.length
@@ -128,9 +128,9 @@ export function ShopifyWebhookSetup() {
               </div>
             </div>
             {registeredCount === REQUIRED_TOPICS.length ? (
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
+              <CheckCircle2 className="h-6 w-6 shrink-0 text-green-600" />
             ) : (
-              <AlertCircle className="h-6 w-6 text-amber-600" />
+              <AlertCircle className="h-6 w-6 shrink-0 text-amber-600" />
             )}
           </div>
 
@@ -150,8 +150,8 @@ export function ShopifyWebhookSetup() {
             )}
           </div>
 
-          <div className="rounded-lg border">
-            <table className="w-full text-sm">
+          <div className="rounded-lg border overflow-x-auto overscroll-x-contain">
+            <table className="w-full min-w-[420px] text-sm">
               <thead className="bg-muted/50">
                 <tr>
                   <th className="p-2 text-left">{t('Topic')}</th>
@@ -165,7 +165,7 @@ export function ShopifyWebhookSetup() {
                   const correct = w && w.address === expectedAddress;
                   return (
                     <tr key={topic} className="border-t">
-                      <td className="p-2 font-mono text-xs">{topic}</td>
+                      <td className="p-2 font-mono text-xs break-all">{topic}</td>
                       <td className="p-2">
                         {correct ? (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
@@ -181,7 +181,7 @@ export function ShopifyWebhookSetup() {
                           </Badge>
                         )}
                       </td>
-                      <td className="p-2 text-xs text-muted-foreground">
+                      <td className="p-2 text-xs text-muted-foreground whitespace-nowrap">
                         {w?.created_at ? new Date(w.created_at).toLocaleString() : '—'}
                       </td>
                     </tr>

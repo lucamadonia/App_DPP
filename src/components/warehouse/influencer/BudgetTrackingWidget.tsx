@@ -66,7 +66,7 @@ export function BudgetTrackingWidget({
         {/* Progress bar */}
         <div className="h-2.5 sm:h-3 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-700`}
+            className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-[width] duration-700`}
             style={{ width: `${percent}%` }}
           />
         </div>

@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Save, Copy, Check, ExternalLink, Link } from 'lucide-react';
+import { Loader2, Save, Copy, Check, ExternalLink, Link, Users, LayoutGrid, ShieldCheck, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { FormSections, FormSection, FormGrid, FormField, InputAffix, FormToggleRow, FormActions } from '@/components/ui/form-layout';
 import type { ReturnsHubSettings, CustomerPortalSettings } from '@/types/returns-hub';
 import { DEFAULT_CUSTOMER_PORTAL_SETTINGS } from '@/services/supabase/rh-settings';
 import { PortalDomainSettingsCard } from '@/components/returns/PortalDomainSettingsCard';
@@ -66,173 +65,101 @@ export function PortalSetupTab({ settings, setSettings, tenantSlug, saving, onSa
   const usagePercent = settings.maxReturnsPerMonth > 0
     ? Math.min((settings.usage.returnsThisMonth / settings.maxReturnsPerMonth) * 100, 100)
     : 0;
-  const usageColor = usagePercent >= 90 ? 'bg-red-500' : usagePercent >= 70 ? 'bg-yellow-500' : 'bg-green-500';
+  const usageColor = usagePercent >= 90 ? 'bg-destructive' : 'bg-primary';
 
-  const saveButton = (
-    <div className="flex justify-end">
-      <Button onClick={onSave} disabled={saving}>
-        {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-        {t('Save')}
-      </Button>
+  const urlRow = (label: string, url: string) => (
+    <FormField label={label}>
+      <div className="flex gap-2">
+        <Input readOnly value={url} className="font-mono text-sm pointer-coarse:h-11" />
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-11 shrink-0 sm:size-9"
+          onClick={() => handleCopy(url)}
+          aria-label={t('Copy', { ns: 'common' })}
+        >
+          {copiedUrl === url ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+        </Button>
+      </div>
+    </FormField>
+  );
+
+  const linkList = (links: { href: string; label: string }[]) => (
+    <div className="-mt-2 flex flex-wrap gap-x-4">
+      {links.map((l) => (
+        <a
+          key={l.href}
+          href={l.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm text-primary hover:underline sm:min-h-8"
+        >
+          <ExternalLink className="h-3.5 w-3.5" /> {l.label}
+        </a>
+      ))}
     </div>
   );
 
   return (
-    <>
-      {/* Card 1: Portal Links */}
+    <FormSections>
       {tenantSlug && (
-        <Card className="animate-fade-in-up">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Link className="h-4 w-4" />
-              {t('Portal Links')}
-            </CardTitle>
-            <CardDescription>{t('All portal URLs at a glance')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            {/* Returns Portal URLs */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground">{t('Returns Portal')}</h4>
-              <div className="flex gap-2">
-                <Input
-                  readOnly
-                  value={returnsPortalBase}
-                  className="font-mono text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0"
-                  onClick={() => handleCopy(returnsPortalBase)}
-                >
-                  {copiedUrl === returnsPortalBase ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <a href={`/returns/portal/${tenantSlug}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                  <ExternalLink className="h-3.5 w-3.5" /> {t('Returns Portal')}
-                </a>
-                <a href={`/returns/portal/${tenantSlug}/register`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                  <ExternalLink className="h-3.5 w-3.5" /> {t('Register Return')}
-                </a>
-                <a href={`/returns/portal/${tenantSlug}/track`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                  <ExternalLink className="h-3.5 w-3.5" /> {t('Track Return')}
-                </a>
-              </div>
-            </div>
-
-            <div className="border-t" />
-
-            {/* Customer Portal URLs */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground">{t('Customer Portal')}</h4>
-              <div className="flex gap-2">
-                <Input
-                  readOnly
-                  value={customerPortalBase}
-                  className="font-mono text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0"
-                  onClick={() => handleCopy(customerPortalBase)}
-                >
-                  {copiedUrl === customerPortalBase ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <a href={customerPortalBase} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                  <ExternalLink className="h-3.5 w-3.5" /> {t('Open Portal')}
-                </a>
-                <a href={`${customerPortalBase}/login`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                  <ExternalLink className="h-3.5 w-3.5" /> {t('Login Page')}
-                </a>
-                <a href={`${customerPortalBase}/register`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                  <ExternalLink className="h-3.5 w-3.5" /> {t('Registration Page')}
-                </a>
-              </div>
-            </div>
-
-            {/* Custom Domain Link */}
-            {customDomainUrl && (
-              <>
-                <div className="border-t" />
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">{t('Custom Domain')}</h4>
-                  <div className="flex gap-2">
-                    <Input
-                      readOnly
-                      value={customDomainUrl}
-                      className="font-mono text-sm"
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="shrink-0"
-                      onClick={() => handleCopy(customDomainUrl)}
-                    >
-                      {copiedUrl === customDomainUrl ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                  <a href={customDomainUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                    <ExternalLink className="h-3.5 w-3.5" /> {t('Open Portal')}
-                  </a>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <FormSection title={t('Portal Links')} description={t('All portal URLs at a glance')} icon={Link}>
+          {urlRow(t('Returns Portal'), returnsPortalBase)}
+          {linkList([
+            { href: `/returns/portal/${tenantSlug}`, label: t('Returns Portal') },
+            { href: `/returns/portal/${tenantSlug}/register`, label: t('Register Return') },
+            { href: `/returns/portal/${tenantSlug}/track`, label: t('Track Return') },
+          ])}
+          {urlRow(t('Customer Portal'), customerPortalBase)}
+          {linkList([
+            { href: customerPortalBase, label: t('Open Portal') },
+            { href: `${customerPortalBase}/login`, label: t('Login Page') },
+            { href: `${customerPortalBase}/register`, label: t('Registration Page') },
+          ])}
+          {customDomainUrl && (
+            <>
+              {urlRow(t('Custom Domain'), customDomainUrl)}
+              {linkList([{ href: customDomainUrl, label: t('Open Portal') }])}
+            </>
+          )}
+        </FormSection>
       )}
 
-      {/* Card 2: Customer Portal Setup */}
-      <Card className="animate-fade-in-up" style={{ animationDelay: '50ms', animationFillMode: 'backwards' }}>
-        <CardHeader>
-          <CardTitle className="text-base">{t('Customer Portal Setup')}</CardTitle>
-          <CardDescription>{t('Configure portal access and registration options')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>{t('Enable Customer Portal')}</Label>
-              <p className="text-xs text-muted-foreground">{t('Allow customers to log in, view returns, and create tickets')}</p>
-            </div>
-            <Switch checked={portal.enabled} onCheckedChange={(v) => updatePortal({ enabled: v })} />
-          </div>
+      <FormSection
+        title={t('Customer Portal Setup')}
+        description={t('Configure portal access and registration options')}
+        icon={Users}
+      >
+        <div className="space-y-2">
+          <FormToggleRow
+            htmlFor="cp-enabled"
+            label={t('Enable Customer Portal')}
+            description={t('Allow customers to log in, view returns, and create tickets')}
+          >
+            <Switch id="cp-enabled" checked={portal.enabled} onCheckedChange={(v) => updatePortal({ enabled: v })} />
+          </FormToggleRow>
+          <FormToggleRow
+            htmlFor="cp-self-reg"
+            label={t('Allow Self-Registration')}
+            description={t('Customers can create their own accounts')}
+          >
+            <Switch id="cp-self-reg" checked={portal.allowSelfRegistration} onCheckedChange={(v) => updatePortal({ allowSelfRegistration: v })} />
+          </FormToggleRow>
+          <FormToggleRow htmlFor="cp-verify" label={t('Require Email Verification')}>
+            <Switch id="cp-verify" checked={portal.requireEmailVerification} onCheckedChange={(v) => updatePortal({ requireEmailVerification: v })} />
+          </FormToggleRow>
+          <FormToggleRow htmlFor="cp-magic" label={t('Enable Magic Link Login')}>
+            <Switch id="cp-magic" checked={portal.enableMagicLink} onCheckedChange={(v) => updatePortal({ enableMagicLink: v })} />
+          </FormToggleRow>
+        </div>
+      </FormSection>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>{t('Allow Self-Registration')}</Label>
-              <p className="text-xs text-muted-foreground">{t('Customers can create their own accounts')}</p>
-            </div>
-            <Switch checked={portal.allowSelfRegistration} onCheckedChange={(v) => updatePortal({ allowSelfRegistration: v })} />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>{t('Require Email Verification')}</Label>
-            </div>
-            <Switch checked={portal.requireEmailVerification} onCheckedChange={(v) => updatePortal({ requireEmailVerification: v })} />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>{t('Enable Magic Link Login')}</Label>
-            </div>
-            <Switch checked={portal.enableMagicLink} onCheckedChange={(v) => updatePortal({ enableMagicLink: v })} />
-          </div>
-
-          {saveButton}
-        </CardContent>
-      </Card>
-
-      {/* Card 3: Feature Access */}
-      <Card className="animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
-        <CardHeader>
-          <CardTitle className="text-base">{t('Feature Access')}</CardTitle>
-          <CardDescription>{t('Control which features customers can use')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <FormSection
+        title={t('Feature Access')}
+        description={t('Control which features customers can use')}
+        icon={LayoutGrid}
+      >
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {([
             ['createReturns', t('Create Returns')],
             ['viewTickets', t('View Tickets')],
@@ -241,102 +168,96 @@ export function PortalSetupTab({ settings, setSettings, tenantSlug, saving, onSa
             ['viewOrderHistory', t('View Order History')],
             ['downloadLabels', t('Download Labels')],
           ] as const).map(([key, label]) => (
-            <div key={key} className="flex items-center justify-between">
-              <Label>{label}</Label>
+            <FormToggleRow key={key} htmlFor={`cp-feature-${key}`} label={label}>
               <Switch
+                id={`cp-feature-${key}`}
                 checked={portal.features[key]}
                 onCheckedChange={(v) => updatePortal({ features: { ...portal.features, [key]: v } })}
               />
-            </div>
+            </FormToggleRow>
           ))}
+        </div>
+      </FormSection>
 
-          {saveButton}
-        </CardContent>
-      </Card>
-
-      {/* Card 4: Security & Onboarding */}
-      <Card className="animate-fade-in-up" style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}>
-        <CardHeader>
-          <CardTitle className="text-base">{t('Security & Onboarding')}</CardTitle>
-          <CardDescription>{t('Security settings for customer sessions')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>{t('Session Timeout')} ({t('minutes')})</Label>
+      <FormSection
+        title={t('Security & Onboarding')}
+        description={t('Security settings for customer sessions')}
+        icon={ShieldCheck}
+      >
+        <FormGrid cols={2}>
+          <FormField label={t('Session Timeout')}>
+            <InputAffix suffix={t('minutes')}>
               <Input
                 type="number"
+                inputMode="numeric"
                 min="5"
                 value={portal.security.sessionTimeoutMinutes}
                 onChange={(e) => updatePortal({ security: { ...portal.security, sessionTimeoutMinutes: parseInt(e.target.value) || 60 } })}
               />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Max Login Attempts')}</Label>
-              <Input
-                type="number"
-                min="1"
-                value={portal.security.maxLoginAttempts}
-                onChange={(e) => updatePortal({ security: { ...portal.security, maxLoginAttempts: parseInt(e.target.value) || 5 } })}
+            </InputAffix>
+          </FormField>
+          <FormField label={t('Max Login Attempts')}>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              value={portal.security.maxLoginAttempts}
+              onChange={(e) => updatePortal({ security: { ...portal.security, maxLoginAttempts: parseInt(e.target.value) || 5 } })}
+            />
+          </FormField>
+        </FormGrid>
+        <FormToggleRow
+          htmlFor="cp-guide"
+          label={t('Getting Started Guide')}
+          description={t('Show new customers a getting started guide on first login')}
+        >
+          <Switch id="cp-guide" checked={portal.showGettingStartedGuide} onCheckedChange={(v) => updatePortal({ showGettingStartedGuide: v })} />
+        </FormToggleRow>
+      </FormSection>
+
+      <FormActions sticky="page">
+        <Button onClick={onSave} disabled={saving}>
+          {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+          {t('Save')}
+        </Button>
+      </FormActions>
+
+      <FormSection title={t('License & Usage')} description={t('Your current plan and usage')} icon={Gauge}>
+        <Badge className="px-3 py-1 text-sm capitalize">{settings.plan}</Badge>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-2 rounded-lg bg-muted p-3">
+            <p className="text-sm text-muted-foreground">{t('Returns this month')}</p>
+            <p className="text-2xl font-semibold tabular-nums">{settings.usage.returnsThisMonth} <span className="text-sm font-normal text-muted-foreground">{t('of {{max}} included', { max: settings.maxReturnsPerMonth })}</span></p>
+            <div className="h-2 overflow-hidden rounded-full bg-muted-foreground/10">
+              <div
+                className={`h-full ${usageColor} rounded-full transition-[width] duration-200 ease-out`}
+                style={{ width: `${usagePercent}%` }}
               />
             </div>
           </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>{t('Getting Started Guide')}</Label>
-              <p className="text-xs text-muted-foreground">{t('Show new customers a getting started guide on first login')}</p>
-            </div>
-            <Switch checked={portal.showGettingStartedGuide} onCheckedChange={(v) => updatePortal({ showGettingStartedGuide: v })} />
+          <div className="rounded-lg bg-muted p-3">
+            <p className="text-sm text-muted-foreground">{t('Admin users')}</p>
+            <p className="text-2xl font-semibold tabular-nums">{settings.maxAdminUsers}</p>
           </div>
-
-          {saveButton}
-        </CardContent>
-      </Card>
-
-      {/* Card 5: License & Usage */}
-      <Card className="animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}>
-        <CardHeader>
-          <CardTitle className="text-base">{t('License & Usage')}</CardTitle>
-          <CardDescription>{t('Your current plan and usage')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Badge className="text-lg px-3 py-1 capitalize">{settings.plan}</Badge>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 rounded-lg bg-muted space-y-2">
-              <p className="text-sm text-muted-foreground">{t('Returns this month')}</p>
-              <p className="text-2xl font-bold">{settings.usage.returnsThisMonth} <span className="text-sm font-normal text-muted-foreground">{t('of {{max}} included', { max: settings.maxReturnsPerMonth })}</span></p>
-              <div className="h-2 bg-muted-foreground/10 rounded-full overflow-hidden">
-                <div
-                  className={`h-full ${usageColor} rounded-full transition-all duration-700`}
-                  style={{ width: `${usagePercent}%` }}
-                />
-              </div>
-            </div>
-            <div className="p-3 rounded-lg bg-muted">
-              <p className="text-sm text-muted-foreground">{t('Admin users')}</p>
-              <p className="text-2xl font-bold">{settings.maxAdminUsers}</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <h4 className="font-medium text-sm">{t('Features')}</h4>
+        </div>
+        <div>
+          <h4 className="mb-1 text-sm font-medium">{t('Features')}</h4>
+          <ul className="divide-y">
             {Object.entries(settings.features).map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between py-1 text-sm">
+              <li key={key} className="flex items-center justify-between py-2 text-sm">
                 <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                <span>{typeof value === 'boolean' ? (value ? '\u2713' : '\u2014') : value}</span>
-              </div>
+                <span className="text-muted-foreground">{typeof value === 'boolean' ? (value ? '✓' : '—') : value}</span>
+              </li>
             ))}
-          </div>
-        </CardContent>
-      </Card>
+          </ul>
+        </div>
+      </FormSection>
 
       {/* Card 6: Custom Domain */}
       <PortalDomainSettingsCard
         settings={settings}
         onSettingsChange={setSettings}
       />
-    </>
+    </FormSections>
   );
 }

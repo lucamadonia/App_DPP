@@ -28,7 +28,7 @@ export function GuideStep({
   return (
     <div
       className={cn(
-        'relative pl-12 transition-all duration-500',
+        'relative pl-12 transition-[opacity,translate] duration-500',
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
       )}
       style={{ transitionDelay: `${delay}ms` }}

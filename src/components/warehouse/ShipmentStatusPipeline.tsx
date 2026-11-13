@@ -86,7 +86,7 @@ export function ShipmentStatusPipeline({
 
                     {/* Node circle */}
                     <div
-                      className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${
+                      className={`relative flex items-center justify-center rounded-full transition-[color,background-color,border-color,box-shadow,opacity,transform,width,height] duration-300 ${
                         isCurrent
                           ? `h-12 w-12 bg-gradient-to-br ${gradient} text-white shadow-lg shadow-slate-900/15 scale-105 ring-2 ring-white dark:ring-slate-900`
                           : isPast
@@ -166,7 +166,7 @@ export function ShipmentStatusPipeline({
                   />
                 )}
                 <div
-                  className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${
+                  className={`relative flex items-center justify-center rounded-full transition-[color,background-color,border-color,box-shadow,opacity,transform,width,height] duration-300 ${
                     isCurrent
                       ? `h-8 w-8 bg-gradient-to-br ${gradient} text-white shadow-md ring-2 ring-white dark:ring-slate-900`
                       : isPast

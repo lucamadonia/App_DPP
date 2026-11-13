@@ -96,7 +96,7 @@ export function ProductComplianceTab({ product }: Props) {
               </div>
               <p className="text-sm text-muted-foreground mt-2">{t('Overall Compliance')}</p>
             </div>
-            <div className="flex-1 grid grid-cols-3 gap-4">
+            <div className="w-full min-w-0 flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="text-center p-3 rounded-lg bg-muted">
                 <p className="text-lg font-bold">{registrationScore}%</p>
                 <p className="text-xs text-muted-foreground">{t('Registrations')}</p>

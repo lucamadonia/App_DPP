@@ -9,11 +9,11 @@
 -- ============================================
 
 INSERT INTO countries (code, name, flag, regulations, checklists, authorities, description) VALUES
-('DE', 'Deutschland', '🇩🇪', 45, 12, ARRAY['Bundesministerium für Wirtschaft und Klimaschutz', 'Umweltbundesamt', 'Bundesnetzagentur'], 'Größter EU-Markt mit strengen Umweltauflagen'),
-('FR', 'Frankreich', '🇫🇷', 38, 10, ARRAY['Ministère de la Transition écologique', 'ADEME'], 'Vorreiter bei Reparierbarkeitsindex'),
-('AT', 'Österreich', '🇦🇹', 32, 8, ARRAY['Bundesministerium für Klimaschutz', 'Umweltbundesamt'], 'Hohe Standards bei Nachhaltigkeit'),
-('IT', 'Italien', '🇮🇹', 35, 9, ARRAY['Ministero della Transizione Ecologica', 'ISPRA'], 'Fokus auf Kreislaufwirtschaft'),
-('ES', 'Spanien', '🇪🇸', 30, 7, ARRAY['Ministerio para la Transición Ecológica', 'MITERD'], 'Wachsender Nachhaltigkeitsmarkt'),
+('DE', 'Deutschland', '🇩🇪', 45, 12, ARRAY['Bundesministerium für Wirtschaft und Energie', 'Bundesministerium für Umwelt, Klimaschutz, Naturschutz und nukleare Sicherheit', 'Umweltbundesamt', 'Bundesnetzagentur'], 'Größter EU-Markt mit strengen Umweltauflagen'),
+('FR', 'Frankreich', '🇫🇷', 38, 10, ARRAY['Ministère de la Transition écologique', 'ADEME', 'DGCCRF'], 'Vorreiter bei Reparierbarkeits- und Haltbarkeitsindex (AGEC)'),
+('AT', 'Österreich', '🇦🇹', 32, 8, ARRAY['Bundesministerium für Land- und Forstwirtschaft, Klima- und Umweltschutz, Regionen und Wasserwirtschaft', 'Umweltbundesamt'], 'Hohe Standards bei Nachhaltigkeit'),
+('IT', 'Italien', '🇮🇹', 35, 9, ARRAY['Ministero dell''Ambiente e della Sicurezza Energetica', 'ISPRA', 'CONAI'], 'Fokus auf Kreislaufwirtschaft'),
+('ES', 'Spanien', '🇪🇸', 30, 7, ARRAY['Ministerio para la Transición Ecológica y el Reto Demográfico', 'MITECO'], 'Wachsender Nachhaltigkeitsmarkt'),
 ('NL', 'Niederlande', '🇳🇱', 33, 9, ARRAY['Rijkswaterstaat', 'RIVM'], 'Führend bei Kreislaufwirtschaft'),
 ('BE', 'Belgien', '🇧🇪', 28, 7, ARRAY['SPF Santé publique', 'IBGE-BIM'], 'Strikte Verpackungsvorschriften'),
 ('PL', 'Polen', '🇵🇱', 25, 6, ARRAY['Ministerstwo Klimatu i Środowiska'], 'Aufstrebender Markt'),
@@ -39,27 +39,27 @@ INSERT INTO countries (code, name, flag, regulations, checklists, authorities, d
 ('MT', 'Malta', '🇲🇹', 18, 4, ARRAY['Environment and Resources Authority'], 'Kleinster EU-Staat'),
 ('PT', 'Portugal', '🇵🇹', 30, 7, ARRAY['Agência Portuguesa do Ambiente'], 'Wachsender Nachhaltigkeitsmarkt'),
 ('RO', 'Rumänien', '🇷🇴', 22, 5, ARRAY['Ministerul Mediului'], 'EU-Mitglied seit 2007'),
-('SI', 'Slowenien', '🇸🇮', 24, 6, ARRAY['Ministrstvo za okolje in prostor'], 'Grüner Alpensstaat'),
+('SI', 'Slowenien', '🇸🇮', 24, 6, ARRAY['Ministrstvo za okolje, podnebje in energijo', 'Ministrstvo za naravne vire in prostor'], 'Grüner Alpenstaat'),
 ('SK', 'Slowakei', '🇸🇰', 23, 6, ARRAY['Ministerstvo životného prostredia'], 'Starke Automobilindustrie')
 ON CONFLICT (code) DO NOTHING;
 
 -- EWR-Länder (nicht EU)
 INSERT INTO countries (code, name, flag, regulations, checklists, authorities, description) VALUES
 ('NO', 'Norwegen', '🇳🇴', 35, 9, ARRAY['Miljødirektoratet'], 'EWR-Mitglied, hohe Umweltstandards'),
-('IS', 'Island', '🇮🇸', 20, 5, ARRAY['Umhverfis- og auðlindaráðuneytið'], 'EWR-Mitglied, erneuerbare Energien'),
+('IS', 'Island', '🇮🇸', 20, 5, ARRAY['Umhverfis-, orku- og loftslagsráðuneytið'], 'EWR-Mitglied, erneuerbare Energien'),
 ('LI', 'Liechtenstein', '🇱🇮', 18, 4, ARRAY['Amt für Umwelt'], 'EWR-Mitglied, Kleinstaat')
 ON CONFLICT (code) DO NOTHING;
 
 -- Wichtige Handelspartner
 INSERT INTO countries (code, name, flag, regulations, checklists, authorities, description) VALUES
-('GB', 'Vereinigtes Königreich', '🇬🇧', 40, 10, ARRAY['Department for Environment, Food & Rural Affairs', 'Environment Agency'], 'Wichtiger Handelspartner nach Brexit'),
+('GB', 'Vereinigtes Königreich', '🇬🇧', 40, 10, ARRAY['Department for Environment, Food & Rural Affairs', 'Environment Agency', 'Office for Product Safety and Standards'], 'Wichtiger Handelspartner nach Brexit'),
 ('US', 'Vereinigte Staaten', '🇺🇸', 35, 8, ARRAY['EPA', 'FTC', 'CPSC'], 'Größte Volkswirtschaft weltweit'),
 ('CN', 'China', '🇨🇳', 30, 7, ARRAY['Ministry of Ecology and Environment'], 'Größter Produktionsstandort'),
 ('JP', 'Japan', '🇯🇵', 32, 8, ARRAY['Ministry of the Environment'], 'Hohe Qualitäts- und Umweltstandards'),
 ('KR', 'Südkorea', '🇰🇷', 28, 7, ARRAY['Ministry of Environment'], 'Technologieführer in Asien'),
 ('IN', 'Indien', '🇮🇳', 22, 5, ARRAY['Ministry of Environment, Forest and Climate Change'], 'Wachsender Markt'),
 ('TR', 'Türkei', '🇹🇷', 25, 6, ARRAY['Çevre, Şehircilik ve İklim Değişikliği Bakanlığı'], 'Wichtiger Handelspartner'),
-('TW', 'Taiwan', '🇹🇼', 26, 6, ARRAY['Environmental Protection Administration'], 'Halbleiter- und Elektronikproduktion')
+('TW', 'Taiwan', '🇹🇼', 26, 6, ARRAY['Ministry of Environment (MOENV)'], 'Halbleiter- und Elektronikproduktion')
 ON CONFLICT (code) DO NOTHING;
 
 -- Europa (nicht EU/EWR)
@@ -343,21 +343,76 @@ INSERT INTO eu_regulations (name, full_name, description, category, status, effe
 ON CONFLICT DO NOTHING;
 
 -- ============================================
--- NATIONALE REGULIERUNGEN (Beispiel: Deutschland)
+-- NATIONALE REGULIERUNGEN
 -- ============================================
+-- Rechtsstand geprüft: 2026-11-10. Quelle je Eintrag als Kommentar.
+-- Die Tabelle hat kein Status-Feld; ersetzte Gesetze werden daher nicht mehr eingespielt:
+--   VerpackG (2019) -> abgelöst durch VerpackDG am 12.08.2026
+--   BattG (2009)    -> abgelöst durch BattDG am 07.10.2025
 
 INSERT INTO national_regulations (country_code, name, description, category, mandatory, effective_date, authority, penalties, products, link) VALUES
-('DE', 'Verpackungsgesetz (VerpackG)', 'Deutsches Verpackungsgesetz mit Systembeteiligungspflicht und Registrierung bei LUCID.', 'Recycling', true, '2019-01-01', 'Zentrale Stelle Verpackungsregister', 'Bis zu 200.000 EUR', ARRAY['Verpackungen'], 'https://www.verpackungsgesetz.com'),
+-- Quelle: https://www.verpackungsregister.org/hilfe/rollen-pflichten
+--         https://www.umweltpakt.bayern.de/abfall/recht/bund/520/verpackdg-verpackungsrecht-durchfuehrungsgesetz (Gesetz vom 13.07.2026, BGBl. 2026 I)
+('DE', 'Verpackungsrecht-Durchführungsgesetz (VerpackDG)', 'Führt seit 12.08.2026 die EU-Verpackungsverordnung (EU) 2025/40 (PPWR) in Deutschland durch und löst das Verpackungsgesetz (VerpackG, 2019) ab. Registrierung weiterhin im Verpackungsregister LUCID der ZSVR (zugleich nationales PPWR-Register); bestehende Registrierungen bleiben gültig, Angaben wie Markennamen, Verpackungsarten oder Bevollmächtigter sind ggf. anzupassen. Systembeteiligung für Verpackungen, die beim privaten Endverbraucher anfallen. Für Verpackungen außerhalb der Systembeteiligung dürfen Hersteller bis 31.12.2027 ohne Zulassung durch die ZSVR in Verkehr bringen (sonstige Organisationen für Herstellerverantwortung bis 31.10.2027); danach ist eine kostenpflichtige Zulassung erforderlich.', 'Recycling', true, '2026-08-12', 'Zentrale Stelle Verpackungsregister (ZSVR)', 'Bußgelder und Vertriebsverbot bei fehlender Registrierung oder Systembeteiligung', ARRAY['Verpackungen'], 'https://www.verpackungsregister.org/hilfe/rollen-pflichten'),
 
-('DE', 'Elektrogesetz (ElektroG)', 'Gesetz über das Inverkehrbringen, die Rücknahme und die umweltverträgliche Entsorgung von Elektro- und Elektronikgeräten.', 'Recycling', true, '2005-08-16', 'Stiftung EAR', 'Bis zu 100.000 EUR', ARRAY['Elektronik'], 'https://www.stiftung-ear.de'),
+-- Quelle: https://www.ihk.de/freiburg/unternehmen-beraten/umwelt-energie-und-klimaschutz/umwelt-und-ressourcen/abfall-und-kreislaufwirtschaft/elektrog-ueberblick-6861386
+('DE', 'Elektro- und Elektronikgerätegesetz (ElektroG)', 'Registrierung, Rücknahme und Entsorgung von Elektro- und Elektronikgeräten (WEEE). Novelle Ende November 2025 verkündet, überwiegend in Kraft seit 01.01.2026: neues Sammelstellen-Logo (Stecker-Logo) für Rücknahmestellen der Hersteller ab Januar 2026; ab 01.07.2026 Anzeige im Laden und online (§ 18a) sowie unentgeltliche Rücknahme von E-Zigaretten und Tabakerhitzern durch alle Verkäufer; erweiterte Hinweise zu Risiken lithiumhaltiger Batterien; Hersteller veröffentlichen Sammel- und Recyclingquoten auf ihrer Website. Marktplätze und Fulfilment-Dienstleister dürfen nur registrierte Hersteller bedienen.', 'Recycling', true, '2005-08-16', 'Stiftung Elektro-Altgeräte Register (stiftung ear) / Umweltbundesamt', 'Bis zu 100.000 EUR', ARRAY['Elektronik'], 'https://www.stiftung-ear.de'),
 
-('DE', 'Batteriegesetz (BattG)', 'Deutsches Batteriegesetz zur Umsetzung der EU-Batterieverordnung.', 'Recycling', true, '2009-12-01', 'Umweltbundesamt', 'Bis zu 100.000 EUR', ARRAY['Batterien'], NULL),
+-- Quelle: https://www.ihk.de/koeln/hauptnavigation/umwelt-energie-nachhaltigkeit/umwelt/neues-batterierecht-durchfuehrungsgesetz-battdg--6803718
+--         https://www.umweltbundesamt.de/themen/batterieverordnung-uba-aktualisiert-beleihung-der
+('DE', 'Batterierecht-Durchführungsgesetz (BattDG)', 'Seit 07.10.2025 in Kraft; ersetzt das Batteriegesetz (BattG) und führt die EU-Batterieverordnung (EU) 2023/1542 in Deutschland durch (deren abfallrechtliche Vorgaben gelten unmittelbar seit 18.08.2025). Herstellerregistrierung bei der stiftung ear, erweiterte Herstellerverantwortung, Rücknahme- und Informationspflichten.', 'Recycling', true, '2025-10-07', 'Stiftung Elektro-Altgeräte Register (stiftung ear)', 'Bußgelder, Vertriebsverbot oder Widerruf der Registrierung', ARRAY['Batterien'], 'https://www.stiftung-ear.de'),
 
-('DE', 'Lieferkettensorgfaltspflichtengesetz (LkSG)', 'Sorgfaltspflichten in der Lieferkette bezüglich Menschenrechte und Umwelt.', 'Nachhaltigkeit', true, '2023-01-01', 'BAFA', 'Bis zu 2% des Jahresumsatzes', ARRAY['Alle'], 'https://www.bafa.de/lieferketten'),
+-- Quelle: https://www.ihk.de/dresden/servicenavigation/presse-publikationen/meldungen/lieferkettengesetz-bafa-stellt-pruefung-von-berichten-ein-6751146
+--         https://dserver.bundestag.de/btd/21/024/2102474.pdf
+('DE', 'Lieferkettensorgfaltspflichtengesetz (LkSG)', 'Menschenrechtliche und umweltbezogene Sorgfaltspflichten in der Lieferkette für Unternehmen ab 1.000 Beschäftigten im Inland (seit 2024). Das BAFA prüft keine Berichte mehr; der Regierungsentwurf (BT-Drs. 21/2474) sieht die rückwirkende Streichung der Berichtspflicht und weniger Bußgeldtatbestände vor, war beim letzten Prüfstand aber noch nicht verkündet. Die Sorgfaltspflichten selbst gelten unverändert.', 'Nachhaltigkeit', true, '2023-01-01', 'BAFA', 'Bis zu 8 Mio. EUR bzw. bis zu 2% des durchschnittlichen Jahresumsatzes', ARRAY['Alle'], 'https://www.bafa.de/lieferketten'),
 
-('FR', 'Loi Anti-Gaspillage (AGEC)', 'Französisches Gesetz gegen Verschwendung für eine Kreislaufwirtschaft.', 'Recycling', true, '2020-02-10', 'ADEME', 'Variable Strafen', ARRAY['Elektronik', 'Textilien', 'Möbel'], NULL),
+-- Quelle: https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000041553759
+('FR', 'Loi Anti-Gaspillage (AGEC)', 'Loi n° 2020-105 vom 10.02.2020 gegen Verschwendung und für die Kreislaufwirtschaft: erweiterte Herstellerverantwortung (REP) für zahlreiche Produktgruppen, Verbot der Vernichtung unverkaufter Non-Food-Waren, Verbraucherinformation zu Umwelteigenschaften, Sortierkennzeichnung (Triman/Info-tri) sowie Reparierbarkeits- und Haltbarkeitsindex.', 'Recycling', true, '2020-02-10', 'Ministère de la Transition écologique / ADEME', 'Variable Strafen', ARRAY['Elektronik', 'Textilien', 'Möbel', 'Verpackungen'], 'https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000041553759'),
 
-('FR', 'Indice de réparabilité', 'Reparierbarkeitsindex für bestimmte Elektronikprodukte.', 'Kennzeichnung', true, '2021-01-01', 'DGCCRF', 'Bis zu 15.000 EUR', ARRAY['Elektronik'], NULL)
+-- Quelle: https://www.ecologie.gouv.fr/politiques-publiques/indice-durabilite
+('FR', 'Indice de réparabilité', 'Reparierbarkeitsindex (0–10) für bestimmte Elektro- und Elektronikgeräte. Wird schrittweise durch das Indice de durabilité ersetzt (Fernseher seit 08.01.2025, Waschmaschinen seit 08.04.2025); Smartphones und Tablets fallen seit Juni 2025 unter das EU-Energielabel mit Reparierbarkeitsklasse.', 'Kennzeichnung', true, '2021-01-01', 'DGCCRF', 'Bis zu 15.000 EUR', ARRAY['Elektronik'], 'https://www.ecologie.gouv.fr/politiques-publiques/indice-durabilite'),
+
+-- Quelle: https://www.ecologie.gouv.fr/politiques-publiques/indice-durabilite
+('FR', 'Indice de durabilité', 'Haltbarkeitsindex (0–10), kombiniert Reparierbarkeit und Zuverlässigkeit; ersetzt das Indice de réparabilité für Fernseher (seit 08.01.2025) und Waschmaschinen (Front- und Toplader, seit 08.04.2025). Berechnung durch Hersteller/Importeure, Anzeige am Verkaufsort und online; weitere Gerätekategorien sollen folgen.', 'Kennzeichnung', true, '2025-01-08', 'DGCCRF', 'Bis zu 15.000 EUR', ARRAY['Elektronik', 'Haushaltsgeräte'], 'https://www.ecologie.gouv.fr/politiques-publiques/indice-durabilite'),
+
+-- Quelle: https://www.adelphe.fr/sites/default/files/Documents/2025-10/adelphe_guide_info-tri_fr.pdf
+--         https://cms.law/en/fra/news-information/logo-triman-la-france-devant-la-cjue
+('FR', 'Triman & Info-tri', 'Pflicht-Sortierkennzeichnung (Triman-Logo und Info-tri-Sortierhinweis) für Haushaltsverpackungen und weitere REP-Produkte, verpflichtend seit 01.01.2022. Bleibt trotz PPWR bis zur Anwendung der harmonisierten EU-Sortierkennzeichnung verpflichtend; die EU-Kommission hat Frankreich wegen des Triman vor dem EuGH verklagt (keine aufschiebende Wirkung). Dematerialisierung bei sehr kleinen Verpackungen möglich.', 'Kennzeichnung', true, '2022-01-01', 'Ministère de la Transition écologique / ADEME', 'Verwaltungssanktionen nach Code de l''environnement', ARRAY['Verpackungen', 'Textilien', 'Elektronik', 'Möbel'], 'https://www.adelphe.fr/sites/default/files/Documents/2025-10/adelphe_guide_info-tri_fr.pdf'),
+
+-- Quelle: https://www.lcalex.it/wp-content/uploads/2021/08/ETICHETTATURA-AMBIENTALE-DEGLI-IMBALLAGGI.pdf
+--         https://www.certifico.com/ambiente/documenti-ambiente/documenti-ambiente-enti/linea-guida-etichettatura-ambientale-imballaggi
+--         https://certifico.com/ambiente/news-ambiente/decreto-mase-n-360-del-28-settembre-2022
+('IT', 'Etichettatura ambientale degli imballaggi', 'Umweltkennzeichnungspflicht für alle Verpackungen nach Art. 219 Abs. 5 D.Lgs. 152/2006 (geändert durch D.Lgs. 116/2020), operativ seit 01.01.2023: Materialcode nach Entscheidung 97/129/EG, für Verbraucherverpackungen zusätzlich Entsorgungshinweise; verbindliche Leitlinien per DM MASE Nr. 360 vom 28.09.2022 (ersetzt DM Nr. 114 vom 16.03.2022) und CONAI-Leitfaden; digitale Kennzeichnung (App/QR-Code) zulässig. Gilt neben der PPWR fort, bis deren harmonisierte Kennzeichnung anwendbar ist.', 'Kennzeichnung', true, '2023-01-01', 'Ministero dell''Ambiente e della Sicurezza Energetica (MASE) / CONAI', '', ARRAY['Verpackungen'], 'https://www.certifico.com/ambiente/documenti-ambiente/documenti-ambiente-enti/linea-guida-etichettatura-ambientale-imballaggi'),
+
+-- Quelle: https://www.miteco.gob.es/es/calidad-y-evaluacion-ambiental/temas/prevencion-y-gestion-residuos/registro-productores-producto/registro-productores-producto-seccion-envases.html
+--         https://www.miteco.gob.es/content/dam/miteco/es/calidad-y-evaluacion-ambiental/sgecocir/envases/nota%20aclaratoria%20sobre%20la%20aplicaci%C3%B3n%20del%20Reglamento%202025-40%20y%20sus%20efectos%20sobre%20el%20RD%201055-2022.pdf
+('ES', 'Real Decreto 1055/2022 de envases y residuos de envases', 'Spanische Verpackungsverordnung mit erweiterter Herstellerverantwortung für Haushalts-, Gewerbe- und Industrieverpackungen. Eintragung im Registro de Productores de Producto (Sección envases) und jährliche Meldung der in Verkehr gebrachten Verpackungen (Daten 2025: 02.01.–02.04.2026). Seit 12.08.2026 hat die PPWR (EU) 2025/40 Vorrang vor unvereinbarem nationalem Recht, u. a. gilt deren Herstellerdefinition.', 'Recycling', true, '2022-12-29', 'Ministerio para la Transición Ecológica y el Reto Demográfico (MITECO)', '', ARRAY['Verpackungen'], 'https://www.miteco.gob.es/es/calidad-y-evaluacion-ambiental/temas/prevencion-y-gestion-residuos/registro-productores-producto/registro-productores-producto-seccion-envases.html'),
+
+-- Quelle: https://www.bmluk.gv.at/themen/abfall-und-kreislaufwirtschaft/abfallsammlung-behandlung-und-verbringung/verpackungen/merkblatt-verpackungsvo.html
+('AT', 'Verpackungsverordnung 2014 / AWG 2002', 'Lizenzierungspflicht (Teilnahme an einem Sammel- und Verwertungssystem, § 13g AWG 2002) für Haushalts- und gewerbliche Verpackungen. Seit 12.08.2026 gilt die PPWR (EU) 2025/40; österreichische Regelungen bleiben bestehen, soweit mit der PPWR vereinbar. Anpassungen über geplante Novellen von AWG 2002 und Verpackungsverordnung 2014; bestehende Sammelsysteme und Meldewege bleiben vorerst aufrecht.', 'Recycling', true, '2015-01-01', 'Bundesministerium für Land- und Forstwirtschaft, Klima- und Umweltschutz, Regionen und Wasserwirtschaft (BMLUK)', '', ARRAY['Verpackungen'], 'https://www.bmluk.gv.at/themen/abfall-und-kreislaufwirtschaft/abfallsammlung-behandlung-und-verbringung/verpackungen/merkblatt-verpackungsvo.html'),
+
+-- Quelle: https://www.verpact.nl/en/news/nieuws-netherlands-belgium-france-and-luxembourg-join-forces-more-sustainable-packaging-europe
+('NL', 'Besluit beheer verpakkingen 2014', 'Niederländische Verpackungsverordnung mit Herstellerverantwortung; Melde- und Beitragspflicht über Verpact (ehemals Afvalfonds Verpakkingen). Seit 12.08.2026 gilt ergänzend die PPWR (EU) 2025/40.', 'Recycling', true, '2015-01-01', 'Verpact / Inspectie Leefomgeving en Transport (ILT)', '', ARRAY['Verpackungen'], 'https://www.verpact.nl'),
+
+-- Quelle: https://www.gov.uk/government/news/preparing-for-pepr-year-1-invoicing-key-information-for-liable-producers
+('GB', 'Extended Producer Responsibility for Packaging (pEPR)', 'Producer Responsibility Obligations (Packaging and Packaging Waste) Regulations 2024: Datenmeldung über Report Packaging Data, Gebühren an PackUK. Erste Gebührenbescheide (Notice of Liability) im Oktober 2025 für das Jahr 01.04.2025–31.03.2026, Zahlung binnen 50 Tagen oder in Raten; recyclingbasierte Gebührenmodulation ab 2026.', 'Recycling', true, '2025-01-01', 'Defra / PackUK / Environment Agency', '', ARRAY['Verpackungen'], 'https://www.gov.uk/government/news/preparing-for-pepr-year-1-invoicing-key-information-for-liable-producers'),
+
+-- Quelle: https://www.bakermckenzie.com/en/insight/publications/resources/product-risk-radar-articles/product-security-telecommunications-infrastructure-regime
+('GB', 'Product Security and Telecommunications Infrastructure (PSTI) Regime', 'Cybersicherheits-Mindestanforderungen für vernetzbare Verbraucherprodukte (Teil 1 PSTI Act 2022 und Security Requirements Regulations 2023), anwendbar seit 29.04.2024: keine universellen Standardpasswörter, Meldestelle für Sicherheitslücken, Angabe des Mindestzeitraums für Sicherheitsupdates, Statement of Compliance.', 'Produktsicherheit', true, '2024-04-29', 'Office for Product Safety and Standards (OPSS)', 'Bis zu 10 Mio. GBP oder 4% des weltweiten Umsatzes', ARRAY['Elektronik', 'Smart Home', 'Spielzeug'], 'https://www.legislation.gov.uk/ukpga/2022/46'),
+
+-- Quelle: https://www.gov.uk/government/publications/continued-recognition-of-eu-requirements-including-ce-marking-for-placing-products-on-the-gb-market/continued-recognition-of-eu-requirements-including-ce-marking-for-placing-products-on-the-gb-market
+--         https://www.pinsentmasons.com/out-law/news/deadline-new-ukca-product-marking-extended-indefinitely
+--         https://www.gov.uk/government/news/government-confirms-indefinite-recognition-of-ce-marked-medical-devices (21.10.2026)
+('GB', 'UKCA- / CE-Kennzeichnung (Großbritannien)', 'Konformitätskennzeichnung für den Markt in Großbritannien: Die CE-Kennzeichnung wird für die meisten Produktbereiche (u. a. Spielzeug, Maschinen, PSA, Gasgeräte, Messgeräte, Aerosole) unbefristet anerkannt; alternativ UKCA. Für Medizinprodukte wurde im Oktober 2026 die unbefristete Anerkennung CE-gekennzeichneter Produkte angekündigt. In Nordirland gelten gesonderte Regeln.', 'Kennzeichnung', true, '2024-10-01', 'Office for Product Safety and Standards (OPSS)', '', ARRAY['Alle'], 'https://www.gov.uk/government/publications/continued-recognition-of-eu-requirements-including-ce-marking-for-placing-products-on-the-gb-market/continued-recognition-of-eu-requirements-including-ce-marking-for-placing-products-on-the-gb-market'),
+
+-- Quelle: https://www.omm.com/insights/alerts-publications/2026-plastics-epr-packaging-rules-update-what-sb-54-sb-343-state-reporting-deadlines-prc-laws-the-eu-ppwr-mean-for-producers-retailers/
+--         https://www.venable.com/insights/publications/2026/05/california-finalizes-long-awaited-epr-regulations
+('US', 'California SB 54 (Plastic Pollution Prevention and Packaging Producer Responsibility Act)', 'Erweiterte Herstellerverantwortung für Einwegverpackungen und Kunststoff-Einweg-Lebensmittelgeschirr in Kalifornien; PRO ist die Circular Action Alliance. Dauerhafte Durchführungsverordnung von OAL am 01.05.2026 genehmigt und in Kraft; Herstellerregistrierung (bei CAA oder als unabhängiger/kleiner Hersteller bei CalRecycle) bis 01.06.2026. Volle Programmumsetzung ab Januar 2027; gegen die Verordnung sind Klagen anhängig.', 'Recycling', true, '2023-01-01', 'CalRecycle', '', ARRAY['Verpackungen'], 'https://calrecycle.ca.gov/laws/rulemaking/sb54regulations/'),
+
+-- Quelle: https://www.omm.com/insights/alerts-publications/2026-plastics-epr-packaging-rules-update-what-sb-54-sb-343-state-reporting-deadlines-prc-laws-the-eu-ppwr-mean-for-producers-retailers/
+--         https://www.hklaw.com/en/insights/publications/2026/08/federal-court-upholds-oregons-epr-law-in-full-after-constitutional
+--         https://resource-recycling.com/policy-now/2026/09/25/naw-appeals-oregon-epr-ruling/
+('US', 'Oregon Plastic Pollution and Recycling Modernization Act', 'Operatives Verpackungs-EPR-Programm in Oregon (SB 582, 2021) mit Registrierungs-, Melde- und Gebührenpflichten für Hersteller, i. d. R. über die Circular Action Alliance (eigene PRO oder Ausnahmen möglich); jährliche Mengenmeldung zum 31.05. Das Bundesbezirksgericht hat das Gesetz am 27.08.2026 vollständig bestätigt; die einstweilige Verfügung zugunsten von NAW-Mitgliedern (Feb. 2026) ist damit entfallen. Berufung beim Ninth Circuit anhängig (seit 24.09.2026), ohne aufschiebende Wirkung.', 'Recycling', true, '2025-07-01', 'Oregon Department of Environmental Quality (DEQ)', '', ARRAY['Verpackungen'], 'https://www.oregon.gov/deq')
 ON CONFLICT DO NOTHING;
 
 -- ============================================

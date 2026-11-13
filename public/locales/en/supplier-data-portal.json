@@ -175,5 +175,10 @@
   "Loading products...": "Loading products...",
   "Too many failed attempts. Please try again in 15 minutes.": "Too many failed attempts. Please try again in 15 minutes.",
   "This data request is no longer active": "This data request is no longer active",
-  "The password could not be checked. Please try again.": "The password could not be checked. Please try again."
+  "The password could not be checked. Please try again.": "The password could not be checked. Please try again.",
+  "Choose products": "Choose products",
+  "Which products the supplier may fill in": "Which products the supplier may fill in",
+  "Fields": "Fields",
+  "Which data the supplier may edit": "Which data the supplier may edit",
+  "Password, validity and a note for the supplier": "Password, validity and a note for the supplier"
 }

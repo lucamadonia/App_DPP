@@ -7,6 +7,52 @@ const failures = [];
 const fail = (message) => failures.push(message);
 const read = (file) => readFileSync(file, 'utf8').trim();
 
+// Validate the actual Xcode asset catalog, not just metadata/screenshots. A
+// correctly sized Capacitor placeholder or a flat launch image can still ship.
+for (const [catalog, reference] of [
+  ['AppIcon.appiconset', 'public/icons/icon-1024.png'],
+]) {
+  const directory = path.join('ios/App/App/Assets.xcassets', catalog);
+  const contents = JSON.parse(read(path.join(directory, 'Contents.json')));
+  const image = contents.images.find((entry) => entry.filename);
+  const target = image && path.join(directory, image.filename);
+  if (!target || !existsSync(target)) {
+    fail(`Missing native brand image in ${catalog}`);
+    continue;
+  }
+  const [nativePixels, brandPixels] = await Promise.all([
+    sharp(target).ensureAlpha().raw().toBuffer(),
+    sharp(reference).ensureAlpha().raw().toBuffer(),
+  ]);
+  if (!nativePixels.equals(brandPixels)) fail(`${catalog} does not contain the current Trackbliss brand image`);
+  if (catalog === 'AppIcon.appiconset') {
+    const metadata = await sharp(target).metadata();
+    if (metadata.width !== 1024 || metadata.height !== 1024 || metadata.hasAlpha) {
+      fail('The iOS app icon must be an opaque 1024 x 1024 PNG');
+    }
+  }
+}
+
+// The launch mark is a free-standing, transparent logo on the full-bleed
+// storyboard background. A square tile here shows up as a box on launch.
+{
+  const directory = 'ios/App/App/Assets.xcassets/LaunchMark.imageset';
+  const contents = JSON.parse(read(path.join(directory, 'Contents.json')));
+  for (const [scale, size] of [['1x', 160], ['2x', 320], ['3x', 480]]) {
+    const entry = contents.images.find((image) => image.scale === scale && image.filename);
+    const target = entry && path.join(directory, entry.filename);
+    if (!target || !existsSync(target)) {
+      fail(`LaunchMark.imageset is missing its @${scale} image`);
+      continue;
+    }
+    const metadata = await sharp(target).metadata();
+    if (metadata.width !== size || metadata.height !== size || !metadata.hasAlpha) {
+      fail(`LaunchMark @${scale} must be a transparent ${size} x ${size} PNG`);
+    }
+  }
+  if (!existsSync('public/icons/splash-mark.png')) fail('Missing public/icons/splash-mark.png for the web splash');
+}
+
 const metadataLimits = {
   'name.txt': 30,
   'subtitle.txt': 30,

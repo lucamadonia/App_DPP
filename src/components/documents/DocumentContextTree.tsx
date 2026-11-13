@@ -35,7 +35,7 @@ export function DocumentContextTree({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors">
+      <CollapsibleTrigger className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 pointer-coarse:min-h-11 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors">
         <ChevronRight
           className={cn(
             'h-3.5 w-3.5 shrink-0 transition-transform duration-200',
@@ -54,7 +54,7 @@ export function DocumentContextTree({
             <div
               key={node.id}
               className={cn(
-                'group flex w-full items-center gap-1 rounded-md px-2 py-1 text-sm transition-colors cursor-pointer',
+                'group flex w-full items-center gap-1 rounded-md px-2 py-1 pointer-coarse:min-h-11 text-sm transition-colors cursor-pointer',
                 selectedId === node.id
                   ? 'bg-primary/10 text-primary font-medium'
                   : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'

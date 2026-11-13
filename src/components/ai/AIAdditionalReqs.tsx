@@ -49,7 +49,7 @@ export function AIAdditionalReqs({ productContext, requirements }: AIAdditionalR
             <Button
               onClick={handleGenerate}
               size="sm"
-              className="relative overflow-hidden gap-1.5 w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 hover:from-amber-600 hover:to-orange-600 transition-all duration-300"
+              className="relative overflow-hidden gap-1.5 w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 hover:from-amber-600 hover:to-orange-600 transition duration-300"
             >
               <div className="absolute inset-0 animate-shimmer" aria-hidden="true">
                 <div className="h-full w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent" />

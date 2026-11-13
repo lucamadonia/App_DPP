@@ -53,7 +53,7 @@ export function SLAProgressBar({ ticket }: SLAProgressBarProps) {
       </div>
       <div className="h-2 bg-muted rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+          className={`h-full rounded-full transition-[width,background-color] duration-300 ease-out ${barColor}`}
           style={{ width: `${Math.min(progress * 100, 100)}%` }}
         />
       </div>

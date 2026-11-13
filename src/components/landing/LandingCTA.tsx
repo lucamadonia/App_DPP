@@ -43,13 +43,13 @@ export function LandingCTA() {
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <button
               onClick={() => navigate('/login')}
-              className="rounded-xl bg-white px-8 py-3.5 text-base font-semibold text-blue-700 shadow-lg hover:bg-blue-50 transition-all hover:scale-[1.03] active:scale-[0.98] animate-landing-cta-glow"
+              className="rounded-xl bg-white px-8 py-3.5 text-base font-semibold text-blue-700 shadow-lg hover:bg-blue-50 transition-[scale,box-shadow,background-color,color] hover:scale-[1.03] active:scale-[0.98] animate-landing-cta-glow"
             >
               {t('cta.primary')}
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="rounded-xl border-2 border-white/30 px-8 py-3.5 text-base font-semibold text-white hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="rounded-xl border-2 border-white/30 px-8 py-3.5 text-base font-semibold text-white hover:bg-white/10 transition-[scale,background-color,border-color,color] hover:scale-[1.02] active:scale-[0.98]"
             >
               {t('cta.secondary')}
             </button>

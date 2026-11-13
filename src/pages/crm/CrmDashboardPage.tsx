@@ -189,12 +189,12 @@ export function CrmDashboardPage() {
       {/* Tables Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between gap-3">
+            <CardTitle className="text-base flex min-w-0 items-center gap-2">
               <Sparkles className="h-4 w-4 text-purple-600" />
               {t('Top-Kunden nach CLV')}
             </CardTitle>
-            <Link to="/crm/customers?sort=total_spent-desc" className="text-xs text-primary hover:underline flex items-center gap-1">
+            <Link to="/crm/customers?sort=total_spent-desc" className="touch-hit shrink-0 whitespace-nowrap text-xs text-primary hover:underline flex items-center gap-1">
               {t('Alle')} <ArrowRight className="h-3 w-3" />
             </Link>
           </CardHeader>
@@ -240,12 +240,12 @@ export function CrmDashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between gap-3">
+            <CardTitle className="text-base flex min-w-0 items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               {t('Risk-Alerts')}
             </CardTitle>
-            <Link to="/crm/customers?segment=at_risk" className="text-xs text-primary hover:underline flex items-center gap-1">
+            <Link to="/crm/customers?segment=at_risk" className="touch-hit shrink-0 whitespace-nowrap text-xs text-primary hover:underline flex items-center gap-1">
               {t('Alle')} <ArrowRight className="h-3 w-3" />
             </Link>
           </CardHeader>

@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { StickyBottomBar } from '@/components/layout/sticky-bottom-bar';
 import { createProduct, updateProduct, getProductById, getCategories, getSuppliers, getProductSuppliers, assignProductToSupplier, removeProductFromSupplier, uploadDocument, getProductImages, createSupplier, getCountries, createCategory, addSubcategoryToCategory } from '@/services/supabase';
 import { getCurrentTenant } from '@/services/supabase/tenants';
 import { getCurrentTenantId } from '@/lib/supabase';
@@ -26,7 +27,6 @@ import { getProductComponents, addProductComponent, removeProductComponent, upda
 import type { VisibilityLevel } from '@/types/visibility';
 import {
   ArrowLeft,
-  ArrowRight,
   Check,
   ChevronsUpDown,
   Package,
@@ -52,18 +52,23 @@ import {
   AlertTriangle,
   ExternalLink,
   Recycle,
+  Box,
+  Ruler,
+  BadgeCheck,
+  Fingerprint,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
-import { motion, AnimatePresence } from 'framer-motion';
-import { blurIn, tabContentVariants, useReducedMotion } from '@/lib/motion';
+import { motion } from 'framer-motion';
+import { blurIn, useReducedMotion } from '@/lib/motion';
+import { FormWizard } from '@/components/ui/form-wizard';
+import { FormSectionNav, FormField, ChoiceCards, OptionalDisclosure } from '@/components/ui/form-layout';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandSeparator } from '@/components/ui/command';
@@ -77,19 +82,43 @@ const SUPPLIER_ROLES = [
   { value: 'logistics', label: 'Logistics' },
 ];
 
-const BASE_STEPS = [
-  { id: 'master-data', title: 'Basic Data', icon: Package },
-  { id: 'images', title: 'Images', icon: ImageIcon },
-  { id: 'sustainability', title: 'Sustainability', icon: Leaf },
-  { id: 'compliance', title: 'Compliance', icon: ShieldCheck },
-  { id: 'espr-compliance', title: 'ESPR Compliance', icon: Factory },
-  { id: 'ear', title: 'EAR / ElektroG', icon: Zap },
-  { id: 'documents', title: 'Documents', icon: FileText },
-  { id: 'support', title: 'Support', icon: Headphones },
-  { id: 'suppliers', title: 'Suppliers', icon: Truck },
+/**
+ * Short form pages, each sized to fit one phone screen. Create mode walks them
+ * as a wizard; edit mode jumps between them via the section navigation.
+ * `group` clusters them in the edit navigation. `editOnly` pages need a saved
+ * product (images upload against the product id).
+ */
+type FormStepGroup = 'product' | 'sustainability' | 'compliance' | 'resources';
+interface FormStepDef {
+  id: string;
+  title: string;
+  description: string;
+  icon: typeof Package;
+  group: FormStepGroup;
+  editOnly?: boolean;
+}
+
+const BASE_STEPS: FormStepDef[] = [
+  { id: 'basics', title: 'Basic Data', description: 'Name, identifier and category of the product', icon: Package, group: 'product' },
+  { id: 'details', title: 'Description & Customs', description: 'What customers read and what customs needs', icon: FileText, group: 'product' },
+  { id: 'images', title: 'Images', description: 'Manage product images', icon: ImageIcon, group: 'product', editOnly: true },
+  { id: 'materials', title: 'Materials', description: 'Product materials and how recyclable they are', icon: Leaf, group: 'sustainability' },
+  { id: 'packaging', title: 'Packaging', description: 'Packaging materials and how recyclable they are', icon: Box, group: 'sustainability' },
+  { id: 'dimensions', title: 'Packaging Type & Dimensions', description: 'Packaging type and product/packaging measurements', icon: Ruler, group: 'sustainability' },
+  { id: 'compliance', title: 'Certifications', description: 'Add certifications and compliance data', icon: BadgeCheck, group: 'compliance' },
+  { id: 'espr-identity', title: 'ESPR Identification', description: 'Unique product ID, dates and importer', icon: Fingerprint, group: 'compliance' },
+  { id: 'espr-operators', title: 'Responsible Parties', description: 'Authorized representative and DPP contact person', icon: Building2, group: 'compliance' },
+  { id: 'espr-substances', title: 'Substances of Concern', description: 'Recycled content and SVHC substances', icon: AlertTriangle, group: 'compliance' },
+  { id: 'espr-durability', title: 'Durability & End of Life', description: 'Energy, lifetime, repairability and disposal', icon: Recycle, group: 'compliance' },
+  { id: 'espr-conformity', title: 'Conformity', description: 'CE marking, declaration of conformity and manuals', icon: ShieldCheck, group: 'compliance' },
+  { id: 'espr-customs', title: 'Customs & Trade', description: 'Customs value and preference proof', icon: Factory, group: 'compliance' },
+  { id: 'ear', title: 'EAR / ElektroG', description: 'Registration data for electrical equipment', icon: Zap, group: 'compliance' },
+  { id: 'documents', title: 'Documents', description: 'Upload relevant documents', icon: FileText, group: 'resources' },
+  { id: 'support', title: 'Support', description: 'Add support resources, FAQ, warranty, and repair information', icon: Headphones, group: 'resources' },
+  { id: 'suppliers', title: 'Suppliers', description: 'Assign suppliers and economic operators', icon: Truck, group: 'resources' },
 ];
 
-const COMPONENTS_STEP = { id: 'components', title: 'Components', icon: Layers };
+const COMPONENTS_STEP: FormStepDef = { id: 'components', title: 'Components', description: 'Select products to include in this set', icon: Layers, group: 'product' };
 
 export function ProductFormPage() {
   const { t, i18n } = useTranslation('products');
@@ -129,6 +158,7 @@ export function ProductFormPage() {
 
   // Multi-language state
   const [activeLanguage, setActiveLanguage] = useState<string>('default');
+  const [certSearch, setCertSearch] = useState('');
   const [translations, setTranslations] = useState<Record<string, Partial<TranslatableProductFields>>>({});
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const productLanguages = tenant?.settings?.productLanguages || ['en', 'de'];
@@ -155,9 +185,12 @@ export function ProductFormPage() {
   const [aggregationOverrides, setAggregationOverrides] = useState<AggregationOverrides>({});
 
   // Dynamic steps: insert "Components" after "Basic Data" when type is 'set'
-  const steps = productType === 'set'
-    ? [BASE_STEPS[0], COMPONENTS_STEP, ...BASE_STEPS.slice(1)]
-    : BASE_STEPS;
+  const steps = useMemo(() => {
+    const available = BASE_STEPS.filter(step => isEditMode || !step.editOnly);
+    return productType === 'set'
+      ? [...available.slice(0, 2), COMPONENTS_STEP, ...available.slice(2)]
+      : available;
+  }, [isEditMode, productType]);
 
   // Product images state
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
@@ -607,19 +640,7 @@ export function ProductFormPage() {
     if (file) openDocDialog(file);
   };
 
-  const nextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleSubmit = async () => {
+  const handleSubmit = async (saveDraft = false) => {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
@@ -773,8 +794,9 @@ export function ProductFormPage() {
               await addProductComponent(result.id, components[i].productId, components[i].quantity);
             }
           }
-          // Redirect to create first batch for this product
-          navigate(`/products/${result.id}/batches/new`);
+          // A saved draft can be resumed later; completing the wizard proceeds
+          // to its first batch as before.
+          navigate(saveDraft ? `/products/${result.id}` : `/products/${result.id}/batches/new`);
         } else if (result.success) {
           navigate('/products');
         } else {
@@ -792,7 +814,6 @@ export function ProductFormPage() {
     }
   };
 
-  const progress = ((currentStep + 1) / steps.length) * 100;
   const currentStepId = steps[currentStep]?.id;
 
   return (
@@ -811,7 +832,7 @@ export function ProductFormPage() {
           <h1 className="text-2xl font-bold text-foreground">
             {isEditMode ? t('Edit Product') : t('Create New Product')}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="hidden text-muted-foreground sm:block">
             {isEditMode
               ? t('Edit the Digital Product Passport')
               : t('Create a new Digital Product Passport')}
@@ -825,44 +846,12 @@ export function ProductFormPage() {
           <span className="ml-3 text-muted-foreground">{t('Loading product data...')}</span>
         </div>
       ) : (<>
-      {/* Progress */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between mb-4 overflow-x-auto gap-1 sm:gap-2">
-            {steps.map((step, index) => (
-              <div
-                key={step.id}
-                className={`flex items-center gap-2 ${
-                  index <= currentStep ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full border-2 ${
-                    index < currentStep
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : index === currentStep
-                        ? 'border-primary text-primary'
-                        : 'border-muted-foreground'
-                  }`}
-                >
-                  {index < currentStep ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <step.icon className="h-4 w-4" />
-                  )}
-                </div>
-                <span className="hidden sm:inline text-sm font-medium">{t(step.title)}</span>
-              </div>
-            ))}
-          </div>
-          <Progress value={progress} className="h-2" />
-        </CardContent>
-      </Card>
-
+      {(() => {
+        const stepBody = (
+          <div data-form-step={currentStepId} className="space-y-6">
       {/* Language Switcher */}
-      {(currentStepId === 'master-data' || currentStepId === 'sustainability' || currentStepId === 'support') && productLanguages.length > 0 && (
-        <Card>
-          <CardContent className="py-3">
+      {(currentStepId === 'details' || currentStepId === 'materials' || currentStepId === 'packaging' || currentStepId === 'support') && productLanguages.length > 0 && (
+        <div className="rounded-lg border bg-muted/30 px-3 py-2">
             <LanguageSwitcher
               activeLanguage={activeLanguage}
               onLanguageChange={setActiveLanguage}
@@ -871,42 +860,12 @@ export function ProductFormPage() {
                 translations[lang] && Object.values(translations[lang]).some(v => v && (typeof v === 'string' ? v.length > 0 : true))
               )}
             />
-          </CardContent>
-        </Card>
+        </div>
       )}
 
-      {/* Form Steps */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {(() => {
-              const StepIcon = steps[currentStep].icon;
-              return <StepIcon className="h-5 w-5" />;
-            })()}
-            {t(steps[currentStep].title)}
-          </CardTitle>
-          <CardDescription>
-            {currentStepId === 'master-data' && t('Enter basic product information')}
-            {currentStepId === 'components' && t('Select products to include in this set')}
-            {currentStepId === 'images' && t('Manage product images')}
-            {currentStepId === 'sustainability' && t('Define materials and sustainability data')}
-            {currentStepId === 'compliance' && t('Add certifications and compliance data')}
-            {currentStepId === 'espr-compliance' && t('EU ESPR mandatory fields: economic operators, substances, durability, conformity')}
-            {currentStepId === 'documents' && t('Upload relevant documents')}
-            {currentStepId === 'support' && t('Add support resources, FAQ, warranty, and repair information')}
-            {currentStepId === 'suppliers' && t('Assign suppliers and economic operators')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <AnimatePresence mode="wait">
-          <MotionDiv
-            key={currentStepId}
-            {...(!prefersReduced && { variants: tabContentVariants, initial: 'initial', animate: 'animate', exit: 'exit' })}
-            className="space-y-6"
-          >
           {/* Step 1: Basic Data */}
-          {currentStepId === 'master-data' && (
-            <div className="grid gap-6 md:grid-cols-2">
+          {currentStepId === 'basics' && (
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2 [&>*]:min-w-0">
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('Product Name')} *</label>
                 <Input
@@ -1269,6 +1228,21 @@ export function ProductFormPage() {
                   </Dialog>
                 </div>
               )}
+              <FormField label={t('Product Type')} span="full">
+                <ChoiceCards<'single' | 'set'>
+                  value={productType}
+                  onValueChange={setProductType}
+                  options={[
+                    { value: 'single', label: t('Single Product'), description: t('One item with its own passport'), icon: Package },
+                    { value: 'set', label: t('Product Set / Bundle'), description: t('Combines several existing products'), icon: Layers },
+                  ]}
+                />
+              </FormField>
+            </div>
+          )}
+
+          {currentStepId === 'details' && (
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2 [&>*]:min-w-0">
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-medium">{t('Description')}</label>
                 {activeLanguage === 'default' ? (
@@ -1291,47 +1265,6 @@ export function ProductFormPage() {
                 )}
               </div>
 
-              <Separator className="md:col-span-2" />
-
-              {/* Product Type Toggle */}
-              <div className="md:col-span-2 space-y-2">
-                <label className="text-sm font-medium">{t('Product Type')}</label>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setProductType('single')}
-                    className={cn(
-                      'flex-1 p-3 rounded-lg border-2 text-left transition-all',
-                      productType === 'single'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-muted hover:border-muted-foreground/25'
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4" />
-                      <span className="font-medium text-sm">{t('Single Product')}</span>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProductType('set')}
-                    className={cn(
-                      'flex-1 p-3 rounded-lg border-2 text-left transition-all',
-                      productType === 'set'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-muted hover:border-muted-foreground/25'
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Layers className="h-4 w-4" />
-                      <span className="font-medium text-sm">{t('Product Set / Bundle')}</span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <Separator className="md:col-span-2" />
-              <h3 className="font-medium md:col-span-2">{t('Extended Product Data')}</h3>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('HS Code (Customs Tariff Number)')}</label>
@@ -1361,8 +1294,12 @@ export function ProductFormPage() {
                 </>
               )}
 
-              <Separator className="md:col-span-2" />
-              <h3 className="font-medium md:col-span-2">{t('Registration Numbers')}</h3>
+              <OptionalDisclosure
+                className="md:col-span-2"
+                label={t('Registration Numbers')}
+                description={t('WEEE, EPREL, packaging register and similar IDs')}
+              >
+                <div className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2 [&>*]:min-w-0">
 
               {REGISTRATION_FIELDS.filter(f => f.type !== 'tags').map((field) => (
                 <div key={field.key} className="space-y-2">
@@ -1400,6 +1337,8 @@ export function ProductFormPage() {
                   <p className="text-xs text-muted-foreground">{t(field.tooltip)}</p>
                 </div>
               ))}
+                </div>
+              </OptionalDisclosure>
             </div>
           )}
 
@@ -1435,8 +1374,9 @@ export function ProductFormPage() {
           )}
 
           {/* Step 3: Sustainability */}
-          {currentStepId === 'sustainability' && (
+          {(currentStepId === 'materials' || currentStepId === 'packaging' || currentStepId === 'dimensions') && (
             <div className="space-y-6">
+              {currentStepId === 'materials' && (<>
               {/* Set Aggregation Override Banner */}
               {productType === 'set' && components.length > 0 && (
                 <div className="p-4 rounded-lg border border-primary/20 bg-primary/5">
@@ -1454,9 +1394,9 @@ export function ProductFormPage() {
                         type="button"
                         onClick={() => setAggregationOverrides(prev => ({ ...prev, [field]: !prev[field] }))}
                         className={cn(
-                          'flex items-center gap-2 p-2 rounded-md border text-xs transition-all',
+                          'flex items-center gap-2 p-2 rounded-md border text-xs transition',
                           aggregationOverrides[field]
-                            ? 'border-amber-300 bg-amber-50 text-amber-800'
+                            ? 'border-primary/40 bg-primary/5 text-foreground'
                             : 'border-muted bg-background text-muted-foreground'
                         )}
                       >
@@ -1479,7 +1419,7 @@ export function ProductFormPage() {
 
               {/* Section 1: Product Materials */}
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-medium">{t('Product Materials')}</h3>
                   <Button variant="outline" size="sm" onClick={addMaterial}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -1488,8 +1428,8 @@ export function ProductFormPage() {
                 </div>
                 <div className="space-y-4">
                   {formData.materials.map((material, index) => (
-                    <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 p-4 border rounded-lg">
-                      <div className="space-y-2">
+                    <div key={index} className="grid grid-cols-2 gap-3 rounded-lg border p-3 sm:p-4 xl:grid-cols-5">
+                      <div className="col-span-2 space-y-2 xl:col-span-1">
                         <label className="text-sm font-medium">{t('Material')}</label>
                         <Input
                           placeholder={t('e.g. Recycled PET')}
@@ -1522,7 +1462,7 @@ export function ProductFormPage() {
                             type="checkbox"
                             checked={material.recyclable}
                             onChange={(e) => updateMaterial(index, 'recyclable', e.target.checked)}
-                            className="h-4 w-4 rounded border-gray-300"
+                            className="h-4 w-4 rounded border-input accent-primary"
                           />
                           <span className="ml-2 text-sm">{t('Yes')}</span>
                         </div>
@@ -1556,8 +1496,11 @@ export function ProductFormPage() {
                     onChange={(e) => updateField('recyclablePercentage', parseInt(e.target.value) || 0)}
                   />
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">{t('Recycling Instructions')}</label>
+                <OptionalDisclosure
+                  className="md:col-span-2"
+                  label={t('Recycling Instructions')}
+                  filledCount={(formData.recyclingInstructions && formData.recyclingInstructions !== '<p></p>') || translations[activeLanguage]?.recyclingInstructions ? 1 : 0}
+                >
                   {activeLanguage === 'default' ? (
                     <RichTextEditor
                       value={formData.recyclingInstructions}
@@ -1576,14 +1519,15 @@ export function ProductFormPage() {
                       minHeight="5rem"
                     />
                   )}
-                </div>
+                </OptionalDisclosure>
               </div>
 
-              <Separator />
+              </>)}
 
+              {currentStepId === 'packaging' && (<>
               {/* Section 3: Packaging Materials */}
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-medium flex items-center gap-2">
                     <Package className="h-4 w-4 text-muted-foreground" />
                     {t('Packaging Materials')}
@@ -1595,8 +1539,8 @@ export function ProductFormPage() {
                 </div>
                 <div className="space-y-4">
                   {formData.packagingMaterials.map((material, index) => (
-                    <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 p-4 border rounded-lg">
-                      <div className="space-y-2">
+                    <div key={index} className="grid grid-cols-2 gap-3 rounded-lg border p-3 sm:p-4 xl:grid-cols-5">
+                      <div className="col-span-2 space-y-2 xl:col-span-1">
                         <label className="text-sm font-medium">{t('Material')}</label>
                         <Input
                           placeholder={t('e.g. Recycled PET')}
@@ -1629,7 +1573,7 @@ export function ProductFormPage() {
                             type="checkbox"
                             checked={material.recyclable}
                             onChange={(e) => updatePackagingMaterial(index, 'recyclable', e.target.checked)}
-                            className="h-4 w-4 rounded border-gray-300"
+                            className="h-4 w-4 rounded border-input accent-primary"
                           />
                           <span className="ml-2 text-sm">{t('Yes')}</span>
                         </div>
@@ -1663,8 +1607,11 @@ export function ProductFormPage() {
                     onChange={(e) => updateField('packagingRecyclablePercentage', parseInt(e.target.value) || 0)}
                   />
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">{t('Packaging Recycling Instructions')}</label>
+                <OptionalDisclosure
+                  className="md:col-span-2"
+                  label={t('Packaging Recycling Instructions')}
+                  filledCount={(formData.packagingRecyclingInstructions && formData.packagingRecyclingInstructions !== '<p></p>') || translations[activeLanguage]?.packagingInstructions ? 1 : 0}
+                >
                   {activeLanguage === 'default' ? (
                     <RichTextEditor
                       value={formData.packagingRecyclingInstructions}
@@ -1683,11 +1630,12 @@ export function ProductFormPage() {
                       minHeight="5rem"
                     />
                   )}
-                </div>
+                </OptionalDisclosure>
               </div>
 
-              <Separator />
+              </>)}
 
+              {currentStepId === 'dimensions' && (<>
               {/* Section 5: Packaging Details */}
               <div>
                 <h3 className="font-medium mb-4 flex items-center gap-2">
@@ -1736,11 +1684,11 @@ export function ProductFormPage() {
               {/* Section 6: Dimensions */}
               <div>
                 <h3 className="font-medium mb-4">{t('Dimensions')}</h3>
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-3 lg:grid-cols-2">
                   {/* Product Dimensions */}
-                  <div className="p-4 border rounded-lg">
-                    <h4 className="text-sm font-medium mb-4">{t('Product Dimensions')}</h4>
-                    <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="p-3 border rounded-lg sm:p-4">
+                    <h4 className="text-sm font-medium mb-3">{t('Product Dimensions')} <span className="font-normal text-muted-foreground">(cm)</span></h4>
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4">
                       <div className="space-y-2">
                         <label className="text-xs text-muted-foreground">{t('Height (cm)')}</label>
                         <Input
@@ -1777,9 +1725,9 @@ export function ProductFormPage() {
                     </div>
                   </div>
                   {/* Packaging Dimensions */}
-                  <div className="p-4 border rounded-lg">
-                    <h4 className="text-sm font-medium mb-4">{t('Packaging Dimensions')}</h4>
-                    <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="p-3 border rounded-lg sm:p-4">
+                    <h4 className="text-sm font-medium mb-3">{t('Packaging Dimensions')} <span className="font-normal text-muted-foreground">(cm)</span></h4>
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4">
                       <div className="space-y-2">
                         <label className="text-xs text-muted-foreground">{t('Height (cm)')}</label>
                         <Input
@@ -1820,90 +1768,183 @@ export function ProductFormPage() {
 
               {/* Section 7: Multiple Packaging Layers (only for existing products) */}
               {id && (
-                <>
-                  <Separator />
+                <OptionalDisclosure
+                  label={t('Packaging Layers')}
+                  description={t('Primary, secondary and transport packaging')}
+                >
                   <PackagingLayersEditor productId={id} />
-                </>
+                </OptionalDisclosure>
               )}
+              </>)}
             </div>
           )}
 
           {/* Step 4: Compliance */}
           {currentStepId === 'compliance' && (
             <div className="space-y-6">
-              {CERTIFICATION_CATEGORIES.map((category) => (
-                <div key={category.label}>
-                  <h3 className="font-medium mb-3">{t(category.label)}</h3>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {category.options.map((opt) => {
-                      const certEntry = formData.certifications.find(c => c.name === opt.name);
-                      const isChecked = Boolean(certEntry);
-                      return (
-                        <div key={opt.name} className="border rounded-lg">
-                          <label className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    certifications: [...prev.certifications, { name: opt.name, issuedBy: '', validUntil: '' }],
-                                  }));
-                                } else {
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    certifications: prev.certifications.filter((c) => c.name !== opt.name),
-                                  }));
-                                }
-                              }}
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                            <span className="font-medium">{opt.name}</span>
-                          </label>
-                          {isChecked && certEntry && (
-                            <div className="px-4 pb-4 grid gap-3 sm:grid-cols-2">
-                              <div className="space-y-1">
-                                <label className="text-xs text-muted-foreground">{t('Issued By')}</label>
-                                <Input
-                                  placeholder={t('e.g. TÜV Süd')}
-                                  value={certEntry.issuedBy}
-                                  onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    certifications: prev.certifications.map(c =>
-                                      c.name === opt.name ? { ...c, issuedBy: e.target.value } : c
-                                    ),
-                                  }))}
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-xs text-muted-foreground">{t('Valid Until')}</label>
-                                <Input
-                                  type="date"
-                                  value={certEntry.validUntil}
-                                  onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    certifications: prev.certifications.map(c =>
-                                      c.name === opt.name ? { ...c, validUntil: e.target.value } : c
-                                    ),
-                                  }))}
-                                />
-                              </div>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Input
+                  type="search"
+                  value={certSearch}
+                  onChange={(e) => setCertSearch(e.target.value)}
+                  placeholder={t('Search certifications...')}
+                  aria-label={t('Search certifications...')}
+                  className="pl-9"
+                />
+              </div>
+
+              {formData.certifications.length > 0 && (
+                <>
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold">{t('Selected Certifications')}</h3>
+                    <div className="space-y-2">
+                      {formData.certifications.map((cert) => (
+                        <div key={cert.name} className="rounded-lg border p-3">
+                          <div className="mb-3 flex items-center justify-between gap-2">
+                            <span className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">{cert.name}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="shrink-0 pointer-coarse:size-11"
+                              aria-label={t('Remove')}
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                certifications: prev.certifications.filter(c => c.name !== cert.name),
+                              }))}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <label className="text-xs text-muted-foreground">{t('Issued By')}</label>
+                              <Input
+                                placeholder={t('e.g. TÜV Süd')}
+                                value={cert.issuedBy}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  certifications: prev.certifications.map(c =>
+                                    c.name === cert.name ? { ...c, issuedBy: e.target.value } : c
+                                  ),
+                                }))}
+                              />
                             </div>
-                          )}
+                            <div className="space-y-1.5">
+                              <label className="text-xs text-muted-foreground">{t('Valid Until')}</label>
+                              <Input
+                                type="date"
+                                value={cert.validUntil}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  certifications: prev.certifications.map(c =>
+                                    c.name === cert.name ? { ...c, validUntil: e.target.value } : c
+                                  ),
+                                }))}
+                              />
+                            </div>
+                          </div>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {certSearch.trim() ? (
+                <div className="flex flex-wrap gap-2">
+                  {CERTIFICATION_CATEGORIES.flatMap(category => category.options)
+                    .filter(opt => opt.name.toLowerCase().includes(certSearch.trim().toLowerCase()))
+                    .map((opt) => {
+                      const isChecked = formData.certifications.some(c => c.name === opt.name);
+                      return (
+                        <button
+                          key={opt.name}
+                          type="button"
+                          aria-pressed={isChecked}
+                          onClick={() => {
+                            if (!isChecked) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                certifications: [...prev.certifications, { name: opt.name, issuedBy: '', validUntil: '' }],
+                              }));
+                            } else {
+                              setFormData((prev) => ({
+                                ...prev,
+                                certifications: prev.certifications.filter((c) => c.name !== opt.name),
+                              }));
+                            }
+                          }}
+                          className={cn(
+                            'inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border px-3 text-left text-sm outline-none pointer-coarse:min-h-11',
+                            'transition-[background-color,border-color,color] duration-150 ease-out focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                            isChecked
+                              ? 'border-primary bg-primary/10 font-medium text-primary'
+                              : 'border-border bg-background text-foreground hover:bg-muted'
+                          )}
+                        >
+                          {isChecked ? <Check className="size-3.5 shrink-0" aria-hidden="true" /> : <Plus className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />}
+                          <span className="min-w-0 [overflow-wrap:anywhere]">{opt.name}</span>
+                        </button>
                       );
                     })}
-                  </div>
                 </div>
-              ))}
-
-              <Separator />
+              ) : (
+                <div className="space-y-2">
+                  {CERTIFICATION_CATEGORIES.map((category) => {
+                    const selectedInCategory = category.options.filter(opt => formData.certifications.some(c => c.name === opt.name)).length;
+                    return (
+                      <OptionalDisclosure
+                        key={category.label}
+                        label={t(category.label)}
+                        description={category.options.slice(0, 3).map(opt => opt.name).join(', ')}
+                        filledCount={selectedInCategory}
+                      >
+                        <div className="flex flex-wrap gap-2">
+                          {category.options.map((opt) => {
+                            const isChecked = formData.certifications.some(c => c.name === opt.name);
+                            return (
+                        <button
+                          key={opt.name}
+                          type="button"
+                          aria-pressed={isChecked}
+                          onClick={() => {
+                            if (!isChecked) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                certifications: [...prev.certifications, { name: opt.name, issuedBy: '', validUntil: '' }],
+                              }));
+                            } else {
+                              setFormData((prev) => ({
+                                ...prev,
+                                certifications: prev.certifications.filter((c) => c.name !== opt.name),
+                              }));
+                            }
+                          }}
+                          className={cn(
+                            'inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border px-3 text-left text-sm outline-none pointer-coarse:min-h-11',
+                            'transition-[background-color,border-color,color] duration-150 ease-out focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                            isChecked
+                              ? 'border-primary bg-primary/10 font-medium text-primary'
+                              : 'border-border bg-background text-foreground hover:bg-muted'
+                          )}
+                        >
+                          {isChecked ? <Check className="size-3.5 shrink-0" aria-hidden="true" /> : <Plus className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />}
+                          <span className="min-w-0 [overflow-wrap:anywhere]">{opt.name}</span>
+                        </button>
+                            );
+                          })}
+                        </div>
+                      </OptionalDisclosure>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Custom certification */}
               <div>
-                <h3 className="font-medium mb-3">{t('Custom Certification')}</h3>
-                <Button
+                                <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
@@ -1920,44 +1961,18 @@ export function ProductFormPage() {
                   {t('Add Custom Certification')}
                 </Button>
               </div>
-
-              {formData.certifications.length > 0 && (
-                <>
-                  <Separator />
-                  <div>
-                    <h3 className="font-medium mb-4">{t('Selected Certifications')}</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.certifications.map((cert) => (
-                        <Badge key={cert.name} variant="secondary" className="gap-1">
-                          {cert.name}
-                          {cert.issuedBy && <span className="text-muted-foreground">({cert.issuedBy})</span>}
-                          <button
-                            type="button"
-                            className="ml-1 hover:text-destructive"
-                            onClick={() => setFormData(prev => ({
-                              ...prev,
-                              certifications: prev.certifications.filter(c => c.name !== cert.name),
-                            }))}
-                          >
-                            ×
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
           )}
 
           {/* Step: ESPR Compliance */}
-          {currentStepId === 'espr-compliance' && (
+          {currentStepId?.startsWith('espr-') && (
             <div className="space-y-8">
               {/* Section 1: Identification & Economic Operators */}
+              {currentStepId === 'espr-identity' && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-semibold">{t('Identification & Economic Operators')}</h3>
+                  <Building2 className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <h3 className="text-sm font-semibold">{t('Identification & Economic Operators')}</h3>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
@@ -2027,10 +2042,14 @@ export function ProductFormPage() {
                     />
                   </div>
                 </div>
+              </div>
+              )}
 
+              {currentStepId === 'espr-operators' && (
+              <div className="space-y-4">
                 {/* Authorized Representative */}
                 <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <Label className="text-base">{t('Authorized Representative')}</Label>
                     {!formData.authorizedRepresentative && (
                       <Button
@@ -2096,7 +2115,7 @@ export function ProductFormPage() {
                           }))}
                         />
                       </div>
-                      <div className="col-span-2 space-y-1">
+                      <div className="md:col-span-2 space-y-1">
                         <Label className="text-xs">{t('Address')}</Label>
                         <Input
                           placeholder={t('Full Address')}
@@ -2107,7 +2126,7 @@ export function ProductFormPage() {
                           }))}
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <Button
                           type="button"
                           variant="ghost"
@@ -2124,7 +2143,7 @@ export function ProductFormPage() {
 
                 {/* DPP Responsible */}
                 <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <Label className="text-base">{t('DPP Responsible Person')}</Label>
                     {!formData.dppResponsible && (
                       <Button
@@ -2204,14 +2223,14 @@ export function ProductFormPage() {
                   )}
                 </div>
               </div>
-
-              <Separator />
+              )}
 
               {/* Section 2: Materials & Substances of Concern */}
+              {currentStepId === 'espr-substances' && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-orange-500" />
-                  <h3 className="text-lg font-semibold">{t('Substances of Concern (SVHC/SCIP)')}</h3>
+                  <AlertTriangle className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <h3 className="text-sm font-semibold">{t('Substances of Concern (SVHC/SCIP)')}</h3>
                 </div>
 
                 <div className="space-y-2">
@@ -2231,7 +2250,7 @@ export function ProductFormPage() {
                 </div>
 
                 <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <Label className="text-base">{t('SVHC Substances List')}</Label>
                     <Button
                       type="button"
@@ -2360,7 +2379,7 @@ export function ProductFormPage() {
                                     i === index ? { ...s, svhcListed: e.target.checked } : s
                                   )
                                 }))}
-                                className="h-4 w-4 rounded border-gray-300"
+                                className="h-4 w-4 rounded border-input accent-primary"
                               />
                               <Label htmlFor={`svhc-${index}`} className="text-xs cursor-pointer">
                                 {t('Listed as SVHC')}
@@ -2373,17 +2392,17 @@ export function ProductFormPage() {
                   )}
                 </div>
               </div>
-
-              <Separator />
+              )}
 
               {/* Section 3: Sustainability & Durability */}
+              {currentStepId === 'espr-durability' && (<>
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-yellow-500" />
-                  <h3 className="text-lg font-semibold">{t('Sustainability & Durability')}</h3>
+                  <Zap className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <h3 className="text-sm font-semibold">{t('Sustainability & Durability')}</h3>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="energyConsumptionKWh">{t('Energy Consumption (kWh/year)')}</Label>
                     <Input
@@ -2431,19 +2450,16 @@ export function ProductFormPage() {
                         className="w-20"
                       />
                     </div>
-                    <Progress value={Number(formData.repairabilityScore) || 0} className="h-2" />
                   </div>
                 </div>
               </div>
 
-              <Separator />
-
               {/* Section 4: Recycling & End-of-Life */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Recycle className="h-5 w-5 text-green-500" />
-                  <h3 className="text-lg font-semibold">{t('Recycling & End-of-Life')}</h3>
-                </div>
+              <OptionalDisclosure
+                label={t('Recycling & End-of-Life')}
+                description={t('Disassembly and disposal instructions')}
+                filledCount={[formData.disassemblyInstructions, formData.endOfLifeInstructions].filter(v => v && v !== '<p></p>').length}
+              >
 
                 <div className="space-y-2">
                   <Label htmlFor="disassemblyInstructions">{t('Disassembly Instructions')}</Label>
@@ -2465,15 +2481,16 @@ export function ProductFormPage() {
                     minHeight="120px"
                   />
                 </div>
-              </div>
+              </OptionalDisclosure>
 
-              <Separator />
+              </>)}
 
               {/* Section 5: Conformity & Certifications */}
+              {currentStepId === 'espr-conformity' && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-blue-500" />
-                  <h3 className="text-lg font-semibold">{t('Conformity & Certifications')}</h3>
+                  <ShieldCheck className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <h3 className="text-sm font-semibold">{t('Conformity & Certifications')}</h3>
                 </div>
 
                 <div className="flex items-center gap-3 p-3 border rounded-lg">
@@ -2482,7 +2499,7 @@ export function ProductFormPage() {
                     id="ceMarking"
                     checked={formData.ceMarking}
                     onChange={(e) => updateField('ceMarking', e.target.checked)}
-                    className="h-5 w-5 rounded border-gray-300"
+                    className="h-5 w-5 rounded border-input accent-primary"
                   />
                   <Label htmlFor="ceMarking" className="text-base font-medium cursor-pointer">
                     {t('CE Marking Present')}
@@ -2538,6 +2555,10 @@ export function ProductFormPage() {
                   </div>
                 </div>
 
+                <OptionalDisclosure
+                  label={t('Test reports & safety information')}
+                  filledCount={formData.testReports.filter(url => url.trim()).length + (formData.safetyInformation && formData.safetyInformation !== '<p></p>' ? 1 : 0)}
+                >
                 <div className="space-y-2">
                   <Label>{t('Test Reports (URLs)')}</Label>
                   {formData.testReports.map((url, index) => (
@@ -2597,15 +2618,17 @@ export function ProductFormPage() {
                     minHeight="100px"
                   />
                 </div>
+                </OptionalDisclosure>
               </div>
 
-              <Separator />
+              )}
 
               {/* Section 6: Customs & Preference */}
+              {currentStepId === 'espr-customs' && (<>
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-purple-500" />
-                  <h3 className="text-lg font-semibold">{t('Customs & Trade Preferences')}</h3>
+                  <Truck className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <h3 className="text-sm font-semibold">{t('Customs & Trade Preferences')}</h3>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
@@ -2642,7 +2665,7 @@ export function ProductFormPage() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <Layers className="h-5 w-5 text-indigo-500" />
-                      <h3 className="text-lg font-semibold">{t('Component DPP URLs')}</h3>
+                      <h3 className="text-sm font-semibold">{t('Component DPP URLs')}</h3>
                     </div>
 
                     <div className="space-y-2">
@@ -2697,6 +2720,7 @@ export function ProductFormPage() {
                   </div>
                 </>
               )}
+              </>)}
             </div>
           )}
 
@@ -2766,11 +2790,11 @@ export function ProductFormPage() {
                 <div className="space-y-2">
                   <h4 className="font-medium">{t('Uploaded Documents')}</h4>
                   {uploadedDocs.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm font-medium">{doc.name}</p>
+                    <div key={index} className="flex items-center justify-between gap-2 p-3 border rounded-lg">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium break-all">{doc.name}</p>
                           <p className="text-xs text-muted-foreground">
                             {doc.size} · {doc.category} · {doc.visibility}
                           </p>
@@ -2909,7 +2933,7 @@ export function ProductFormPage() {
                         type="checkbox"
                         checked={isSelfManufacturer}
                         onChange={(e) => setIsSelfManufacturer(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300"
+                        className="h-4 w-4 rounded border-input accent-primary"
                       />
                       {t('is Manufacturer')}
                     </label>
@@ -2918,7 +2942,7 @@ export function ProductFormPage() {
                         type="checkbox"
                         checked={isSelfImporter}
                         onChange={(e) => setIsSelfImporter(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300"
+                        className="h-4 w-4 rounded border-input accent-primary"
                       />
                       {t('is Importer')}
                     </label>
@@ -2930,7 +2954,7 @@ export function ProductFormPage() {
 
               {/* External Suppliers */}
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-medium">{t('External Suppliers')}</h3>
                   <Button variant="outline" size="sm" onClick={addSupplierAssignment}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -2949,7 +2973,7 @@ export function ProductFormPage() {
                 ) : (
                   <div className="space-y-4">
                     {selectedSuppliers.map((assignment, index) => (
-                      <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-7 p-4 border rounded-lg">
+                      <div key={index} className="grid gap-4 grid-cols-1 sm:grid-cols-2 2xl:grid-cols-7 p-4 border rounded-lg">
                         <div className="space-y-2 md:col-span-2">
                           <label className="text-sm font-medium">{t('Supplier')}</label>
                           <Select
@@ -3032,7 +3056,7 @@ export function ProductFormPage() {
                                 type="checkbox"
                                 checked={assignment.is_primary}
                                 onChange={(e) => updateSupplierAssignment(index, 'is_primary', e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300"
+                                className="h-4 w-4 rounded border-input accent-primary"
                               />
                               <span className="text-sm">{t('Primary')}</span>
                             </label>
@@ -3052,41 +3076,67 @@ export function ProductFormPage() {
               </div>
             </div>
           )}
-          </MotionDiv>
-          </AnimatePresence>
-        </CardContent>
-      </Card>
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={prevStep} disabled={currentStep === 0}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {t('Back')}
-        </Button>
-
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Save className="mr-2 h-4 w-4" />
-            {t('Save as Draft')}
-          </Button>
-
-          {currentStep < steps.length - 1 ? (
-            <Button onClick={nextStep}>
-              {t('Next')}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          ) : (
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="mr-2 h-4 w-4" />
-              )}
-              {isSubmitting ? t('Saving...') : isEditMode ? t('Save Changes') : t('Create Product')}
-            </Button>
-          )}
-        </div>
-      </div>
+          </div>
+        );
+        return isEditMode ? (
+          <>
+            <FormSectionNav
+              sections={steps.map(step => ({ id: step.id, label: t(step.title), icon: step.icon }))}
+              value={currentStepId ?? steps[0].id}
+              onValueChange={(stepId) => setCurrentStep(Math.max(0, steps.findIndex(step => step.id === stepId)))}
+              label={t('Sections', { ns: 'common' })}
+            >
+              <div className="rounded-xl border bg-card p-4 shadow-xs sm:p-6">
+                <header className="mb-5">
+                  <h2 className="text-lg font-semibold tracking-tight text-balance">{t(steps[currentStep].title)}</h2>
+                  <p className="mt-1 text-sm text-pretty text-muted-foreground">{t(steps[currentStep].description)}</p>
+                </header>
+                {stepBody}
+              </div>
+            </FormSectionNav>
+            <StickyBottomBar>
+              <Button variant="ghost" asChild>
+                <Link to={`/products/${id}`}>{t('Cancel', { ns: 'common' })}</Link>
+              </Button>
+              <Button className="min-w-0 flex-1 sm:flex-none sm:min-w-32" onClick={() => handleSubmit(true)} disabled={isSubmitting || !formData.name.trim()}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {isSubmitting ? t('Saving...') : t('Save Changes')}
+              </Button>
+            </StickyBottomBar>
+          </>
+        ) : (
+          <div className="rounded-xl border bg-card p-4 shadow-xs sm:p-6">
+            <FormWizard
+              variant="page"
+              step={currentStep}
+              onStepChange={(_, index) => setCurrentStep(index)}
+              steps={steps.map(step => ({
+                id: step.id,
+                title: t(step.title),
+                description: t(step.description),
+                icon: step.icon,
+              }))}
+              secondaryAction={
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleSubmit(true)}
+                  disabled={isSubmitting || !formData.name.trim()}
+                  aria-label={t('Save as Draft')}
+                >
+                  <Save className="h-4 w-4" />
+                  <span className="hidden sm:inline">{t('Save as Draft')}</span>
+                </Button>
+              }
+              onFinish={() => handleSubmit()}
+              finishing={isSubmitting}
+              finishLabel={isSubmitting ? t('Saving...') : t('Create Product')}
+            >
+              {() => stepBody}
+            </FormWizard>
+          </div>
+        );
+      })()}
 
       {submitError && (
         quotaReached ? (

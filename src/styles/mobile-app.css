@@ -1,0 +1,341 @@
+/* App-level adaptations live here; shared shadcn primitives stay untouched. */
+:root {
+  --app-visible-height: calc(100dvh - var(--kb-h, 0px));
+  --app-gutter: 1rem;
+}
+
+@media (min-width: 640px) {
+  :root { --app-gutter: 1.5rem; }
+}
+
+[data-slot="tabs"],
+[data-slot="tabs-content"],
+[data-slot="card"] {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-content {
+  scroll-padding-block: 5rem 7rem;
+  overscroll-behavior-x: none;
+}
+
+/* Reach the physical edge across main's padding. Only this narrow strip owns
+   horizontal touch motion; lists, tables and sliders keep normal gestures. */
+.app-back-edge {
+  position: absolute;
+  inset-block: 0;
+  left: calc(-1 * max(var(--app-gutter), var(--safe-left)));
+  width: 24px;
+  z-index: 20;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The authenticated app has one vertical scroller. Pinning the outer document
+   prevents WKWebView from moving the entire shell behind that inner scroller.
+   Public/onboarding pages retain their own document scrolling. */
+html[data-native="true"]:has(.app-content),
+[data-native="true"] body:has(.app-content) {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+[data-native="true"] body:has(.app-content) {
+  position: fixed;
+  inset: 0;
+}
+
+[data-native="true"] body:has(.app-content) #root {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+[data-native="true"] [data-slot="sidebar-wrapper"] {
+  height: var(--app-visible-height);
+  min-height: 0;
+}
+
+[data-native="true"] .admin-shell {
+  height: var(--app-visible-height);
+  min-height: 0;
+}
+
+[data-native="true"] [data-slot="sidebar-inset"] {
+  min-height: 0;
+}
+
+[data-native="true"] .app-content {
+  padding-left: max(var(--app-gutter), var(--safe-left));
+  padding-right: max(var(--app-gutter), var(--safe-right));
+}
+
+[data-keyboard-open] .app-tab-bar {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+[data-keyboard-open] .app-action-bar {
+  padding-bottom: 0.75rem;
+}
+
+/* A bottom sheet must fit above the keyboard, including on a landscape phone.
+   Raw centered dialogs (e.g. the photo viewer) retain their centered layout. */
+[data-keyboard-open] [data-slot="dialog-content"].bottom-0,
+[data-keyboard-open] .app-drawer.bottom-0 {
+  bottom: var(--kb-h);
+  max-height: calc(var(--app-visible-height) - var(--safe-top) - 1rem) !important;
+}
+
+@media (max-width: 1023px) {
+  [data-slot="tabs"][data-orientation="horizontal"] { width: 100%; }
+  /* Forms use the action bar as their bottom toolbar; do not show a second
+     navigation bar underneath its translucent surface. The header retains Back. */
+  body:has(.app-action-bar) .app-tab-bar { visibility: hidden; pointer-events: none; }
+  [data-slot="button"] { max-width: 100%; white-space: normal; height: auto; min-height: 44px; }
+  [data-slot="select-trigger"], [data-slot="input"], [data-slot="textarea"] { max-width: 100%; }
+  [data-slot="accordion-trigger"] { min-width: 0; overflow-wrap: anywhere; }
+  [data-slot="tabs-list"][data-orientation="horizontal"] {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-height: 48px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 4px;
+    scrollbar-width: none;
+  }
+
+  [data-slot="tabs-list"][data-orientation="horizontal"] > [role="tab"] {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding-inline: 0.875rem;
+  }
+
+  [data-slot="dialog-content"] {
+    max-width: calc(100vw - var(--safe-left) - var(--safe-right) - 1rem);
+    max-height: calc(var(--app-visible-height) - var(--safe-top) - 1rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: 3rem;
+  }
+
+  [data-slot="dialog-content"].bottom-0 {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.25rem;
+    padding-top: 2.75rem;
+    border-radius: 1.5rem 1.5rem 0 0;
+    animation-duration: 220ms;
+  }
+
+  /* The grabber pill is rendered by adaptive-dialog (it doubles as the drag
+     handle); a ::before pill here would draw a second one. */
+
+  [data-slot="dialog-header"] { padding-right: 1.5rem; }
+  [data-slot="popover-content"] { max-width: calc(100vw - 2rem); }
+  [data-slot="select-content"] { max-width: calc(100vw - 2rem); }
+  [data-slot="select-item"] { white-space: normal; overflow-wrap: anywhere; }
+
+  .app-content h1 { overflow-wrap: anywhere; text-wrap: balance; }
+  .app-content :is(.text-\[8px\], .text-\[9px\], .text-\[10px\]) { font-size: 11px; }
+  .app-action-bar { gap: 0.5rem; }
+  .app-action-bar > * { min-width: 0; }
+  .app-tab-bar { box-shadow: 0 -8px 28px rgb(15 23 42 / 0.04); }
+}
+
+/* Safe areas for overlays. The status bar overlays the WebView
+   (capacitor.config.ts overlaysWebView), so anything pinned to y=0 sits under
+   the clock/battery where iOS swallows taps. Full-height sheets reserve the
+   inset and move their close button below it. */
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"]):is([data-side="left"], [data-side="right"], [data-side="top"]) {
+  padding-top: var(--safe-top);
+}
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"]):is([data-side="left"], [data-side="right"], [data-side="bottom"]) {
+  padding-bottom: var(--safe-bottom);
+}
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"])[data-side="right"] { padding-right: var(--safe-right); }
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"])[data-side="left"] { padding-left: var(--safe-left); }
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"]):is([data-side="left"], [data-side="right"], [data-side="top"]) > [data-slot="sheet-close"] {
+  top: calc(var(--safe-top) + 0.75rem);
+}
+:is([data-slot="sheet-content"], [data-slot="sidebar"][data-mobile="true"])[data-side="right"] > [data-slot="sheet-close"] {
+  right: calc(var(--safe-right) + 0.75rem);
+}
+
+@media (max-width: 1023px) {
+  /* A centered dialog only keeps half of its spare height above it, so the
+     inset is reserved twice; otherwise a tall dialog's X lands under the notch. */
+  [data-slot="dialog-content"]:not(.bottom-0),
+  [data-slot="alert-dialog-content"] {
+    max-height: calc(var(--app-visible-height) - 2 * max(var(--safe-top), var(--safe-bottom)) - 1.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (pointer: coarse) {
+  /* Inputs inside an InputAffix/SecretInput frame fill the frame (which is
+     itself 44px); the generic 44px input rule below would overflow it. */
+  [data-slot="input-affix"] [data-slot="input"] {
+    min-height: 0;
+  }
+
+  /* Sidebar nav rows (iPad shows the desktop sidebar): 44px rows on touch.
+     Mouse density is unchanged; the collapsed icon rail (32px buttons in a
+     48px rail) keeps its square buttons. */
+  /* data-sidebar, not data-slot: CollapsibleTrigger asChild replaces data-slot. */
+  :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]):not([data-collapsible="icon"] *) {
+    min-height: 44px;
+  }
+
+  /* Invisible 44x44 hit area for controls that must stay visually small
+     (switch 36x20, checkbox 16x16) and for opt-in elements (.touch-hit: small
+     chips, "Alle" links, breadcrumbs). Centered ::after, no layout shift. */
+  [data-slot="switch"],
+  [data-slot="checkbox"],
+  [data-slot="breadcrumb-link"],
+  .touch-hit {
+    position: relative;
+  }
+  [data-slot="switch"]::after,
+  [data-slot="checkbox"]::after,
+  [data-slot="breadcrumb-link"]::after,
+  .touch-hit::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+
+  /* 44pt close targets, pulled into the corner so the glyph stays where it was. */
+  [data-slot="dialog-close"].absolute,
+  [data-slot="sheet-close"] {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin: -0.75rem -0.75rem 0 0;
+    border-radius: 9999px;
+    z-index: 10;
+  }
+
+  /* The adaptive bottom sheet already places a 44px close at top-2/right-2;
+     the corner pull above would push it 4px past the sheet edge (320px phones). */
+  [data-slot="dialog-content"].bottom-0 [data-slot="dialog-close"].absolute {
+    margin: 0;
+  }
+
+  /* 44pt targets for Radix triggers that are bare <button>s rather than our
+     Button (which already has its own rule). Only buttons that contain an icon
+     are matched, so plain inline text triggers keep their size; min-* never
+     shrinks anything already larger. Button asChild triggers resolve to
+     data-slot="button" and are excluded here. */
+  button:is(
+    [data-slot="dropdown-menu-trigger"],
+    [data-slot="popover-trigger"],
+    [data-slot="tooltip-trigger"],
+    [data-slot="sheet-trigger"],
+    [data-slot="dialog-trigger"]
+  ):not([data-slot="button"]):has(> svg) {
+    /* Size only: unlayered alignment rules would override justify-between
+       etc. on row-style triggers. */
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  [data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"] {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  [data-slot="button"], [data-slot="dialog-close"] { min-width: 44px; }
+}
+
+/* The press scale itself lives in ui/button.tsx (active:scale-[0.97]); one
+   gesture, one source. Reduced motion keeps the colour feedback only. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="button"]:active:not(:disabled) { transform: none; scale: none; }
+}
+
+/* Native shell: no grey tap flash anywhere, and no long-press callout or text
+   selection on chrome that is never meant to be copied. Text, inputs and
+   editable regions keep their normal selection behaviour. */
+html[data-native="true"] {
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-native="true"] :is(
+  nav,
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="tablist"],
+  [data-slot="button"],
+  [data-slot="tabs-trigger"],
+  [data-slot="sidebar-menu-button"],
+  .app-tab-bar
+) {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Drag-to-dismiss handles (src/lib/motion-gestures.ts useDragDismiss). The
+   browser must not claim these touches for panning, or it fires
+   pointercancel mid-gesture. Only the handle strip opts out; the sheet body
+   keeps native scrolling. */
+[data-drag-dismiss] :is([data-drag-handle], [data-slot="sheet-header"], [data-slot="dialog-header"]) {
+  touch-action: none;
+}
+[data-drag-dismiss] [data-drag-handle] { cursor: grab; }
+
+/* Native date/time inputs. WebKit on iOS gives them an intrinsic height,
+   centred text and a zero-height empty value, so they render taller than the
+   inputs beside them and look blank until a date is picked. Strip the native
+   chrome and let the field follow the same box as every other input. */
+:is(input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"]) {
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  line-height: 1.25;
+}
+:is(input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"])::-webkit-date-and-time-value {
+  min-height: 1.25em;
+  margin: 0;
+  text-align: left;
+}
+:is(input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"])::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+}
+
+/* Appearance reveal (src/lib/appearance-transition.ts). The new look grows out
+   of the tapped control; the WAAPI clip-path drives it, so the default
+   crossfade is switched off. Live transitions are paused for the snapshot so
+   colours land crisply instead of tweening inside the circle. */
+:root[data-appearance-transition] *,
+:root[data-appearance-transition] *::before,
+:root[data-appearance-transition] *::after {
+  transition: none !important;
+}
+:root[data-appearance-transition="reveal"]::view-transition-old(root),
+:root[data-appearance-transition="reveal"]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+:root[data-appearance-transition="reveal"]::view-transition-new(root) {
+  z-index: 1;
+}
+:root[data-appearance-transition="fade"]::view-transition-old(root),
+:root[data-appearance-transition="fade"]::view-transition-new(root) {
+  animation-duration: 150ms;
+}

@@ -71,7 +71,7 @@ function CardsMode({ materials, primaryColor, t }: { materials: Material[]; prim
           </div>
           <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full rounded-full transition-all"
+              className="h-full rounded-full transition-[width,color]"
               style={{ width: `${material.percentage}%`, backgroundColor: primaryColor }}
             />
           </div>
@@ -100,7 +100,7 @@ function HorizontalBarsMode({ materials, primaryColor, showLabels }: { materials
         {materials.map((m, i) => (
           <div
             key={i}
-            className="h-full transition-all relative group"
+            className="h-full transition-[width] relative group"
             style={{ width: `${m.percentage}%`, backgroundColor: colors[i % colors.length] }}
             title={`${m.name}: ${m.percentage}%`}
           />

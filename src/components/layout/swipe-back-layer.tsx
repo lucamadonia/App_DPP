@@ -1,46 +1,22 @@
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useMotionBudget } from '@/hooks/use-motion-budget';
-import { useNavDepth } from '@/hooks/use-nav-depth';
-import { useSwipeBack } from '@/lib/motion-gestures';
-
 interface SwipeBackLayerProps {
   children: React.ReactNode;
 }
 
 /**
- * iOS-style interactive back gesture around the routed content.
+ * Wrapper around the routed content.
  *
- * Active only on touch viewports, only when there is somewhere to go back to,
- * and never under `prefers-reduced-motion`. The gesture is edge-armed — the
- * pointer must start within 24px of the left edge — because a full-width drag
- * would fight the 80+ horizontally scrollable regions in this app. Anything
- * that scrolls sideways can opt out entirely via `data-no-swipe-back`.
+ * The back gesture is deliberately NOT implemented in JS any more. A web-drawn
+ * gesture could only slide the current page off screen over an empty backdrop,
+ * because the previous route is already unmounted, so it read as the whole
+ * window coming loose. Instead:
+ *  - iOS app: WKWebView's native back/forward gesture (enabled in
+ *    SceneDelegate.swift) shows the real previous screen underneath.
+ *  - Android: the system back gesture fires Capacitor's backButton event
+ *    (handled in src/lib/native-init.ts).
+ *  - Mobile browsers: the browser's own edge gesture.
  *
- * Keep wrappers mounted when disabled so rotating never resets routed forms.
+ * The wrapper stays so layout and the `.app-swipe-content` hook are stable.
  */
 export function SwipeBackLayer({ children }: SwipeBackLayerProps) {
-  const isMobile = useIsMobile();
-  const budget = useMotionBudget();
-  const { canGoBack } = useNavDepth();
-  const navigate = useNavigate();
-
-  const enabled = isMobile && canGoBack && budget !== 'reduced';
-  const { dragProps, backdropOpacity } = useSwipeBack({
-    enabled,
-    onCommit: () => navigate(-1),
-  });
-
-  return (
-    <div className="relative min-w-0">
-      {/* Suggests the page underneath, fading as the current page slides away. */}
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-foreground"
-        style={{ opacity: backdropOpacity }}
-      />
-      <motion.div {...dragProps} className="min-w-0">{children}</motion.div>
-    </div>
-  );
+  return <div className="app-swipe-content relative min-w-0 max-w-full">{children}</div>;
 }

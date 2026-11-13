@@ -451,7 +451,7 @@ export function ProductCategoriesPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -530,17 +530,17 @@ export function ProductCategoriesPage() {
               <Card key={category.id} className="overflow-hidden">
                 <Accordion type="single" collapsible>
                   <AccordionItem value={category.id} className="border-none">
-                    <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/50">
-                      <div className="flex items-center gap-4 text-left w-full">
+                      <AccordionTrigger className="px-3 sm:px-6 py-4 hover:no-underline hover:bg-muted/50">
+                        <div className="flex min-w-0 items-center gap-3 text-left w-full">
                         <IconTile icon={getCategoryIcon(category.id, category.name)} size="lg" />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
                             <h3 className="font-semibold">{category.name}</h3>
                             <Badge variant="secondary">{subcategories.length} {t('Products')}</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">{category.description}</p>
                         </div>
-                        <div className="hidden md:flex flex-wrap gap-1 max-w-xs justify-end">
+                        <div className="hidden xl:flex flex-wrap gap-1 max-w-xs justify-end">
                           {regulations.slice(0, 3).map(reg => (
                             <Badge key={reg} variant="outline" className="text-xs">
                               {reg}

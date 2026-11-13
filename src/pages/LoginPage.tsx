@@ -45,7 +45,7 @@ export function LoginPage() {
             aria-hidden="true"
           />
           <div
-            className="pointer-events-none absolute -bottom-8 -right-8 z-0 h-[16rem] w-[16rem] bg-blue-400/6 blur-3xl animate-landing-morph sm:-bottom-12 sm:right-[-6rem] sm:h-[24rem] sm:w-[24rem]"
+            className="pointer-events-none absolute -bottom-8 -right-8 z-0 h-[16rem] w-[16rem] bg-primary/6 blur-3xl animate-landing-morph sm:-bottom-12 sm:right-[-6rem] sm:h-[24rem] sm:w-[24rem]"
             style={{ animationDuration: '10s', animationDelay: '2s' }}
             aria-hidden="true"
           />

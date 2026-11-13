@@ -65,6 +65,9 @@ export function RichTextEditor({
   compact = false,
 }: RichTextEditorProps) {
   const editor = useEditor({
+    // Mount after React commits; an abandoned render must not leave a stale
+    // editor in the effects that synchronize asynchronously loaded form data.
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] },
@@ -80,6 +83,7 @@ export function RichTextEditor({
     content: value || '',
     editable: !disabled,
     onUpdate: ({ editor }) => {
+      if (editor.isDestroyed) return;
       const html = editor.getHTML();
       // Tiptap returns <p></p> for empty content
       onChange(html === '<p></p>' ? '' : html);
@@ -88,22 +92,22 @@ export function RichTextEditor({
 
   // Sync external value changes (e.g. when switching languages)
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
     const currentHtml = editor.getHTML();
     const normalizedCurrent = currentHtml === '<p></p>' ? '' : currentHtml;
     if (normalizedCurrent !== (value || '')) {
-      editor.commands.setContent(value || '');
+      editor.commands.setContent(value || '', { emitUpdate: false });
     }
   }, [value, editor]);
 
   useEffect(() => {
-    if (editor) {
-      editor.setEditable(!disabled);
+    if (editor && !editor.isDestroyed) {
+      editor.setEditable(!disabled, false);
     }
   }, [disabled, editor]);
 
   const setLink = useCallback(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
     const previousUrl = editor.getAttributes('link').href;
     const url = window.prompt('URL', previousUrl);
     if (url === null) return;

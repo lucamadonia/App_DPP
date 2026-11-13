@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormField, InputAffix } from '@/components/ui/form-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Leaf, Lock, Loader2, CheckCircle } from 'lucide-react';
+import { Leaf, Lock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { updatePassword } from '@/services/supabase/auth';
 import { MIN_PASSWORD_LENGTH } from '@/lib/security';
 
@@ -76,58 +76,57 @@ export function ResetPasswordPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
-              <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-                {error}
+              <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 text-pretty">{error}</span>
               </div>
             )}
 
             {success ? (
               <div className="space-y-4">
                 <div className="flex justify-center">
-                  <CheckCircle className="h-12 w-12 text-green-500" />
+                  <div className="flex size-14 items-center justify-center rounded-full bg-success/10">
+                    <CheckCircle className="h-7 w-7 text-success" aria-hidden="true" />
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
                   {t('You can now sign in with your new password.')}
                 </p>
-                <Button asChild className="w-full">
+                <Button asChild className="w-full pointer-coarse:h-11">
                   <Link to="/login">{t('Go to Sign In')}</Link>
                 </Button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">{t('New Password')}</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <FormField label={t('New Password')} htmlFor="new-password">
+                  <InputAffix prefix={<Lock className="h-4 w-4" />}>
                     <Input
                       id="new-password"
                       type="password"
+                      autoComplete="new-password"
                       placeholder={t('At least 8 characters')}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-9"
                       required
                       minLength={8}
                     />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">{t('Confirm Password')}</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  </InputAffix>
+                </FormField>
+                <FormField label={t('Confirm Password')} htmlFor="confirm-password">
+                  <InputAffix prefix={<Lock className="h-4 w-4" />}>
                     <Input
                       id="confirm-password"
                       type="password"
+                      autoComplete="new-password"
                       placeholder={t('Repeat password')}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-9"
                       required
                       minLength={8}
                     />
-                  </div>
-                </div>
-                <Button type="submit" disabled={loading} className="w-full">
+                  </InputAffix>
+                </FormField>
+                <Button type="submit" disabled={loading} className="w-full pointer-coarse:h-11">
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -137,7 +136,7 @@ export function ResetPasswordPage() {
                     t('Save Password')
                   )}
                 </Button>
-                <Button variant="ghost" asChild className="w-full">
+                <Button variant="ghost" asChild className="w-full pointer-coarse:h-11">
                   <Link to="/login">{t('Back to Sign In')}</Link>
                 </Button>
               </form>

@@ -13,3 +13,9 @@ android/*.gradle text eol=lf
 android/**/*.gradle text eol=lf
 android/gradlew text eol=lf
 
+# Asset catalogs also live below ios/: never normalize image bytes as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+

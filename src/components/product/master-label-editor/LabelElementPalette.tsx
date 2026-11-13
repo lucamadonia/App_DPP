@@ -175,7 +175,7 @@ export function LabelElementPalette({ onDragStart, onClickAdd, onFieldDragStart,
                 onDragStart(type);
               }}
               onClick={() => onClickAdd(type)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md cursor-grab active:cursor-grabbing hover:bg-accent/80 hover:shadow-sm transition-all text-left"
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md cursor-grab active:cursor-grabbing hover:bg-accent/80 hover:shadow-sm transition text-left"
               title={t(labelKey)}
             >
               <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -216,7 +216,7 @@ export function LabelElementPalette({ onDragStart, onClickAdd, onFieldDragStart,
 
                 {/* Fields with smooth collapse animation */}
                 <div
-                  className="overflow-hidden transition-all duration-200"
+                  className="overflow-hidden transition-[max-height,opacity] duration-200"
                   style={{
                     maxHeight: expandedGroups.has(group.id) ? `${group.fields.length * 28}px` : '0px',
                     opacity: expandedGroups.has(group.id) ? 1 : 0,
@@ -231,7 +231,7 @@ export function LabelElementPalette({ onDragStart, onClickAdd, onFieldDragStart,
                         draggable
                         onDragStart={(e) => handleFieldDrag(e, fieldKey)}
                         onClick={() => handleFieldClick(fieldKey)}
-                        className="w-full flex items-center gap-1.5 pl-5 pr-1.5 py-1 rounded-sm cursor-grab active:cursor-grabbing hover:bg-primary/10 hover:shadow-[0_0_6px_rgba(59,130,246,0.15)] transition-all text-left group/field"
+                        className="w-full flex items-center gap-1.5 pl-5 pr-1.5 py-1 rounded-sm cursor-grab active:cursor-grabbing hover:bg-primary/10 hover:shadow-[0_0_6px_rgba(59,130,246,0.15)] transition text-left group/field"
                         title={label}
                       >
                         <FileText className="h-3 w-3 text-muted-foreground/60 group-hover/field:text-primary/70 shrink-0 transition-colors" />

@@ -225,7 +225,7 @@ export function BillingPage() {
         </div>
 
         <Card>
-          <CardContent className="flex items-center justify-between py-5">
+          <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
             <div>
               <p className="text-sm text-muted-foreground">{t('Current plan')}</p>
               <p className="text-lg font-semibold capitalize">{entitlements.plan}</p>
@@ -248,7 +248,7 @@ export function BillingPage() {
     <div className="space-y-8">
       {/* Page Header */}
       <MotionDiv
-        className="flex items-center justify-between"
+        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         {...(!prefersReduced && { variants: blurIn, initial: 'initial', animate: 'animate' })}
       >
         <div>
@@ -267,7 +267,7 @@ export function BillingPage() {
       {/* Cancellation notice */}
       {entitlements.cancelAtPeriodEnd && entitlements.currentPeriodEnd && (
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-          <CardContent className="flex items-center gap-3 py-4">
+          <CardContent className="flex flex-wrap items-center gap-3 py-4">
             <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-300">
               {t('Canceling')}
             </Badge>
@@ -282,7 +282,7 @@ export function BillingPage() {
 
       {/* Section 1: Plans + Usage */}
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold">{t('Plans')}</h2>
           <Tabs value={interval} onValueChange={(v) => setInterval(v as 'monthly' | 'yearly')}>
             <TabsList>
@@ -397,8 +397,8 @@ export function BillingPage() {
                   { op: t('AI Chat Message'), cost: 1 },
                   { op: t('PDF Report'), cost: 0 },
                 ].map(({ op, cost }) => (
-                  <div key={op} className="flex items-center justify-between py-1">
-                    <span className="text-muted-foreground">{op}</span>
+                  <div key={op} className="flex items-center justify-between gap-3 py-1">
+                    <span className="min-w-0 text-muted-foreground">{op}</span>
                     <Badge variant={cost > 0 ? 'secondary' : 'outline'}>
                       {cost > 0 ? `${cost} ${cost === 1 ? 'Credit' : 'Credits'}` : t('Free')}
                     </Badge>

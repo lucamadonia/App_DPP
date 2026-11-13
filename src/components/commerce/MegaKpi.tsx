@@ -60,9 +60,9 @@ export function MegaKpi({ block, hero, accent, className }: MegaKpiProps) {
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        'relative overflow-hidden rounded-[20px] md:rounded-2xl',
+        '@container relative min-w-0 overflow-hidden rounded-[20px] md:rounded-2xl',
         'border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]',
         'backdrop-blur-xl',
         'cursor-pointer select-none active:bg-white/[0.02] touch-target',
@@ -101,8 +101,8 @@ export function MegaKpi({ block, hero, accent, className }: MegaKpiProps) {
         className={cn(
           'mt-2 sm:mt-3 font-display tabular-nums text-white',
           hero
-            ? 'text-[40px] leading-[0.95] tracking-[-0.02em] sm:text-5xl md:text-6xl xl:text-7xl 2xl:text-[88px]'
-            : 'text-2xl sm:text-3xl md:text-4xl tracking-tight',
+            ? 'whitespace-nowrap text-[clamp(1.5rem,19cqi,2.5rem)] leading-[0.95] tracking-[-0.02em] sm:text-5xl md:text-6xl xl:text-7xl 2xl:text-[88px]'
+            : 'whitespace-nowrap text-[clamp(1rem,15cqi,2.25rem)] tracking-tight',
         )}
       >
         {formatted}

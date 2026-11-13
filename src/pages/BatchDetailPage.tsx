@@ -157,16 +157,16 @@ export function BatchDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link to={`/products/${productId}?tab=batches`}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground font-mono">{batch.serialNumber}</h1>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground font-mono break-all">{batch.serialNumber}</h1>
               <Badge variant="secondary" className={status.className}>
                 <status.icon className="mr-1 h-3 w-3" />
                 {t(status.label, { ns: 'common' })}
@@ -174,21 +174,21 @@ export function BatchDetailPage() {
               {hasOverrides && (
                 <Badge variant="outline" className="border-primary text-primary">
                   <Settings2 className="mr-1 h-3 w-3" />
-                  Overrides
+                  {t('Overrides')}
                 </Badge>
               )}
             </div>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground break-words">
               {product.name} · {product.gtin}
-              {batch.batchNumber && ` · Batch ${batch.batchNumber}`}
+              {batch.batchNumber && ` · ${t('Batch')} ${batch.batchNumber}`}
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
           <Button variant="outline" asChild>
             <Link to={`/products/${productId}?tab=ai-check&batchId=${batchId}`}>
               <BrainCircuit className="mr-2 h-4 w-4" />
-              AI Check
+              {t('AI Check', { ns: 'compliance' })}
             </Link>
           </Button>
           <Button variant="outline" asChild>
@@ -200,23 +200,19 @@ export function BatchDetailPage() {
           <Button variant="outline" asChild>
             <Link to={`/products/${productId}/batches/new?duplicate=${batchId}`}>
               <Copy className="mr-2 h-4 w-4" />
-              Duplicate
+              {t('Duplicate', { ns: 'common' })}
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <a
-              href={`/p/${product.gtin}/${batch.serialNumber}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <Link to={`/p/${product.gtin}/${batch.serialNumber}`}>
               <ExternalLink className="mr-2 h-4 w-4" />
-              Public DPP
-            </a>
+              {t('Public DPP')}
+            </Link>
           </Button>
           <Button asChild>
             <Link to={`/products/${productId}/batches/${batchId}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
-              Edit
+              {t('Edit', { ns: 'common' })}
             </Link>
           </Button>
         </div>
@@ -226,9 +222,9 @@ export function BatchDetailPage() {
       <Card>
         <CardContent className="py-4">
           <div className="flex items-center gap-4">
-            <Package className="h-5 w-5 text-muted-foreground" />
-            <div className="flex items-center gap-6 text-sm">
-              <Link to={`/products/${productId}`} className="font-medium hover:text-primary hover:underline">
+            <Package className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <Link to={`/products/${productId}`} className="break-words font-medium hover:text-primary hover:underline">
                 {product.name}
               </Link>
               <code className="font-mono text-muted-foreground">{product.gtin}</code>
@@ -244,56 +240,56 @@ export function BatchDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Layers className="h-5 w-5 text-primary" />
-              Batch Information
+              {t('Batch Information')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Serial Number</p>
-                <code className="font-mono font-medium">{batch.serialNumber}</code>
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4">
+              <div className="min-w-0">
+                <p className="text-sm text-muted-foreground">{t('Serial Number')}</p>
+                <code className="font-mono font-medium break-all">{batch.serialNumber}</code>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Batch Number</p>
+                <p className="text-sm text-muted-foreground">{t('Batch Number')}</p>
                 <p className="font-medium">{batch.batchNumber || '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Production Date</p>
+                <p className="text-sm text-muted-foreground">{t('Production Date')}</p>
                 <p className="font-medium">{new Date(batch.productionDate).toLocaleDateString('en-US')}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Expiration Date</p>
+                <p className="text-sm text-muted-foreground">{t('Expiration Date')}</p>
                 <p className="font-medium">
                   {batch.expirationDate ? new Date(batch.expirationDate).toLocaleDateString('en-US') : '-'}
                 </p>
               </div>
               {batch.netWeight != null && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Net Weight</p>
+                  <p className="text-sm text-muted-foreground">{t('Net Weight')}</p>
                   <p className="font-medium">{batch.netWeight} g</p>
                 </div>
               )}
               {batch.grossWeight != null && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Gross Weight</p>
+                  <p className="text-sm text-muted-foreground">{t('Gross Weight')}</p>
                   <p className="font-medium">{batch.grossWeight} g</p>
                 </div>
               )}
               {batch.quantity != null && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Quantity</p>
+                  <p className="text-sm text-muted-foreground">{t('Quantity')}</p>
                   <p className="font-medium">{batch.quantity} pcs</p>
                 </div>
               )}
               <div>
-                <p className="text-sm text-muted-foreground">Status</p>
+                <p className="text-sm text-muted-foreground">{t('Status')}</p>
                 <Badge variant="secondary" className={status.className}>
                   <status.icon className="mr-1 h-3 w-3" />
                   {t(status.label, { ns: 'common' })}
                 </Badge>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Created</p>
+                <p className="text-sm text-muted-foreground">{t('Created')}</p>
                 <p className="font-medium">{new Date(batch.createdAt).toLocaleDateString('en-US')}</p>
               </div>
             </div>
@@ -301,7 +297,7 @@ export function BatchDetailPage() {
               <>
                 <Separator className="my-4" />
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Notes</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('Notes')}</p>
                   <p className="text-sm">{batch.notes}</p>
                 </div>
               </>
@@ -359,7 +355,7 @@ export function BatchDetailPage() {
             </CardHeader>
             <CardContent className="space-y-5">
               {/* Volume & Weight row */}
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">{tW('Volume')}</h4>
                   <div className="grid grid-cols-2 gap-3">
@@ -630,13 +626,13 @@ export function BatchDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <QrCode className="h-5 w-5 text-primary" />
-              Public DPP Links
+              {t('Public DPP Links')}
             </CardTitle>
-            <CardDescription>Links to the public Digital Product Passport for this batch</CardDescription>
+            <CardDescription>{t('Links to the public Digital Product Passport for this batch')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Customer View</p>
+              <p className="text-sm text-muted-foreground mb-2">{t('Customer View')}</p>
               <div className="p-3 rounded-lg bg-muted font-mono text-sm break-all">
                 /p/{product.gtin}/{batch.serialNumber}
               </div>
@@ -647,12 +643,12 @@ export function BatchDetailPage() {
                   rel="noopener noreferrer"
                 >
                   <ExternalLink className="mr-2 h-3 w-3" />
-                  Open Customer View
+                  {t('Open Customer View')}
                 </a>
               </Button>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Customs View</p>
+              <p className="text-sm text-muted-foreground mb-2">{t('Customs View')}</p>
               <div className="p-3 rounded-lg bg-muted font-mono text-sm break-all">
                 /p/{product.gtin}/{batch.serialNumber}/customs
               </div>
@@ -663,7 +659,7 @@ export function BatchDetailPage() {
                   rel="noopener noreferrer"
                 >
                   <ExternalLink className="mr-2 h-3 w-3" />
-                  Open Customs View
+                  {t('Open Customs View')}
                 </a>
               </Button>
             </div>
@@ -682,9 +678,9 @@ export function BatchDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              Description
+              {t('Description')}
               {batch.descriptionOverride && (
-                <Badge variant="outline" className="ml-2 border-primary text-primary">Override</Badge>
+                <Badge variant="outline" className="ml-2 border-primary text-primary">{t('Override')}</Badge>
               )}
             </CardTitle>
           </CardHeader>
@@ -699,9 +695,9 @@ export function BatchDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              Materials
+              {t('Materials')}
               {batch.materialsOverride && (
-                <Badge variant="outline" className="ml-2 border-primary text-primary">Override</Badge>
+                <Badge variant="outline" className="ml-2 border-primary text-primary">{t('Override')}</Badge>
               )}
             </CardTitle>
           </CardHeader>
@@ -716,7 +712,7 @@ export function BatchDetailPage() {
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium">{m.percentage}%</span>
                     {m.recyclable && (
-                      <Badge variant="outline" className="text-success border-success">Recyclable</Badge>
+                      <Badge variant="outline" className="text-success border-success">{t('Recyclable')}</Badge>
                     )}
                   </div>
                 </div>
@@ -731,9 +727,9 @@ export function BatchDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              Certifications
+              {t('Certifications')}
               {batch.certificationsOverride && (
-                <Badge variant="outline" className="ml-2 border-primary text-primary">Override</Badge>
+                <Badge variant="outline" className="ml-2 border-primary text-primary">{t('Override')}</Badge>
               )}
             </CardTitle>
           </CardHeader>
@@ -750,17 +746,17 @@ export function BatchDetailPage() {
       {/* Danger Zone */}
       <Card className="border-destructive/50">
         <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
+          <CardTitle className="text-destructive">{t('Danger Zone')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Delete this batch</p>
-              <p className="text-sm text-muted-foreground">This action cannot be undone. The product itself will not be affected.</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="font-medium">{t('Delete this batch')}</p>
+              <p className="text-sm text-muted-foreground">{t('This action cannot be undone. The product itself will not be affected.')}</p>
             </div>
             <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete Batch
+              {t('Delete Batch')}
             </Button>
           </div>
         </CardContent>

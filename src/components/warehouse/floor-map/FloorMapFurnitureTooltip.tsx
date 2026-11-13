@@ -106,7 +106,7 @@ export function FloorMapFurnitureTooltip({
             </div>
             <div className="h-1 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-[width] duration-500"
                 style={{
                   width: `${fillPercent}%`,
                   background: fillPercent > 90 ? '#EF4444' : fillPercent > 70 ? '#F59E0B' : '#22C55E',

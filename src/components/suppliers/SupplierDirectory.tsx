@@ -124,7 +124,7 @@ export function SupplierDirectory({
                 type="button"
                 whileTap={prefersReduced ? undefined : { scale: 0.97 }}
                 onClick={() => setStatusFilter(chip.value)}
-                className={`min-h-[36px] rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                className={`min-h-[36px] pointer-coarse:min-h-11 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   statusFilter === chip.value
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-input bg-background text-muted-foreground hover:bg-muted'
@@ -172,7 +172,7 @@ export function SupplierDirectory({
           </Select>
 
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" className="h-9 rounded-full text-xs" onClick={clearFilters}>
+            <Button variant="ghost" size="sm" className="h-9 pointer-coarse:h-11 rounded-full text-xs" onClick={clearFilters}>
               <X className="mr-1 h-3 w-3" />
               {t('Clear filters')}
             </Button>

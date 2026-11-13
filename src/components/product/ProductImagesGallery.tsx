@@ -25,6 +25,8 @@ export function ProductImagesGallery({ productId, images, onImagesChange, readOn
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [editingCaption, setEditingCaption] = useState<string | null>(null);
+  // Images whose URL no longer loads (e.g. removed at the external host).
+  const [brokenIds, setBrokenIds] = useState<Set<string>>(() => new Set());
 
   const handleUpload = async (files: FileList) => {
     setUploadError(null);
@@ -64,7 +66,7 @@ export function ProductImagesGallery({ productId, images, onImagesChange, readOn
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2">
             <ImageIcon className="h-5 w-5 text-primary" />
             {t('Product Images')}
@@ -123,15 +125,23 @@ export function ProductImagesGallery({ productId, images, onImagesChange, readOn
                 key={image.id}
                 className="group relative rounded-lg border overflow-hidden"
               >
-                <img
-                  src={image.url}
-                  alt={image.caption || ''}
-                  className="aspect-square w-full object-cover"
-                />
+                {brokenIds.has(image.id) ? (
+                  <div className="flex aspect-square w-full flex-col items-center justify-center gap-1 bg-muted/60 text-muted-foreground">
+                    <ImageIcon className="h-5 w-5" aria-hidden="true" />
+                    <span className="px-2 text-center text-xs">{t('Image unavailable')}</span>
+                  </div>
+                ) : (
+                  <img
+                    src={image.url}
+                    alt={image.caption || ''}
+                    className="aspect-square w-full object-cover"
+                    onError={() => setBrokenIds((prev) => new Set(prev).add(image.id))}
+                  />
+                )}
 
                 {/* Overlay controls */}
                 {!readOnly && (
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100 pointer-coarse:bg-transparent pointer-coarse:items-end pointer-coarse:justify-end pointer-coarse:p-1.5 transition-opacity flex items-center justify-center gap-2">
                     <Button
                       size="icon"
                       variant="secondary"

@@ -128,7 +128,7 @@ export function FloorMapZoneDetail({
                       </div>
                       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                         <div
-                          className="h-full rounded-full transition-all duration-700"
+                          className="h-full rounded-full transition-[width] duration-700"
                           style={{ width: `${pct}%`, background: row.color }}
                         />
                       </div>
@@ -163,7 +163,7 @@ export function FloorMapZoneDetail({
                   strokeLinecap="round"
                   strokeDasharray={ringCircumference}
                   strokeDashoffset={ringOffset}
-                  className="transition-all duration-1000"
+                  className="transition-[stroke-dashoffset] duration-700"
                 />
               </svg>
               <div className="text-lg font-bold mt-2 tabular-nums">{fillPercent}%</div>
