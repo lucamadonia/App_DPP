@@ -113,6 +113,7 @@ export function AppSidebar() {
             { title: t('Stocktake', { ns: 'warehouse' }), url: '/warehouse/stocktake' },
             { title: t('Shipments', { ns: 'warehouse' }), url: '/warehouse/shipments' },
             { title: t('Shipping Rates', { ns: 'warehouse' }), url: '/warehouse/shipping-rates' },
+            { title: t('Letter Mail', { ns: 'warehouse' }), url: '/warehouse/letters' },
             { title: t('Umverpackung', { ns: 'warehouse' }), url: '/warehouse/packaging-types' },
             { title: t('Transfers', { ns: 'warehouse' }), url: '/warehouse/transfers' },
             { title: t('Bewegungen & Auswertung', { ns: 'warehouse' }), url: '/warehouse/movements' },
