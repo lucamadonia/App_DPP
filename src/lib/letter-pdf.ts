@@ -186,6 +186,54 @@ export async function mergeLetterBatch(input: {
   return await out.save();
 }
 
+const SHEET_MARGIN_PT = 12 * PT_PER_MM;
+const SHEET_GAP_PT = 8 * PT_PER_MM;
+
+/** How many stamps of the given size fit on one sheet, with room to cut. */
+export function computeSheetLayout(
+  stampWidthPt: number,
+  stampHeightPt: number,
+  pageWidthPt = A4_PT[0],
+  pageHeightPt = A4_PT[1],
+) {
+  const fit = (page: number, stamp: number) =>
+    Math.max(1, Math.floor((page - 2 * SHEET_MARGIN_PT + SHEET_GAP_PT) / (stamp + SHEET_GAP_PT)));
+  return { columns: fit(pageWidthPt, stampWidthPt), rows: fit(pageHeightPt, stampHeightPt) };
+}
+
+/**
+ * Puts several stamps on A4 sheets, at original size, to cut out and stick on
+ * envelopes. Each stamp must only be printed and used once.
+ */
+export async function mergeStampSheet(
+  stamps: { stampPdf: Uint8Array; stampRegion: PdfRegion }[],
+): Promise<Uint8Array> {
+  const { PDFDocument } = await import('pdf-lib');
+  const out = await PDFDocument.create();
+  const cellWidth = Math.max(...stamps.map(({ stampRegion }) => stampRegion.right - stampRegion.left));
+  const cellHeight = Math.max(...stamps.map(({ stampRegion }) => stampRegion.top - stampRegion.bottom));
+  const { columns, rows } = computeSheetLayout(cellWidth, cellHeight);
+  const perPage = columns * rows;
+
+  for (let index = 0; index < stamps.length; index++) {
+    const { stampPdf, stampRegion } = stamps[index];
+    const slot = index % perPage;
+    const page = slot === 0 ? out.addPage(A4_PT) : out.getPage(out.getPageCount() - 1);
+    const stampDoc = await PDFDocument.load(stampPdf);
+    const stamp = await out.embedPage(stampDoc.getPage(0), stampRegion);
+    const width = stampRegion.right - stampRegion.left;
+    const height = stampRegion.top - stampRegion.bottom;
+    const cellTop = A4_PT[1] - SHEET_MARGIN_PT - Math.floor(slot / columns) * (cellHeight + SHEET_GAP_PT);
+    page.drawPage(stamp, {
+      x: SHEET_MARGIN_PT + (slot % columns) * (cellWidth + SHEET_GAP_PT),
+      y: cellTop - height,
+      width,
+      height,
+    });
+  }
+  return await out.save();
+}
+
 /** Full pipeline: measure the stamp, then merge it into the document. */
 export async function composeFrankedLetter(input: {
   stampPdf: Uint8Array;

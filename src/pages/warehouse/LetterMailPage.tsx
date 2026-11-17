@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Download, FileText, Loader2, Mail, Undo2 } from 'lucide-react';
+import { Download, FileText, Loader2, Mail, Printer, Undo2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,10 @@ import { getContacts } from '@/services/supabase/wh-contacts';
 import {
   createLetter, downloadLetterStamp, fetchPdfBytes, getLetters, refundLetter,
 } from '@/services/supabase/letters';
-import { composeFrankedLetter, downloadPdf, type LetterPlacement } from '@/lib/letter-pdf';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  composeFrankedLetter, detectStampRegion, downloadPdf, mergeStampSheet, type LetterPlacement,
+} from '@/lib/letter-pdf';
 import { formatDate } from '@/lib/format';
 import type { DeutschePostLetterProduct, LetterRecipient, WhLetter } from '@/types/dhl';
 import type { WhContact } from '@/types/warehouse';
@@ -65,6 +68,8 @@ export function LetterMailPage() {
   const [busy, setBusy] = useState(false);
   const [rowBusy, setRowBusy] = useState<string | null>(null);
   const [refundTarget, setRefundTarget] = useState<WhLetter | null>(null);
+  const [sheetIds, setSheetIds] = useState<Set<string>>(new Set());
+  const [sheetBusy, setSheetBusy] = useState(false);
 
   const loadLetters = useCallback(async () => {
     try {
@@ -180,6 +185,33 @@ export function LetterMailPage() {
       toast.error(err instanceof Error ? err.message : t('Could not load the stamp PDF'));
     } finally {
       setRowBusy(null);
+    }
+  };
+
+  const printable = letters.filter((letter) => letter.status === 'purchased');
+  const sheetLetters = printable.filter((letter) => sheetIds.has(letter.id));
+
+  const toggleSheet = (id: string) => setSheetIds((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+
+  /** All selected stamps together on A4, to cut out and stick on envelopes. */
+  const handlePrintSheet = async () => {
+    setSheetBusy(true);
+    try {
+      const stamps = [];
+      for (const letter of sheetLetters) {
+        const stampPdf = await downloadLetterStamp(letter.stampStoragePath);
+        stamps.push({ stampPdf, stampRegion: await detectStampRegion(stampPdf) });
+      }
+      downloadPdf(await mergeStampSheet(stamps), `briefmarken-${stamps.length}.pdf`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('Could not load the stamp PDF'));
+    } finally {
+      setSheetBusy(false);
     }
   };
 
@@ -322,7 +354,24 @@ export function LetterMailPage() {
       <LetterBatchCard ready={!!ready} products={products} onPurchased={() => void loadLetters()} />
 
       <Card>
-        <CardHeader><CardTitle className="text-base">{t('Letter history')}</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+          <CardTitle className="text-base">{t('Letter history')}</CardTitle>
+          {printable.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="ghost" size="sm"
+                onClick={() => setSheetIds(sheetLetters.length === printable.length
+                  ? new Set() : new Set(printable.map((letter) => letter.id)))}
+              >
+                {sheetLetters.length === printable.length ? t('Deselect all') : t('Select all')}
+              </Button>
+              <Button variant="outline" size="sm" disabled={sheetLetters.length === 0 || sheetBusy} onClick={() => void handlePrintSheet()}>
+                {sheetBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                {t('Print {{n}} stamps together on A4', { n: sheetLetters.length })}
+              </Button>
+            </div>
+          )}
+        </CardHeader>
         <CardContent>
           {letters.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('No letters yet')}</p>
@@ -331,6 +380,7 @@ export function LetterMailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8" />
                     <TableHead>{t('Date')}</TableHead>
                     <TableHead>{t('Recipient')}</TableHead>
                     <TableHead>{t('Reference')}</TableHead>
@@ -342,6 +392,15 @@ export function LetterMailPage() {
                 <TableBody>
                   {letters.map((letter) => (
                     <TableRow key={letter.id}>
+                      <TableCell>
+                        {letter.status === 'purchased' && (
+                          <Checkbox
+                            checked={sheetIds.has(letter.id)}
+                            onCheckedChange={() => toggleSheet(letter.id)}
+                            aria-label={t('Select letter')}
+                          />
+                        )}
+                      </TableCell>
                       <TableCell className="whitespace-nowrap">{formatDate(letter.createdAt)}</TableCell>
                       <TableCell>
                         {letter.recipientName}
@@ -360,7 +419,7 @@ export function LetterMailPage() {
                             <Button
                               variant="ghost" size="sm" disabled={rowBusy === letter.id}
                               onClick={() => void handleDownloadStamp(letter)}
-                              aria-label={t('Download stamp')} title={t('Download stamp')}
+                              aria-label={t('Print this stamp individually')} title={t('Print this stamp individually')}
                             >
                               {rowBusy === letter.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                             </Button>
