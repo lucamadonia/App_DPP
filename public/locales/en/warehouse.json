@@ -2139,5 +2139,9 @@
   "Stopped after {{done}} of {{total}} letters: {{error}}": "Stopped after {{done}} of {{total}} letters: {{error}}",
   "{{n}} letters created": "{{n}} letters created",
   "The PDF is too large (max. 40 MB)": "The PDF is too large (max. 40 MB)",
-  "Could not read the PDF": "Could not read the PDF"
+  "Could not read the PDF": "Could not read the PDF",
+  "Print {{n}} stamps together on A4": "Print {{n}} stamps together on A4",
+  "Print this stamp individually": "Print this stamp individually",
+  "Deselect all": "Deselect all",
+  "Select letter": "Select letter"
 }

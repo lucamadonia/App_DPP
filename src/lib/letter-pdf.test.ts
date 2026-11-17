@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { PDFDocument, rgb } from 'pdf-lib';
 import {
   ADDRESS_WINDOW_MM,
+  computeSheetLayout,
   computeStampPlacement,
   findContentBounds,
   mergeStampIntoDocument,
+  mergeStampSheet,
   pixelBoundsToRegion,
 } from './letter-pdf';
 
@@ -65,6 +67,24 @@ describe('computeStampPlacement', () => {
     expect(p.scale).toBeLessThan(1);
     expect(p.width).toBeLessThanOrEqual((ADDRESS_WINDOW_MM.width - 4) * PT_PER_MM + 0.001);
     expect(p.height).toBeLessThanOrEqual((ADDRESS_WINDOW_MM.height - 4) * PT_PER_MM + 0.001);
+  });
+});
+
+describe('stamp sheet', () => {
+  it('fits a grid of stamps on A4 and never returns less than one per page', () => {
+    // 80 x 40 mm stamps: 2 columns, 5 rows on A4 with margins and gaps.
+    expect(computeSheetLayout(80 * PT_PER_MM, 40 * PT_PER_MM)).toEqual({ columns: 2, rows: 5 });
+    expect(computeSheetLayout(900, 1200)).toEqual({ columns: 1, rows: 1 });
+  });
+
+  it('starts a new sheet when one is full', async () => {
+    // 204 x 94 pt stamps: 2 columns x 6 rows = 12 per sheet.
+    const stampRegion = { left: 48, bottom: 698, right: 252, top: 792 };
+    const one = { stampPdf: await stampPdf(), stampRegion };
+    const twelve = await mergeStampSheet(Array.from({ length: 12 }, () => one));
+    const thirteen = await mergeStampSheet(Array.from({ length: 13 }, () => one));
+    expect((await PDFDocument.load(twelve)).getPageCount()).toBe(1);
+    expect((await PDFDocument.load(thirteen)).getPageCount()).toBe(2);
   });
 });
 

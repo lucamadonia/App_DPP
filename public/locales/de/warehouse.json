@@ -2139,5 +2139,9 @@
   "Stopped after {{done}} of {{total}} letters: {{error}}": "Nach {{done}} von {{total}} Briefen gestoppt: {{error}}",
   "{{n}} letters created": "{{n}} Briefe erstellt",
   "The PDF is too large (max. 40 MB)": "Das PDF ist zu groß (max. 40 MB)",
-  "Could not read the PDF": "Das PDF konnte nicht gelesen werden"
+  "Could not read the PDF": "Das PDF konnte nicht gelesen werden",
+  "Print {{n}} stamps together on A4": "{{n}} Marken zusammen auf A4 drucken",
+  "Print this stamp individually": "Diese Marke einzeln drucken",
+  "Deselect all": "Auswahl aufheben",
+  "Select letter": "Brief auswählen"
 }
