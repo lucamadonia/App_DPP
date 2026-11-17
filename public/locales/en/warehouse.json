@@ -2124,5 +2124,20 @@
   "Could not load letters": "Could not load letters",
   "Could not load the stamp PDF": "Could not load the stamp PDF",
   "Could not request the refund": "Could not request the refund",
-  "The INTERNETMARKE terms and conditions of Deutsche Post apply.": "The INTERNETMARKE terms and conditions of Deutsche Post apply."
+  "The INTERNETMARKE terms and conditions of Deutsche Post apply.": "The INTERNETMARKE terms and conditions of Deutsche Post apply.",
+  "Serial letters from one PDF": "Serial letters from one PDF",
+  "Upload one PDF with several invoices. The recipient of each letter is read from the address window; pages with the same recipient stay together.": "Upload one PDF with several invoices. The recipient of each letter is read from the address window; pages with the same recipient stay together.",
+  "PDF with several letters": "PDF with several letters",
+  "Reading addresses...": "Reading addresses...",
+  "Unreadable address": "Unreadable address",
+  "Outside Germany: please create this letter individually.": "Outside Germany: please create this letter individually.",
+  "p.": "p.",
+  "Buying stamp {{done}} of {{total}}...": "Buying stamp {{done}} of {{total}}...",
+  "Buy {{n}} stamps — {{price}}": "Buy {{n}} stamps — {{price}}",
+  "{{n}} × {{product}} will be charged to your Portokasse now.": "{{n}} × {{product}} will be charged to your Portokasse now.",
+  "Buy now": "Buy now",
+  "Stopped after {{done}} of {{total}} letters: {{error}}": "Stopped after {{done}} of {{total}} letters: {{error}}",
+  "{{n}} letters created": "{{n}} letters created",
+  "The PDF is too large (max. 40 MB)": "The PDF is too large (max. 40 MB)",
+  "Could not read the PDF": "Could not read the PDF"
 }
