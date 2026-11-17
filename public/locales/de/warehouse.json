@@ -2124,5 +2124,20 @@
   "Could not load letters": "Briefe konnten nicht geladen werden",
   "Could not load the stamp PDF": "Marken-PDF konnte nicht geladen werden",
   "Could not request the refund": "Erstattung konnte nicht beantragt werden",
-  "The INTERNETMARKE terms and conditions of Deutsche Post apply.": "Es gelten die AGB INTERNETMARKE der Deutschen Post."
+  "The INTERNETMARKE terms and conditions of Deutsche Post apply.": "Es gelten die AGB INTERNETMARKE der Deutschen Post.",
+  "Serial letters from one PDF": "Serienbrief aus einem PDF",
+  "Upload one PDF with several invoices. The recipient of each letter is read from the address window; pages with the same recipient stay together.": "Lade ein PDF mit mehreren Rechnungen hoch. Der Empfänger jedes Briefs wird aus dem Adressfenster gelesen; Seiten mit demselben Empfänger bleiben zusammen.",
+  "PDF with several letters": "PDF mit mehreren Briefen",
+  "Reading addresses...": "Adressen werden gelesen...",
+  "Unreadable address": "Adresse nicht lesbar",
+  "Outside Germany: please create this letter individually.": "Außerhalb Deutschlands: Bitte diesen Brief einzeln erstellen.",
+  "p.": "S.",
+  "Buying stamp {{done}} of {{total}}...": "Marke {{done}} von {{total}} wird gekauft...",
+  "Buy {{n}} stamps — {{price}}": "{{n}} Marken kaufen — {{price}}",
+  "{{n}} × {{product}} will be charged to your Portokasse now.": "{{n}} × {{product}} wird jetzt deiner Portokasse belastet.",
+  "Buy now": "Jetzt kaufen",
+  "Stopped after {{done}} of {{total}} letters: {{error}}": "Nach {{done}} von {{total}} Briefen gestoppt: {{error}}",
+  "{{n}} letters created": "{{n}} Briefe erstellt",
+  "The PDF is too large (max. 40 MB)": "Das PDF ist zu groß (max. 40 MB)",
+  "Could not read the PDF": "Das PDF konnte nicht gelesen werden"
 }

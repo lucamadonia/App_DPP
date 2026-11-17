@@ -149,6 +149,43 @@ export async function mergeStampIntoDocument(input: {
   return await out.save();
 }
 
+/**
+ * Serial letters: builds one print file from a PDF that holds many letters.
+ * Each letter's pages are copied in order and its stamp replaces the address
+ * window on its first page. Letters not listed are left out.
+ */
+export async function mergeLetterBatch(input: {
+  documentPdf: Uint8Array;
+  letters: { pages: number[]; stampPdf: Uint8Array; stampRegion: PdfRegion }[];
+}): Promise<Uint8Array> {
+  const { PDFDocument, rgb } = await import('pdf-lib');
+  const source = await PDFDocument.load(input.documentPdf);
+  const out = await PDFDocument.create();
+
+  for (const letter of input.letters) {
+    const copied = await out.copyPages(source, letter.pages.map((pageNumber) => pageNumber - 1));
+    copied.forEach((page) => out.addPage(page));
+    const first = copied[0];
+    const pageHeight = first.getSize().height;
+    const stampDoc = await PDFDocument.load(letter.stampPdf);
+    const stamp = await out.embedPage(stampDoc.getPage(0), letter.stampRegion);
+    first.drawRectangle({
+      x: ADDRESS_WINDOW_MM.left * PT_PER_MM,
+      y: pageHeight - (ADDRESS_WINDOW_MM.top + ADDRESS_WINDOW_MM.height) * PT_PER_MM,
+      width: ADDRESS_WINDOW_MM.width * PT_PER_MM,
+      height: ADDRESS_WINDOW_MM.height * PT_PER_MM,
+      color: rgb(1, 1, 1),
+    });
+    const target = computeStampPlacement(
+      letter.stampRegion.right - letter.stampRegion.left,
+      letter.stampRegion.top - letter.stampRegion.bottom,
+      pageHeight,
+    );
+    first.drawPage(stamp, { x: target.x, y: target.y, width: target.width, height: target.height });
+  }
+  return await out.save();
+}
+
 /** Full pipeline: measure the stamp, then merge it into the document. */
 export async function composeFrankedLetter(input: {
   stampPdf: Uint8Array;

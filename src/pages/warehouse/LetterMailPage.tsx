@@ -21,6 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PageContainer } from '@/components/layout/page-container';
+import { LetterBatchCard } from '@/components/warehouse/letter-batch-card';
 import { getDHLSettings, getDeutschePostLetterProducts } from '@/services/supabase/dhl-carrier';
 import { getContacts } from '@/services/supabase/wh-contacts';
 import {
@@ -317,6 +318,8 @@ export function LetterMailPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <LetterBatchCard ready={!!ready} products={products} onPurchased={() => void loadLetters()} />
 
       <Card>
         <CardHeader><CardTitle className="text-base">{t('Letter history')}</CardTitle></CardHeader>
