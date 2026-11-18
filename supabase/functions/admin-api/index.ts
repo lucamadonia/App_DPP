@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { checkTenantCustomDomain, normalizeCustomDomain } from '../_shared/custom-domain.ts';
+import { projectScope, STRIPE_PROJECT, STRIPE_PROJECT_KEY } from '../_shared/stripe-project.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -751,7 +752,12 @@ async function listCoupons() {
     promoMap.set(promo.coupon.id, { id: promo.id, code: promo.code });
   }
 
-  return (couponsData.data || []).map((c: Record<string, unknown>) => {
+  // Shared Stripe account: hide coupons tagged for another app (untagged
+  // legacy coupons stay visible).
+  const own = (couponsData.data || []).filter(
+    (c: Record<string, unknown>) => projectScope(c.metadata) !== 'foreign',
+  );
+  return own.map((c: Record<string, unknown>) => {
     const promo = promoMap.get(c.id as string);
     return {
       id: c.id,
@@ -785,6 +791,7 @@ async function createCoupon(params: Record<string, unknown>) {
   }
 
   formParts.push(`duration=${params.duration}`);
+  formParts.push(`metadata[${STRIPE_PROJECT_KEY}]=${STRIPE_PROJECT}`);
   if (params.duration === 'repeating' && params.durationInMonths) {
     formParts.push(`duration_in_months=${params.durationInMonths}`);
   }
@@ -806,7 +813,8 @@ async function createCoupon(params: Record<string, unknown>) {
   if (params.promoCode) {
     const promo = await stripeFetch('/promotion_codes', {
       method: 'POST',
-      body: `coupon=${coupon.id}&code=${encodeURIComponent(params.promoCode as string)}`,
+      body: `coupon=${coupon.id}&code=${encodeURIComponent(params.promoCode as string)}`
+        + `&metadata[${STRIPE_PROJECT_KEY}]=${STRIPE_PROJECT}`,
     });
     promoCode = promo.code;
     promoCodeId = promo.id;
@@ -830,7 +838,16 @@ async function createCoupon(params: Record<string, unknown>) {
   };
 }
 
+/** Refuse to touch a coupon tagged for another app of the shared Stripe account. */
+async function assertOwnCoupon(couponId: string) {
+  const coupon = await stripeFetch(`/coupons/${encodeURIComponent(couponId)}`);
+  if (projectScope(coupon.metadata) === 'foreign') {
+    throw new Error('Coupon belongs to another project');
+  }
+}
+
 async function updateCouponStatus(couponId: string, active: boolean) {
+  await assertOwnCoupon(couponId);
   // Stripe doesn't allow reactivating coupons, but we can manage promo codes
   if (!active) {
     // Get promo codes for this coupon and deactivate them
@@ -845,6 +862,7 @@ async function updateCouponStatus(couponId: string, active: boolean) {
 }
 
 async function deleteCoupon(couponId: string) {
+  await assertOwnCoupon(couponId);
   await stripeFetch(`/coupons/${couponId}`, { method: 'DELETE' });
 }
 

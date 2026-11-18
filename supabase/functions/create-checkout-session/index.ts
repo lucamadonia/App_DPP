@@ -27,6 +27,7 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14?target=deno';
 import { isAllowedRedirectUrl, resolvePrice, type CatalogEntry } from '../_shared/stripe-catalog.ts';
+import { withProjectTag } from '../_shared/stripe-project.ts';
 
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY') || '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -130,7 +131,9 @@ Deno.serve(async (req) => {
 
     // Server-built metadata — informational/audit only. The webhook derives
     // entitlements from the purchased price IDs and the tenant from the
-    // Stripe customer, never from this metadata.
+    // Stripe customer, never from this metadata. It carries project=TRACK
+    // (session, subscription and payment intent) so the apps sharing the
+    // Stripe account can tell their objects apart.
     const metadata = buildServerMetadata(entry, priceId, tenantId, user.id, stripeLocale);
 
     // Create Checkout Session
@@ -184,7 +187,7 @@ async function linkNewStripeCustomer(
   const customer = await stripe.customers.create({
     email: user.email,
     name: tenantName || undefined,
-    metadata: { tenant_id: tenantId, user_id: user.id },
+    metadata: withProjectTag({ tenant_id: tenantId, user_id: user.id }),
   });
 
   // Service role — the tenants guard trigger blocks every other caller from
@@ -236,13 +239,13 @@ function buildServerMetadata(
   userId: string,
   locale: 'de' | 'en',
 ): Record<string, string> {
-  const base: Record<string, string> = {
+  const base: Record<string, string> = withProjectTag({
     tenant_id: tenantId,
     user_id: userId,
     price_id: priceId,
     kind: entry.kind,
     locale,
-  };
+  });
   if (entry.kind === 'plan') base.plan = entry.plan;
   if (entry.kind === 'module') base.module = entry.module;
   if (entry.kind === 'credits') {

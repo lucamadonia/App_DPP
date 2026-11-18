@@ -12,7 +12,15 @@ import Stripe from 'https://esm.sh/stripe@14?target=deno';
 import { verifyStripeEvent } from './verify.ts';
 import { deriveSubscriptionEntitlements, mapSubscriptionStatus, sumPurchasedCredits } from './entitlements.ts';
 import { getAllowedRedirectOrigins, isAllowedRedirectUrl, resolvePrice } from '../_shared/stripe-catalog.ts';
-import { invoiceSubscriptionId, mayWritePlan, refetch, subscriptionPeriod, unixToIso } from './billing-sync.ts';
+import {
+  type Db,
+  invoiceSubscriptionId,
+  mayWritePlan,
+  refetch,
+  resolveTenant,
+  subscriptionPeriod,
+  unixToIso,
+} from './billing-sync.ts';
 
 const SECRET = 'whsec_test_fixture_secret';
 const stripe = new Stripe('sk_test_dummy');
@@ -211,4 +219,67 @@ Deno.test('refetch prefers the pinned-version object, falls back only when missi
   const missing = Object.assign(new Error('No such subscription'), { code: 'resource_missing', statusCode: 404 });
   assertEquals(await refetch('payload', () => Promise.reject(missing)), 'payload');
   await assertRejects(() => refetch('payload', () => Promise.reject(new Error('network'))));
+});
+
+// Shared Stripe account: minimal fakes for resolveTenant's metadata fallback.
+function fakeDb(tenants: Array<{ id: string; stripe_customer_id: string | null }>) {
+  const writes: unknown[] = [];
+  const db = {
+    from: () => {
+      const filters: Record<string, unknown> = {};
+      const q = {
+        select: () => q,
+        eq: (col: string, val: unknown) => {
+          filters[col] = val;
+          return q;
+        },
+        or: () => q,
+        update: (row: unknown) => {
+          writes.push(row);
+          return q;
+        },
+        maybeSingle: () =>
+          Promise.resolve({
+            data: tenants.find((t) => Object.entries(filters).every(([k, v]) => (t as Record<string, unknown>)[k] === v))
+              ?? null,
+            error: null,
+          }),
+        then: (resolve: (v: unknown) => void) => resolve({ data: [{ id: filters.id }], error: null }),
+      };
+      return q;
+    },
+  };
+  return { db: db as unknown as Db, writes };
+}
+
+function fakeStripe(metadata: Record<string, string>) {
+  return {
+    customers: { retrieve: () => Promise.resolve({ id: 'cus_x', deleted: false, metadata }) },
+  } as unknown as Stripe;
+}
+
+const TENANT = '11111111-2222-3333-4444-555555555555';
+
+Deno.test('resolveTenant never links a customer tagged for another project', async () => {
+  const { db, writes } = fakeDb([{ id: TENANT, stripe_customer_id: null }]);
+  const res = await resolveTenant(fakeStripe({ project: 'WEALTH', tenant_id: TENANT }), db, 'cus_x');
+  assertEquals(res, { tenantId: null, linkExpected: false });
+  assertEquals(writes.length, 0);
+});
+
+Deno.test('resolveTenant ignores untagged foreign customers without a tenant id (no email match)', async () => {
+  const { db, writes } = fakeDb([{ id: TENANT, stripe_customer_id: null }]);
+  const res = await resolveTenant(fakeStripe({ household_id: 'hh_1' }), db, 'cus_x');
+  assertEquals(res, { tenantId: null, linkExpected: false });
+  assertEquals(writes.length, 0);
+});
+
+Deno.test('resolveTenant still resolves stored and Trackbliss-tagged customers', async () => {
+  const stored = fakeDb([{ id: TENANT, stripe_customer_id: 'cus_x' }]);
+  assertEquals(await resolveTenant(fakeStripe({}), stored.db, 'cus_x'), { tenantId: TENANT, linkExpected: true });
+
+  const tagged = fakeDb([{ id: TENANT, stripe_customer_id: null }]);
+  const res = await resolveTenant(fakeStripe({ project: 'TRACK', tenant_id: TENANT }), tagged.db, 'cus_x');
+  assertEquals(res, { tenantId: TENANT, linkExpected: true });
+  assertEquals(tagged.writes.length, 1);
 });
