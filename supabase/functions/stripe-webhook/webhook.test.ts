@@ -11,8 +11,8 @@ import { assert, assertEquals, assertRejects } from 'https://deno.land/std@0.224
 import Stripe from 'https://esm.sh/stripe@14?target=deno';
 import { verifyStripeEvent } from './verify.ts';
 import { deriveSubscriptionEntitlements, mapSubscriptionStatus, sumPurchasedCredits } from './entitlements.ts';
-import { getAllowedRedirectOrigins, isAllowedRedirectUrl, resolvePrice } from '../_shared/stripe-catalog.ts';
-import { invoiceSubscriptionId, mayWritePlan, refetch, subscriptionPeriod, unixToIso } from './billing-sync.ts';
+import { ACCOUNTING_PROJECT_CODE, getAllowedRedirectOrigins, isAllowedRedirectUrl, resolvePrice } from '../_shared/stripe-catalog.ts';
+import { invoicePaymentIntentId, invoiceSubscriptionId, mayWritePlan, refetch, subscriptionPeriod, unixToIso } from './billing-sync.ts';
 
 const SECRET = 'whsec_test_fixture_secret';
 const stripe = new Stripe('sk_test_dummy');
@@ -204,6 +204,13 @@ Deno.test('basil-shaped invoice: subscription id read from parent', () => {
     'sub_exp',
   );
   assertEquals(invoiceSubscriptionId({ id: 'in_none', parent: null } as unknown as Stripe.Invoice), null);
+});
+
+Deno.test('Trackbliss payment references support expanded and absent PaymentIntents', () => {
+  assertEquals(ACCOUNTING_PROJECT_CODE, 'TRACK');
+  assertEquals(invoicePaymentIntentId({ payment_intent: 'pi_renewal' } as Stripe.Invoice), 'pi_renewal');
+  assertEquals(invoicePaymentIntentId({ payment_intent: { id: 'pi_expanded' } } as unknown as Stripe.Invoice), 'pi_expanded');
+  assertEquals(invoicePaymentIntentId({ payment_intent: null } as Stripe.Invoice), null);
 });
 
 Deno.test('refetch prefers the pinned-version object, falls back only when missing', async () => {

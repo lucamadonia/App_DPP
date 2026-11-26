@@ -67,7 +67,8 @@ export interface FeedbackReview {
   productId: string;
   batchId?: string;
   variantTitle?: string;
-  rating: 1 | 2 | 3 | 4 | 5;
+  /** Optional since 20261119: storefront reports are text-only (no stars). */
+  rating: 1 | 2 | 3 | 4 | 5 | null;
   title?: string;
   comment?: string;
   reviewerDisplayName: string;
@@ -288,6 +289,13 @@ export interface FeedbackSettings {
   /** Idea-board specific */
   ideaBoardEnabled: boolean;
   ideaInviteExpiryDays: number;
+  /**
+   * Review page on the tenant's own storefront, e.g.
+   * "https://shop.fambliss.de/bewerten". When set (https only), review links
+   * (day-7 mail, tracking page) point to `<url>?t=<token>` instead of the
+   * built-in `/feedback/<token>` form.
+   */
+  storefrontReviewUrl?: string;
   /** Widget appearance + behavior */
   widget: {
     defaultMode: FeedbackWidgetMode;

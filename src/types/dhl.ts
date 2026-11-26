@@ -64,6 +64,48 @@ export interface DeutschePostLetterProduct {
   maxWeightGrams?: number;
 }
 
+/** Recipient of a standalone franked letter (not tied to a shipment). */
+export interface LetterRecipient {
+  name: string;
+  /** Second address line, e.g. contact person or c/o. */
+  additionalName?: string;
+  /** Street including house number. */
+  street: string;
+  postalCode: string;
+  city: string;
+  /** ISO-2 or ISO-3 country code. */
+  country: string;
+}
+
+export interface CreateLetterResult {
+  success: true;
+  letterId: string;
+  /** Short-lived signed URL of the stamp PDF. */
+  stampUrl: string;
+  productName: string;
+  priceCents: number;
+  trackId?: string;
+}
+
+/** A purchased standalone letter stamp (row of wh_letters). */
+export interface WhLetter {
+  id: string;
+  reference?: string;
+  recipientName: string;
+  recipientAdditionalName?: string;
+  recipientStreet: string;
+  recipientPostalCode: string;
+  recipientCity: string;
+  recipientCountry: string;
+  productName: string;
+  priceCents: number;
+  currency: string;
+  trackId?: string;
+  stampStoragePath: string;
+  status: 'purchased' | 'refund_requested';
+  createdAt: string;
+}
+
 export interface DHLAddress {
   name1: string;
   name2?: string;

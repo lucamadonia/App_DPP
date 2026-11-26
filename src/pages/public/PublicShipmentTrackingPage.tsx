@@ -21,7 +21,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import {
   Package, MapPin, Clock, Truck, Check, CheckCheck, AlertTriangle,
   RefreshCw, Share2, Recycle, Leaf, ExternalLink, ChevronDown, Loader2,
-  PackageCheck, PackageX, MailWarning, Box, PackageOpen, LifeBuoy,
+  PackageCheck, PackageX, MailWarning, Box, PackageOpen, LifeBuoy, MessageCircleHeart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,6 +34,8 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { applyPrimaryColor, applyDocumentTitle } from '@/lib/dynamic-theme';
+import { getPublicBaseUrl } from '@/lib/platform';
+import { buildFeedbackReviewUrl } from '@/lib/feedback-review-url';
 import {
   getPublicShipmentByToken,
   getPublicShipmentTrackingEvents,
@@ -725,6 +727,11 @@ export function PublicShipmentTrackingPage() {
   }
 
   const isDelivered = !!shipment.deliveredAt;
+  // Storefront review page when the tenant has one, else the built-in form.
+  const feedbackHref = shipment.feedbackToken
+    ? shipment.feedbackUrl
+      || buildFeedbackReviewUrl(null, shipment.feedbackToken, getPublicBaseUrl())
+    : null;
   const isCancelled = shipment.status === 'cancelled';
   const carrierLink = shipment.carrier === 'DHL' && shipment.trackingNumber
     ? `https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${encodeURIComponent(shipment.trackingNumber)}`
@@ -948,6 +955,32 @@ export function PublicShipmentTrackingPage() {
           <Card>
             <CardContent className="pt-5 pb-5 px-5 sm:px-7">
               <ProductsInShipment items={items} t={t} />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* FEEDBACK: delivered + open feedback request. The page is embedded
+            in an iframe on the tenant's shop, so the link leaves the frame
+            (target="_top"). */}
+        {isDelivered && feedbackHref && (
+          <Card>
+            <CardContent className="pt-5 pb-5 px-5 sm:px-7">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <MessageCircleHeart className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold">{t('feedback_card_title')}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {t('feedback_card_text')}
+                    </div>
+                  </div>
+                </div>
+                <Button asChild size="sm" className="shrink-0">
+                  <a href={feedbackHref} target="_top" rel="noopener">
+                    {t('feedback_card_cta')}
+                  </a>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

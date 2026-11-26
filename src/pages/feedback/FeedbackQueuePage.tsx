@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, X, Eye, Clock, MessageCircleHeart, Sparkles } from 'lucide-react';
+import { Check, X, Eye, EyeOff, Clock, MessageCircleHeart, Sparkles, Reply } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { StarRating } from '@/components/feedback/StarRating';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
@@ -11,6 +14,8 @@ import {
   getReviews,
   approveReview,
   rejectReview,
+  hideReview,
+  addReply,
   getReviewStats,
   type ReviewStats,
 } from '@/services/supabase/feedback-reviews';
@@ -19,6 +24,18 @@ import { getFeedbackPhotoPublicUrl } from '@/services/supabase/feedback-public';
 import { getVariantColorHex } from '@/lib/variant-color';
 import { toast } from 'sonner';
 import { PageContainer } from '@/components/layout/page-container';
+import { useBranding } from '@/contexts/BrandingContext';
+
+const REPLY_AUTHOR_STORAGE_KEY = 'feedback.replyAuthor';
+const REPLY_MAX_LENGTH = 2000;
+
+function readStoredReplyAuthor(): string {
+  try {
+    return window.localStorage.getItem(REPLY_AUTHOR_STORAGE_KEY) || '';
+  } catch {
+    return '';
+  }
+}
 
 export function FeedbackQueuePage() {
   const { t } = useTranslation('warehouse');
@@ -27,6 +44,20 @@ export function FeedbackQueuePage() {
   const [reviews, setReviews] = useState<FeedbackReview[]>([]);
   const [stats, setStats] = useState<ReviewStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const { branding } = useBranding();
+  // Public author name of replies. Remembered per browser, defaults to the
+  // tenant's app name.
+  const [replyAuthor, setReplyAuthor] = useState<string>(readStoredReplyAuthor);
+  const effectiveReplyAuthor = replyAuthor.trim() || branding.appName;
+
+  function handleReplyAuthorChange(value: string) {
+    setReplyAuthor(value);
+    try {
+      window.localStorage.setItem(REPLY_AUTHOR_STORAGE_KEY, value);
+    } catch {
+      // Storage unavailable (private mode): keep the value for this session.
+    }
+  }
 
   async function reload() {
     setLoading(true);
@@ -64,6 +95,28 @@ export function FeedbackQueuePage() {
     }
   }
 
+  async function handleHide(id: string) {
+    try {
+      await hideReview(id);
+      toast.success(t('Review hidden'));
+      reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function handleReply(id: string, content: string): Promise<boolean> {
+    try {
+      await addReply(id, content, effectiveReplyAuthor);
+      toast.success(t('Reply published'));
+      reload();
+      return true;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+      return false;
+    }
+  }
+
   return (
     <PageContainer
       size="full"
@@ -87,7 +140,7 @@ export function FeedbackQueuePage() {
           <Kpi
             icon={<Sparkles className="h-4 w-4" />}
             label="Ø Sterne"
-            value={stats.averageRating ? stats.averageRating.toFixed(2) : '—'}
+            value={stats.averageRating != null ? stats.averageRating.toFixed(2) : 'ohne Note'}
           />
           <Kpi icon={<Eye className="h-4 w-4" />} label="Insgesamt" value={stats.total} />
         </div>
@@ -128,6 +181,11 @@ export function FeedbackQueuePage() {
                 review={r}
                 onApprove={() => handleApprove(r.id)}
                 onReject={() => handleReject(r.id)}
+                onHide={() => handleHide(r.id)}
+                onReply={content => handleReply(r.id, content)}
+                replyAuthor={replyAuthor}
+                replyAuthorPlaceholder={branding.appName}
+                onReplyAuthorChange={handleReplyAuthorChange}
               />
             ))
           )}
@@ -156,12 +214,40 @@ function ModerationRow({
   review,
   onApprove,
   onReject,
+  onHide,
+  onReply,
+  replyAuthor,
+  replyAuthorPlaceholder,
+  onReplyAuthorChange,
 }: {
   review: FeedbackReview;
   onApprove: () => void;
   onReject: () => void;
+  onHide: () => void;
+  /** Resolves true when the reply was stored (the draft is then cleared). */
+  onReply: (content: string) => Promise<boolean>;
+  replyAuthor: string;
+  replyAuthorPlaceholder: string;
+  onReplyAuthorChange: (value: string) => void;
 }) {
   const variantHex = review.variantTitle ? getVariantColorHex(review.variantTitle) : null;
+  const hasRating = typeof review.rating === 'number';
+  const canReply = review.status === 'pending_review' || review.status === 'approved';
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyDraft, setReplyDraft] = useState('');
+  const [replySending, setReplySending] = useState(false);
+
+  async function submitReply() {
+    const content = replyDraft.trim();
+    if (!content || replySending) return;
+    setReplySending(true);
+    const ok = await onReply(content);
+    setReplySending(false);
+    if (ok) {
+      setReplyDraft('');
+      setReplyOpen(false);
+    }
+  }
 
   return (
     <Card>
@@ -169,8 +255,16 @@ function ModerationRow({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <StarRating value={review.rating} size="sm" />
-              <span className="text-sm font-semibold tabular-nums">{review.rating}/5</span>
+              {hasRating ? (
+                <>
+                  <StarRating value={review.rating ?? 0} size="sm" />
+                  <span className="text-sm font-semibold tabular-nums">{review.rating}/5</span>
+                </>
+              ) : (
+                <Badge variant="outline" className="px-1.5 py-0 text-[10px] font-medium">
+                  ohne Note
+                </Badge>
+              )}
               <span className="text-xs text-muted-foreground">·</span>
               <span className="text-sm font-medium">{review.productName || review.productId.slice(0, 8)}</span>
               {review.variantTitle && (
@@ -197,7 +291,7 @@ function ModerationRow({
             )}
             {!review.title && !review.comment && (
               <p className="text-sm italic text-muted-foreground">
-                Nur Sterne-Bewertung – kein Kommentartext.
+                {hasRating ? 'Nur Sterne-Bewertung, kein Kommentartext.' : 'Kein Text vorhanden.'}
               </p>
             )}
             {review.photos && review.photos.length > 0 && (
@@ -297,7 +391,91 @@ function ModerationRow({
               </Button>
             </div>
           )}
+          {review.status === 'approved' && (
+            <div className="flex flex-col gap-1.5 shrink-0">
+              <Button size="sm" variant="outline" onClick={onHide} className="gap-1">
+                <EyeOff className="h-3.5 w-3.5" />
+                Ausblenden
+              </Button>
+            </div>
+          )}
         </div>
+
+        {review.replies && review.replies.length > 0 && (
+          <div className="space-y-2 border-l-2 border-primary/30 pl-3">
+            {review.replies.map(reply => (
+              <div key={reply.id} className="text-sm">
+                <div className="text-xs text-muted-foreground">
+                  Antwort von {reply.authorDisplayName} · {new Date(reply.createdAt).toLocaleString()}
+                  {!reply.visible && ' · nicht sichtbar'}
+                </div>
+                <p className="leading-relaxed break-words whitespace-pre-line">{reply.content}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {canReply && !replyOpen && (
+          <Button size="sm" variant="ghost" onClick={() => setReplyOpen(true)} className="gap-1 -ml-2">
+            <Reply className="h-3.5 w-3.5" />
+            Antworten
+          </Button>
+        )}
+
+        {canReply && replyOpen && (
+          <div className="space-y-2 rounded-md border p-3">
+            <div className="space-y-1">
+              <Label htmlFor={`reply-author-${review.id}`} className="text-xs">
+                Antwort als
+              </Label>
+              <Input
+                id={`reply-author-${review.id}`}
+                value={replyAuthor}
+                onChange={e => onReplyAuthorChange(e.target.value)}
+                placeholder={replyAuthorPlaceholder}
+                maxLength={80}
+                className="h-8 max-w-xs text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor={`reply-content-${review.id}`} className="text-xs">
+                Öffentliche Antwort
+              </Label>
+              <Textarea
+                id={`reply-content-${review.id}`}
+                value={replyDraft}
+                onChange={e => setReplyDraft(e.target.value)}
+                maxLength={REPLY_MAX_LENGTH}
+                rows={3}
+                placeholder="Antwort schreiben, sie erscheint öffentlich unter der Bewertung."
+              />
+            </div>
+            {review.status === 'pending_review' && (
+              <p className="text-xs text-muted-foreground">
+                Die Antwort wird erst sichtbar, wenn die Bewertung freigegeben ist.
+              </p>
+            )}
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={submitReply}
+                disabled={!replyDraft.trim() || replySending}
+                className="gap-1"
+              >
+                <Reply className="h-3.5 w-3.5" />
+                Antwort veröffentlichen
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setReplyOpen(false)}
+                disabled={replySending}
+              >
+                Abbrechen
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -37,6 +37,11 @@ export interface PublicShipmentSummary {
   deliveredAt: string | null;
   createdAt: string;
   totalItems: number;
+  /** Open feedback request of a delivered shipment, null otherwise. */
+  feedbackToken: string | null;
+  /** Review page on the tenant's storefront (already carries the token), null
+   *  when the tenant has none configured. */
+  feedbackUrl: string | null;
 }
 
 export interface PublicShipmentItem {
@@ -112,6 +117,9 @@ interface PublicShipmentRow {
   delivered_at: string | null;
   created_at: string;
   total_items: number;
+  // Added in 20261119_feedback_storefront.sql; absent on an older database.
+  feedback_token?: string | null;
+  feedback_url?: string | null;
 }
 
 interface PublicShipmentItemRow {
@@ -167,6 +175,8 @@ function transformShipment(row: PublicShipmentRow): PublicShipmentSummary {
     deliveredAt: row.delivered_at,
     createdAt: row.created_at,
     totalItems: row.total_items,
+    feedbackToken: row.feedback_token || null,
+    feedbackUrl: row.feedback_url || null,
   };
 }
 

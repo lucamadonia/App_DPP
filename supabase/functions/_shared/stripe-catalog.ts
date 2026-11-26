@@ -17,6 +17,9 @@
 
 export type BillingPlanId = 'pro' | 'enterprise';
 
+/** Stable bookkeeping dimension for every Trackbliss sale in this Stripe account. */
+export const ACCOUNTING_PROJECT_CODE = 'TRACK';
+
 export type CatalogEntry =
   | { kind: 'plan'; mode: 'subscription'; plan: BillingPlanId; interval: 'monthly' | 'yearly' }
   | { kind: 'module'; mode: 'subscription'; module: string }

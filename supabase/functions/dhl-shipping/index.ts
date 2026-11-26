@@ -13,6 +13,7 @@ import {
   isServiceRoleBearer,
 } from '../_shared/tenant-secrets.ts';
 import { enforceRateLimits, getClientIp, hashKey, rateLimitedResponse } from '../_shared/rate-limit.ts';
+import { buildCustoms, requiresCustoms } from './customs.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -194,6 +195,10 @@ Deno.serve(async (req) => {
         return await handleCreateLabel(supabase, tenantId, params);
       case 'create_letter_label':
         return await handleCreateLetterLabel(supabase, tenantId, params);
+      case 'create_standalone_letter':
+        return await handleCreateStandaloneLetter(supabase, tenantId, user.id, params);
+      case 'refund_standalone_letter':
+        return await handleRefundStandaloneLetter(supabase, tenantId, params);
       case 'validate_address':
         return await handleValidateAddress(supabase, tenantId, params);
       case 'cancel_label':
@@ -689,6 +694,40 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
     ? { services: { endorsement: 'RETURN' } }
     : {};
 
+  // Destinations outside the EU customs territory (CH, GB, NO, ...) need a
+  // customs declaration. Without it DHL rejects the order with "Please enter
+  // the type of shipment". Build it from the shipment items + product data and
+  // fail with a readable message when master data is missing.
+  let customsBlock: Record<string, unknown> = {};
+  if (requiresCustoms(shipperCountry, consigneeCountry)) {
+    const { data: itemRows, error: itemsErr } = await supabase
+      .from('wh_shipment_items')
+      .select('quantity, unit_price, products(name, hs_code, customs_value, country_of_origin, net_weight, gross_weight)')
+      .eq('shipment_id', shipmentId);
+    if (itemsErr) {
+      return json({ error: `Could not load shipment items for the customs declaration: ${itemsErr.message}` });
+    }
+    const customsResult = buildCustoms({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      lines: (itemRows || []).map((row: any) => ({
+        name: row.products?.name || 'Goods',
+        quantity: row.quantity,
+        unitPriceEur: row.unit_price,
+        customsValueEur: row.products?.customs_value,
+        hsCode: row.products?.hs_code,
+        originIso3: lookupCountryISO3(row.products?.country_of_origin || ''),
+        // Product weights are stored in grams.
+        unitWeightGrams: row.products?.net_weight ?? row.products?.gross_weight,
+      })),
+      totalWeightGrams: effectiveWeightGrams,
+      postalChargesEur: shipment.shipping_cost,
+      exportType: params.exportType as string | undefined,
+      exportDescription: params.exportDescription as string | undefined,
+    });
+    if ('error' in customsResult) return json({ error: customsResult.error });
+    customsBlock = { customs: customsResult.customs };
+  }
+
   const dhlOrder = {
     profile: 'STANDARD_GRUPPENPROFIL',
     shipments: [
@@ -721,6 +760,7 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
           dim: dimsForProduct(product),
           weight: { uom: 'kg', value: weightKg },
         },
+        ...customsBlock,
       },
     ],
   };
@@ -1007,6 +1047,203 @@ async function handleCreateLetterLabel(supabase: any, tenantId: string, params?:
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Action: create_standalone_letter — franked letter without a shipment       */
+/*  (e.g. an invoice sent by post). The stamp PDF is stored and recorded in    */
+/*  wh_letters; the client merges it onto the document to print.               */
+/* -------------------------------------------------------------------------- */
+
+function cleanText(value: unknown, maxLength: number): string {
+  return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, maxLength);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleCreateStandaloneLetter(supabase: any, tenantId: string, userId: string, params?: Record<string, unknown>) {
+  const recipient = (params?.recipient || {}) as Record<string, unknown>;
+  const requestedProductCode = cleanText(params?.productCode, 20);
+  const receiver = {
+    name: cleanText(recipient.name, 50),
+    additionalName: cleanText(recipient.additionalName, 50),
+    street: cleanText(recipient.street, 50),
+    postalCode: cleanText(recipient.postalCode, 12),
+    city: cleanText(recipient.city, 40),
+    country: mapCountryToISO3(cleanText(recipient.country, 40) || 'DEU'),
+  };
+  const reference = cleanText(params?.reference, 80);
+  if (!requestedProductCode) return json({ error: 'Missing productCode' }, 400);
+  if (!receiver.name || !receiver.street || !receiver.postalCode || !receiver.city) {
+    return json({ error: 'Complete recipient address is required' }, 400);
+  }
+
+  const settings = await getDHLSettings(supabase, tenantId);
+  if (!settings?.internetmarke?.enabled) return json({ error: 'Deutsche Post INTERNETMARKE is not enabled' }, 400);
+
+  try {
+    // Resolve product and price server-side immediately before checkout.
+    const catalogue = await fetchInternetmarkeProducts(settings);
+    const rawProduct = catalogue.find((p: Record<string, unknown>) =>
+      String(p.extProductid) === requestedProductCode && isLetterProduct(p)
+    );
+    if (!rawProduct) return json({ error: 'The selected letter product is no longer available. Reload the product list.' }, 400);
+    const product = toLetterProduct(rawProduct);
+
+    const shipperCountry = mapCountryToISO3(settings.shipper?.country || 'DEU');
+    if (shipperCountry !== 'DEU') {
+      return json({ error: 'Deutsche Post INTERNETMARKE requires a sender address in Germany.' }, 400);
+    }
+    if (!settings.shipper?.name1 || !settings.shipper?.addressStreet || !settings.shipper?.postalCode || !settings.shipper?.city) {
+      return json({ error: 'Complete sender address is required for letter postage.' }, 400);
+    }
+    const expectedTransport = shipperCountry === receiver.country ? 'national' : 'international';
+    if (product.transport && product.transport !== expectedTransport) {
+      return json({ error: `This letter product is for ${product.transport} shipments, but the address is ${expectedTransport}.` }, 400);
+    }
+
+    const auth = await getInternetmarkeAccess(settings);
+    const requestBody = {
+      type: 'AppShoppingCartPDFRequest',
+      pageFormatId: Number(settings.internetmarke.pageFormatId) || 2,
+      positions: [{
+        productCode: Number(product.productCode),
+        address: {
+          sender: {
+            additionalName: settings.shipper?.name2 || '',
+            name: settings.shipper?.name1 || '',
+            addressLine1: settings.shipper?.addressStreet || '',
+            postalCode: settings.shipper?.postalCode || '',
+            city: settings.shipper?.city || '',
+            country: shipperCountry,
+          },
+          receiver: {
+            additionalName: receiver.additionalName,
+            name: receiver.name,
+            addressLine1: receiver.street,
+            postalCode: receiver.postalCode,
+            city: receiver.city,
+            country: receiver.country,
+          },
+        },
+        voucherLayout: 'ADDRESS_ZONE',
+        position: { labelX: 1, labelY: 1, page: 1 },
+        positionType: 'AppShoppingCartPDFPosition',
+      }],
+      total: product.priceCents,
+      createManifest: false,
+      createShippingList: '0',
+      dpi: 'DPI300',
+    };
+
+    const resp = await fetch(`${INTERNETMARKE_URL}/app/shoppingcart/pdf?directCheckout=true`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${auth.accessToken}`,
+        'dhl-api-key': settings.internetmarke.clientId,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+    const responseBody = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      const message = responseBody?.detail || responseBody?.title || responseBody?.message || `INTERNETMARKE checkout failed (${resp.status})`;
+      return json({ error: String(message), dhlResponse: responseBody });
+    }
+
+    const voucher = responseBody?.shoppingCart?.voucherList?.[0] || {};
+    const shopOrderId = String(responseBody?.shoppingCart?.shopOrderId || '');
+    const voucherId = String(voucher?.voucherId || '');
+    const trackId = String(voucher?.trackId || '');
+    const stampUrl = String(responseBody?.link || voucher?.link || '');
+    if (!stampUrl) return json({ error: 'INTERNETMARKE did not return a PDF link', dhlResponse: responseBody });
+
+    // From here on money has been spent: every failure path refunds.
+    const failAfterPurchase = async (reason: string) => {
+      const refunded = await refundInternetmarkeVoucher(settings, auth.accessToken, voucherId);
+      return json({ error: refunded
+        ? `${reason}; the purchase was refunded.`
+        : `${reason}. Voucher ${voucherId} must be refunded manually.` });
+    };
+
+    const stampResp = await fetch(stampUrl, { headers: { Authorization: `Bearer ${auth.accessToken}` } });
+    if (!stampResp.ok) return await failAfterPurchase(`Could not download INTERNETMARKE PDF (${stampResp.status})`);
+    const stampBuffer = await stampResp.arrayBuffer();
+
+    const letterId = crypto.randomUUID();
+    const storagePath = `${tenantId}/letters/${letterId}-marke.pdf`;
+    const { error: uploadErr } = await supabase.storage
+      .from('documents')
+      .upload(storagePath, new Uint8Array(stampBuffer), { contentType: 'application/pdf', upsert: true });
+    if (uploadErr) return await failAfterPurchase(`Could not store INTERNETMARKE PDF: ${uploadErr.message}`);
+
+    const { error: insertErr } = await supabase.from('wh_letters').insert({
+      id: letterId,
+      tenant_id: tenantId,
+      created_by: userId,
+      reference: reference || null,
+      recipient_name: receiver.name,
+      recipient_additional_name: receiver.additionalName || null,
+      recipient_street: receiver.street,
+      recipient_postal_code: receiver.postalCode,
+      recipient_city: receiver.city,
+      recipient_country: receiver.country,
+      product_code: product.productCode,
+      product_name: product.name,
+      price_cents: product.priceCents,
+      currency: product.currency,
+      shop_order_id: shopOrderId || null,
+      voucher_id: voucherId || null,
+      track_id: trackId || null,
+      stamp_storage_path: storagePath,
+    });
+    if (insertErr) {
+      await supabase.storage.from('documents').remove([storagePath]);
+      return await failAfterPurchase(`Could not record the letter: ${insertErr.message}`);
+    }
+
+    const { data: signedData } = await supabase.storage.from('documents').createSignedUrl(storagePath, 60 * 60);
+    return json({
+      success: true,
+      letterId,
+      stampUrl: signedData?.signedUrl || '',
+      productName: product.name,
+      priceCents: product.priceCents,
+      trackId,
+    });
+  } catch (err) {
+    return json({ error: err instanceof Error ? err.message : 'INTERNETMARKE letter creation failed' });
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleRefundStandaloneLetter(supabase: any, tenantId: string, params?: Record<string, unknown>) {
+  if (!params?.letterId) return json({ error: 'Missing letterId' }, 400);
+  const { data: letter, error } = await supabase
+    .from('wh_letters')
+    .select('id, voucher_id, status')
+    .eq('id', String(params.letterId))
+    .eq('tenant_id', tenantId)
+    .single();
+  if (error || !letter) return json({ error: 'Letter not found' }, 404);
+  if (letter.status === 'refund_requested') return json({ error: 'A refund was already requested for this letter' }, 409);
+  if (!letter.voucher_id) return json({ error: 'No INTERNETMARKE voucher ID found' }, 400);
+
+  const settings = await getDHLSettings(supabase, tenantId);
+  try {
+    const auth = await getInternetmarkeAccess(settings);
+    const refunded = await refundInternetmarkeVoucher(settings, auth.accessToken, letter.voucher_id);
+    if (!refunded) return json({ error: 'INTERNETMARKE refund request failed' });
+  } catch (err) {
+    return json({ error: err instanceof Error ? err.message : 'INTERNETMARKE refund failed' });
+  }
+
+  const { error: updateErr } = await supabase
+    .from('wh_letters')
+    .update({ status: 'refund_requested', refunded_at: new Date().toISOString() })
+    .eq('id', letter.id)
+    .eq('tenant_id', tenantId);
+  if (updateErr) return json({ error: `Refund was requested, but the record could not be updated: ${updateErr.message}` });
+  return json({ success: true });
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Action: validate_address                                                   */
 /*                                                                             */
 /*  Dry-run a DHL order with ?validate=true. DHL returns validationMessages    */
@@ -1072,6 +1309,20 @@ async function handleValidateAddress(supabase: any, tenantId: string, params?: R
           dim: dimsForProduct(product),
           weight: { uom: 'kg', value: Math.max(0.1, Number(params?.weightKg) || 1) },
         },
+        // Non-EU destinations: DHL validates the customs block too. Send a
+        // placeholder so the probe reports address problems, not customs noise.
+        ...(requiresCustoms(shipperCountry, consigneeCountry) ? {
+          customs: {
+            exportType: 'COMMERCIAL_GOODS',
+            postalCharges: { currency: 'EUR', value: 0 },
+            items: [{
+              itemDescription: 'Address validation probe',
+              packagedQuantity: 1,
+              itemValue: { currency: 'EUR', value: 1 },
+              itemWeight: { uom: 'kg', value: 0.1 },
+            }],
+          },
+        } : {}),
       },
     ],
   };
@@ -2621,6 +2872,17 @@ async function handleCancelReturnLabel(supabase: any, tenantId: string, params?:
 
 function mapCountryToISO3(country: string): string {
   if (!country) return 'DEU';
+  const iso3 = lookupCountryISO3(country);
+  if (iso3) return iso3;
+  // Last resort: log and default to DEU so the shipment doesn't fail silently.
+  console.warn('[dhl-shipping] mapCountryToISO3: unknown country "%s" — defaulting to DEU', country);
+  return 'DEU';
+}
+
+/** Strict variant: null for unknown input. Use where a wrong guess would be a
+ *  false statement (e.g. country of origin on a customs declaration). */
+function lookupCountryISO3(country: string): string | null {
+  if (!country) return null;
   const trimmed = country.trim();
   const upper = trimmed.toUpperCase();
 
@@ -2636,7 +2898,8 @@ function mapCountryToISO3(country: string): string {
     HU: 'HUN', RO: 'ROU', BG: 'BGR', HR: 'HRV', SK: 'SVK',
     SI: 'SVN', LT: 'LTU', LV: 'LVA', EE: 'EST', GR: 'GRC',
     MT: 'MLT', CY: 'CYP', LI: 'LIE', IS: 'ISL', CA: 'CAN',
-    AU: 'AUS', NZ: 'NZL', JP: 'JPN',
+    AU: 'AUS', NZ: 'NZL', JP: 'JPN', CN: 'CHN', TW: 'TWN',
+    KR: 'KOR', IN: 'IND', VN: 'VNM', TR: 'TUR', BD: 'BGD',
   };
   if (iso2[upper]) return iso2[upper];
 
@@ -2676,10 +2939,12 @@ function mapCountryToISO3(country: string): string {
     AUSTRALIEN: 'AUS', AUSTRALIA: 'AUS',
     NEUSEELAND: 'NZL', 'NEW ZEALAND': 'NZL',
     JAPAN: 'JPN',
+    CHINA: 'CHN', TAIWAN: 'TWN',
+    SÜDKOREA: 'KOR', SUEDKOREA: 'KOR', 'SOUTH KOREA': 'KOR',
+    INDIEN: 'IND', INDIA: 'IND',
+    VIETNAM: 'VNM',
+    TÜRKEI: 'TUR', TUERKEI: 'TUR', TURKEY: 'TUR', TÜRKIYE: 'TUR',
+    BANGLADESCH: 'BGD', BANGLADESH: 'BGD',
   };
-  if (names[upper]) return names[upper];
-
-  // Last resort: log and default to DEU so the shipment doesn't fail silently.
-  console.warn('[dhl-shipping] mapCountryToISO3: unknown country "%s" — defaulting to DEU', country);
-  return 'DEU';
+  return names[upper] ?? null;
 }

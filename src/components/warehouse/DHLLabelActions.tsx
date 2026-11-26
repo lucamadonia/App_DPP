@@ -26,6 +26,30 @@ import { DHL_PRODUCT_LABELS } from '@/types/dhl';
 import type { DeutschePostLetterProduct, DHLLabelResponse, DHLParcelProduct } from '@/types/dhl';
 import type { WhShipment } from '@/types/warehouse';
 
+// EU member states (ISO-2 / ISO-3). Everything else needs a customs declaration.
+const EU_COUNTRIES = new Set([
+  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE',
+  'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
+  'AUT', 'BEL', 'BGR', 'HRV', 'CYP', 'CZE', 'DNK', 'EST', 'FIN', 'FRA', 'DEU', 'GRC',
+  'HUN', 'IRL', 'ITA', 'LVA', 'LTU', 'LUX', 'MLT', 'NLD', 'POL', 'PRT', 'ROU', 'SVK',
+  'SVN', 'ESP', 'SWE',
+]);
+
+/** Only for ISO codes we can positively identify as non-EU; free-text country
+ *  names fall back to the server default (commercial goods). */
+function needsCustomsDeclaration(country?: string | null): boolean {
+  const code = (country || 'DE').trim().toUpperCase();
+  return /^[A-Z]{2,3}$/.test(code) && !EU_COUNTRIES.has(code);
+}
+
+const EXPORT_TYPE_OPTIONS = [
+  { value: 'COMMERCIAL_GOODS', label: 'Commercial goods' },
+  { value: 'PRESENT', label: 'Gift (customs)' },
+  { value: 'COMMERCIAL_SAMPLE', label: 'Commercial sample' },
+  { value: 'DOCUMENT', label: 'Documents' },
+  { value: 'RETURN_OF_GOODS', label: 'Return of goods' },
+] as const;
+
 interface DHLLabelActionsProps {
   shipment: WhShipment;
   onUpdate: () => void;
@@ -45,6 +69,7 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
   const [letterProducts, setLetterProducts] = useState<DeutschePostLetterProduct[]>([]);
   const [letterProductsLoading, setLetterProductsLoading] = useState(false);
   const [letterProductCode, setLetterProductCode] = useState('');
+  const [exportType, setExportType] = useState('COMMERCIAL_GOODS');
 
   // Seed the editable weight from the shipment whenever the dialog opens.
   useEffect(() => {
@@ -132,6 +157,8 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
       }
       const result = shippingMethod === 'letter'
         ? await createDeutschePostLetterLabel(shipment.id, letterProductCode, override)
+        : needsCustomsDeclaration(shipment.shippingCountry)
+        ? await createDHLLabel(shipment.id, undefined, override, false, exportType)
         : await createDHLLabel(shipment.id, undefined, override);
       if (!('success' in result)) {
         setPendingWeightGrams(grams);
@@ -320,6 +347,27 @@ export function DHLLabelActions({ shipment, onUpdate }: DHLLabelActionsProps) {
               {autoWeightKg && autoWeightKg !== weightKgPreview && (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-500/30 dark:bg-blue-500/10 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
                   {t('Auto-filled from items: {{kg}} kg', { kg: autoWeightKg })}
+                </div>
+              )}
+
+              {shippingMethod === 'parcel' && needsCustomsDeclaration(shipment.shippingCountry) && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="dhl-export-type" className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                    {t('Type of shipment (customs)')}
+                  </Label>
+                  <Select value={exportType} onValueChange={setExportType}>
+                    <SelectTrigger id="dhl-export-type" className="h-12 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EXPORT_TYPE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{t(option.label)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-slate-500">
+                    {t('Required outside the EU. The value of goods comes from the item price or the customs value of the product.')}
+                  </p>
                 </div>
               )}
 

@@ -26,6 +26,11 @@
  *   FAMBLISS_SHOP_URL           — optional, defaults to https://shop.fambliss.de
  *   MAIL_HUB_TENANT_IDS         — optional CSV of Fambliss tenant UUIDs; default = MYFAMBLISS GmbH
  *
+ * Day-7 review link: when the tenant has tenants.settings.feedback.storefrontReviewUrl
+ * (https, e.g. https://shop.fambliss.de/bewerten) the mail links to
+ * `<storefrontReviewUrl>?t=<token>`; tenants without it keep the built-in
+ * `${TRACKBLISS_PUBLIC_URL}/feedback/<token>` form.
+ *
  * Tenant gate (FINAL-EF-01): these mails are Fambliss-branded (Fambliss
  * sender, shop.fambliss.de links) and go through the Family-Joy hub, so only
  * tenants on the MAIL_HUB_TENANT_IDS allowlist (same list and default as
@@ -222,6 +227,9 @@ async function fireFeedbackDay7(supabase: any): Promise<FireResult> {
     .in('tenant_id', Array.from(eligibleTenants));
   if (shipErr) throw new Error(`wh_shipments query failed: ${shipErr.message}`);
 
+  // Storefront review URL per tenant, resolved once per run.
+  const reviewUrlCache = new Map<string, string | null>();
+
   for (const ship of (shipments || []) as ShipmentRow[]) {
     result.scanned++;
     // Defense in depth: never post a non-allowlisted tenant's recipient.
@@ -230,7 +238,7 @@ async function fireFeedbackDay7(supabase: any): Promise<FireResult> {
       result.details.push({ shipmentId: ship.id, tenantId: ship.tenant_id, outcome: 'skipped', reason: 'tenant_not_on_mail_hub' });
       continue;
     }
-    const outcome = await processShipment(supabase, ship);
+    const outcome = await processShipment(supabase, ship, reviewUrlCache);
     result.details.push(outcome);
     if (outcome.outcome === 'fired') result.fired++;
     else if (outcome.outcome === 'skipped') result.skipped++;
@@ -354,8 +362,48 @@ async function fireEngagementDay(
   return result;
 }
 
-// deno-lint-ignore no-explicit-any
-async function processShipment(supabase: any, ship: ShipmentRow):
+/**
+ * Review page on the tenant's own storefront
+ * (tenants.settings.feedback.storefrontReviewUrl). Null when not configured,
+ * not https, or the lookup failed: the caller then links to the built-in form.
+ */
+async function getStorefrontReviewUrl(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  tenantId: string,
+  cache: Map<string, string | null>,
+): Promise<string | null> {
+  if (cache.has(tenantId)) return cache.get(tenantId) ?? null;
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('settings')
+    .eq('id', tenantId)
+    .maybeSingle();
+  if (error) {
+    // Not cached: a transient error must not pin the fallback for the whole run.
+    console.warn('[engagement-cron] tenant settings query failed:', error.message);
+    return null;
+  }
+  const raw = data?.settings?.feedback?.storefrontReviewUrl;
+  const url = typeof raw === 'string' ? raw.trim() : '';
+  const valid = /^https:\/\/\S+$/.test(url) ? url : null;
+  cache.set(tenantId, valid);
+  return valid;
+}
+
+/** `<storefrontReviewUrl>?t=<token>`, or the built-in Trackbliss form. */
+function buildReviewUrl(storefrontReviewUrl: string | null, token: string): string {
+  if (!storefrontReviewUrl) return `${TRACKBLISS_PUBLIC_URL}/feedback/${token}`;
+  const sep = storefrontReviewUrl.includes('?') ? '&' : '?';
+  return `${storefrontReviewUrl}${sep}t=${encodeURIComponent(token)}`;
+}
+
+async function processShipment(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  ship: ShipmentRow,
+  reviewUrlCache: Map<string, string | null>,
+):
   Promise<{ shipmentId: string; tenantId: string; outcome: 'fired' | 'skipped' | 'failed'; reason?: string; token?: string }> {
 
   // A feedback_request is pre-created (silently) when the shipment is marked
@@ -464,7 +512,10 @@ async function processShipment(supabase: any, ship: ShipmentRow):
   }
 
   const firstName = (ship.recipient_name || '').trim().split(/\s+/)[0] || 'Kunde';
-  const feedbackUrl = `${TRACKBLISS_PUBLIC_URL}/feedback/${firstToken}`;
+  const feedbackUrl = buildReviewUrl(
+    await getStorefrontReviewUrl(supabase, ship.tenant_id, reviewUrlCache),
+    firstToken,
+  );
 
   const ok = await postToFamilyJoy({
     eventType: 'feedback_request',
@@ -500,8 +551,8 @@ function buildFeedbackBody(firstName: string, feedbackUrl: string): string {
   const name = esc(firstName || 'du');
   const url = esc(feedbackUrl);
   return `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#2d3a28;">Hallo ${name},</p>`
-    + `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#6b6e64;">vor ein paar Tagen ist dein Fambliss-Paket bei dir angekommen — wir hoffen, es hat schon einen festen Platz in eurem Familienalltag gefunden. 💛</p>`
-    + `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#6b6e64;">Wir würden uns riesig freuen, wenn du dir einen kurzen Moment nimmst und deine Erfahrung teilst. Deine Bewertung hilft anderen Familien bei der Entscheidung — und uns, Fambliss noch besser zu machen.</p>`
+    + `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#6b6e64;">vor ein paar Tagen ist dein Fambliss-Paket bei dir angekommen. Wir hoffen, es hat schon einen festen Platz in eurem Familienalltag gefunden. 💛</p>`
+    + `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#6b6e64;">Wir würden uns riesig freuen, wenn du dir einen kurzen Moment nimmst und deine Erfahrung teilst. Deine Bewertung hilft anderen Familien bei der Entscheidung und uns dabei, Fambliss noch besser zu machen.</p>`
     + `<p style="margin:0 0 4px;font-size:16px;line-height:1.6;color:#6b6e64;">Es dauert wirklich nur eine Minute:</p>`
     + `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 6px;"><tr><td bgcolor="#2d3a28" style="border-radius:9999px;"><a href="${url}" target="_blank" rel="noopener" style="display:inline-block;padding:15px 44px;color:#f5f4ef;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:0.12em;text-transform:uppercase;">Jetzt bewerten</a></td></tr></table>`
     + `<p style="margin:6px 0 18px;font-size:12px;line-height:1.5;color:#94978d;">Falls der Button nicht funktioniert: <a href="${url}" style="color:#5a6855;">${url}</a></p>`

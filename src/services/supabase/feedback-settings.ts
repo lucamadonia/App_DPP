@@ -5,6 +5,7 @@
 import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import { getPublicTenantBySlug } from './public-tenant';
 import type { FeedbackSettings } from '@/types/feedback';
+import { buildFeedbackReviewUrl } from '@/lib/feedback-review-url';
 
 export const DEFAULT_FEEDBACK_SETTINGS: FeedbackSettings = {
   enabled: false,
@@ -100,4 +101,30 @@ export async function updateFeedbackSettings(
     return { success: false, error: error.message };
   }
   return { success: true };
+}
+
+/**
+ * Customer-facing review link for a feedback token of the given tenant:
+ * the tenant's storefront review page when `feedback.storefrontReviewUrl` is
+ * set, otherwise the built-in `<fallbackBaseUrl>/feedback/<token>` form.
+ * A failed settings lookup also falls back, so a mail is never left without
+ * a link.
+ */
+export async function getFeedbackReviewUrl(
+  tenantId: string,
+  token: string,
+  fallbackBaseUrl: string,
+): Promise<string> {
+  let storefrontReviewUrl: unknown;
+  try {
+    const { data } = await supabase
+      .from('tenants')
+      .select('settings')
+      .eq('id', tenantId)
+      .maybeSingle();
+    storefrontReviewUrl = data?.settings?.feedback?.storefrontReviewUrl;
+  } catch (e) {
+    console.warn('[feedback-settings] storefront review url lookup failed:', e);
+  }
+  return buildFeedbackReviewUrl(storefrontReviewUrl, token, fallbackBaseUrl);
 }

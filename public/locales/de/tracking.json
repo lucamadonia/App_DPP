@@ -103,5 +103,8 @@
   "widget_submit": "Paket verfolgen",
   "widget_not_found": "Wir konnten keine Sendung mit dieser Bestellnummer und E-Mail finden. Bitte beides prüfen und erneut versuchen.",
   "widget_powered_by": "Live-Tracking von Trackbliss",
-  "In this shipment": "In dieser Sendung"
+  "In this shipment": "In dieser Sendung",
+  "feedback_card_title": "Wie gefällt es euch?",
+  "feedback_card_text": "Erzählt uns in ein paar Sätzen von euren Erfahrungen. Das hilft anderen Familien und uns.",
+  "feedback_card_cta": "Erfahrung teilen"
 }

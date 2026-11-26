@@ -32,7 +32,8 @@ export async function getFeedbackRequestByToken(
 
 export interface ReviewSubmitItem {
   request_id: string;
-  rating: number;
+  /** Optional: text-only reports are accepted without a rating. */
+  rating?: number | null;
   title?: string;
   comment?: string;
   reviewer_city?: string;

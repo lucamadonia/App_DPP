@@ -80,6 +80,7 @@ export const NAV_GROUPS: NavGroup[] = [
           { path: '/warehouse/stocktake', titleKey: 'Stocktake', ns: W },
           { path: '/warehouse/shipments', titleKey: 'Shipments', ns: W },
           { path: '/warehouse/shipping-rates', titleKey: 'Shipping Rates', ns: W },
+          { path: '/warehouse/letters', titleKey: 'Letter Mail', ns: W },
           { path: '/warehouse/packaging-types', titleKey: 'Umverpackung', ns: W },
           { path: '/warehouse/transfers', titleKey: 'Transfers', ns: W },
           { path: '/warehouse/movements', titleKey: 'Bewegungen & Auswertung', ns: W },

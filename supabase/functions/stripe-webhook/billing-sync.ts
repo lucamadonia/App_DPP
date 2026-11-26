@@ -5,7 +5,7 @@
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type Stripe from 'https://esm.sh/stripe@14?target=deno';
-import { PLAN_MONTHLY_CREDITS } from '../_shared/stripe-catalog.ts';
+import { ACCOUNTING_PROJECT_CODE, PLAN_MONTHLY_CREDITS } from '../_shared/stripe-catalog.ts';
 import {
   deriveSubscriptionEntitlements,
   mapSubscriptionStatus,
@@ -300,10 +300,24 @@ export function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
   return idOf(details?.subscription);
 }
 
+/** PaymentIntent on the pinned Stripe API version; absent for zero-value invoices. */
+export function invoicePaymentIntentId(invoice: Stripe.Invoice): string | null {
+  const paymentIntent = (invoice as unknown as LooseRecord).payment_intent;
+  if (typeof paymentIntent === 'string') return paymentIntent || null;
+  const id = asRecord(paymentIntent)?.id;
+  return typeof id === 'string' && id ? id : null;
+}
+
 export async function upsertInvoice(supabase: Db, tenantId: string, invoice: Stripe.Invoice, status: 'paid' | 'open') {
   const { error } = await supabase.from('billing_invoices').upsert({
     tenant_id: tenantId,
+    project_code: ACCOUNTING_PROJECT_CODE,
     stripe_invoice_id: invoice.id,
+    invoice_number: invoice.number,
+    stripe_customer_id: customerIdOf(invoice.customer),
+    stripe_subscription_id: invoiceSubscriptionId(invoice),
+    stripe_payment_intent_id: invoicePaymentIntentId(invoice),
+    stripe_created_at: unixToIso(invoice.created),
     stripe_invoice_url: invoice.hosted_invoice_url,
     stripe_pdf_url: invoice.invoice_pdf,
     amount_due: invoice.amount_due,
