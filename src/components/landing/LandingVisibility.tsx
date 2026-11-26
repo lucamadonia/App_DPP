@@ -43,7 +43,7 @@ export function LandingVisibility() {
                 {tiers.map((tier, i) => (
                   <div
                     key={tier.key}
-                    className={`absolute flex flex-col items-center justify-center rounded-full border-2 ${tier.bgLight} border-current ${tier.textColor} transition-all duration-700 ${tier.size} ${
+                    className={`absolute flex flex-col items-center justify-center rounded-full border-2 ${tier.bgLight} border-current ${tier.textColor} transition-[opacity,scale] duration-500 ease-out ${tier.size} ${
                       isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
                     }`}
                     style={{ transitionDelay: `${(2 - i) * 200}ms`, zIndex: 3 - i }}
@@ -61,7 +61,7 @@ export function LandingVisibility() {
             </div>
 
             {/* Matrix Table */}
-            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+            <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50">

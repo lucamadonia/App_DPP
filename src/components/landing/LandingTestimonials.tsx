@@ -22,7 +22,7 @@ export function LandingTestimonials() {
     <section className="py-24 bg-white">
       <div ref={ref} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div
-          className={`text-center max-w-3xl mx-auto mb-14 transition-all duration-700 ${
+          className={`text-center max-w-3xl mx-auto mb-14 transition-[opacity,translate] duration-500 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}
         >
@@ -42,7 +42,7 @@ export function LandingTestimonials() {
             return (
               <article
                 key={item.key}
-                className={`relative flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm landing-card-hover transition-all duration-500 ${
+                className={`relative flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm landing-card-hover transition-[opacity,translate,box-shadow] duration-500 ${
                   isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
                 }`}
                 style={{ transitionDelay: `${200 + i * 150}ms` }}

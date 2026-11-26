@@ -336,7 +336,7 @@ export function ImportProductsDialog({
           {step === 'upload' && (
             <div className="space-y-4">
               <div
-                className="border-2 border-dashed rounded-lg p-12 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                className="border-2 border-dashed rounded-lg p-6 sm:p-12 text-center cursor-pointer hover:border-primary/50 transition-colors"
                 role="button"
                 tabIndex={0}
                 onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fileRef.current?.click(); } }}
@@ -463,7 +463,7 @@ export function ImportProductsDialog({
           {/* STEP 3: Validation */}
           {step === 'validation' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm">
                 <Badge variant="default" className="bg-green-600">
                   <CheckCircle2 className="mr-1 h-3 w-3" />
                   {validCount} {t('valid', { ns: 'common' }).toLowerCase?.() || 'valid'}

@@ -30,7 +30,7 @@ export function SolutionStep({ selected, onSelect }: SolutionStepProps) {
             key={value}
             type="button"
             onClick={() => onSelect(value)}
-            className={`p-5 rounded-xl border-2 text-left transition-all group ${
+            className={`p-5 rounded-xl border-2 text-left transition-[border-color,background-color,box-shadow] duration-150 group ${
               selected === value
                 ? 'border-primary bg-primary/5 shadow-sm'
                 : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'

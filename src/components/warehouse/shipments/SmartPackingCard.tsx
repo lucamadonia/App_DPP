@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Package,
@@ -64,32 +64,46 @@ interface SmartPackingCardProps {
   onPickService?: (serviceId: string) => void;
 }
 
+/** Small neutral pill with a status dot — color only on the dot, where it carries meaning. */
+const pillBase = 'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium text-foreground';
+
 function statusPill(status: CarrierMatch['status']) {
   if (status === 'ok') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-300 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-emerald-500/30">
-        <CheckCircle2 className="h-3 w-3" /> Passt
+      <span className={pillBase}>
+        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500" aria-hidden="true" /> Passt
       </span>
     );
   }
   if (status === 'warning') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-300 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-amber-500/30">
-        <AlertTriangle className="h-3 w-3" /> Achtung
+      <span className={pillBase}>
+        <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500" aria-hidden="true" /> Achtung
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 text-rose-300 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-rose-500/30">
-      <XCircle className="h-3 w-3" /> Blockiert
+    <span className={pillBase}>
+      <XCircle className="h-3.5 w-3.5 text-destructive" aria-hidden="true" /> Blockiert
     </span>
   );
 }
 
 function violationIcon(level: 'hard_fail' | 'warning' | 'info') {
-  if (level === 'hard_fail') return <XCircle className="h-3.5 w-3.5 text-rose-400 flex-shrink-0" />;
-  if (level === 'warning') return <AlertTriangle className="h-3.5 w-3.5 text-amber-400 flex-shrink-0" />;
-  return <Info className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />;
+  if (level === 'hard_fail') return <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" aria-hidden="true" />;
+  if (level === 'warning') return <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-500" aria-hidden="true" />;
+  return <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />;
+}
+
+/** Section heading used throughout the card — one size, one weight, muted icon. */
+function SubHeading({ icon: Icon, children, aside }: { icon: typeof Info; children: ReactNode; aside?: ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <h3 className="text-sm font-medium text-foreground">{children}</h3>
+      {aside && <span className="ml-auto text-xs text-muted-foreground">{aside}</span>}
+    </div>
+  );
 }
 
 export function SmartPackingCard({
@@ -246,10 +260,10 @@ export function SmartPackingCard({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="h-4 w-4 text-violet-400" />
-          <span className="font-semibold text-white">{t('Smart Packing Assistant')}</span>
+      <div className="rounded-xl border bg-card p-4 text-sm text-muted-foreground sm:p-6">
+        <div className="mb-1 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <span className="font-semibold text-foreground">{t('Smart Packing Assistant')}</span>
         </div>
         {t('Add items to get carton size and carrier suggestions.')}
       </div>
@@ -260,16 +274,14 @@ export function SmartPackingCard({
   const hasWeight = effectiveWeightKg > 0;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-900/5 dark:border-slate-700 dark:bg-slate-900">
+    <div className="rounded-xl border bg-card text-card-foreground">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-700">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-violet-500/20">
-            <Sparkles className="h-4 w-4 text-white" />
-          </div>
+      <div className="flex items-start justify-between gap-3 px-4 pt-4 sm:px-6 sm:pt-5">
+        <div className="flex min-w-0 items-start gap-3">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{t('Smart Packing Assistant')}</p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+            <p className="text-sm font-semibold leading-5 text-foreground">{t('Smart Packing Assistant')}</p>
+            <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
               {t('{{n}} items · {{kg}} kg contents', {
                 n: items.length,
                 kg: totalContentsWeight.toFixed(1),
@@ -277,47 +289,40 @@ export function SmartPackingCard({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30">
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className={`${pillBase} tabular-nums`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
             {okMatches.length} OK
           </span>
           {warnMatches.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30">
-              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+            <span className={`${pillBase} tabular-nums`}>
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500" aria-hidden="true" />
               {warnMatches.length}
             </span>
           )}
           {blockedMatches.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 text-rose-300 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-rose-500/30">
-              {blockedMatches.length} ✗
+            <span className={`${pillBase} tabular-nums`}>
+              <XCircle className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
+              {blockedMatches.length}
             </span>
           )}
         </div>
       </div>
 
-      <div className="p-4 sm:p-5 space-y-5">
+      <div className="space-y-6 px-4 pb-4 pt-4 sm:px-6 sm:pb-6">
         {/* Calculation breakdown — explains exactly where the weight comes from */}
-        <section className={`rounded-xl border p-3 ${
-          usingComputedWeight
-            ? 'border-blue-500/25 bg-blue-500/5'
-            : 'border-white/10 bg-white/5'
-        }`}>
-          <div className="flex items-center gap-2 mb-2">
-            <Scale className="h-3.5 w-3.5 text-blue-400" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-              {t('Calculation')}
-            </h3>
-            {usingComputedWeight && (
-              <span className="ml-auto rounded-full bg-blue-500/20 text-blue-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
-                {t('Auto')}
-              </span>
-            )}
-          </div>
+        <section className="rounded-lg border bg-muted/30 p-3 sm:p-4">
+          <SubHeading
+            icon={Scale}
+            aside={usingComputedWeight ? t('Auto') : undefined}
+          >
+            {t('Calculation')}
+          </SubHeading>
           {/* Sanity warning: a single item over 50 kg almost always means a
               unit mismatch in the underlying product/batch master data. */}
           {items.some((it) => it.weightKg > 50) && (
-            <div className="mb-2 rounded-md bg-rose-500/15 border border-rose-500/40 p-2 text-[11px] text-rose-200 leading-snug">
-              <strong className="flex items-center gap-1 font-semibold mb-0.5">
+            <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs leading-snug text-muted-foreground">
+              <strong className="mb-0.5 flex items-center gap-1.5 font-medium text-destructive">
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 {t('Suspicious weight detected')}
               </strong>
@@ -328,15 +333,15 @@ export function SmartPackingCard({
           {/* Missing-dimensions warning: some items lack L/W/H and are
               excluded from the carton suggestion. Weight still counts. */}
           {itemsMissingDims > 0 && (
-            <div className="mb-2 rounded-md bg-amber-50 border border-amber-300 p-2 text-[11px] text-amber-800 leading-snug dark:bg-amber-500/10 dark:border-amber-500/40 dark:text-amber-200">
-              <strong className="flex items-center gap-1 font-semibold mb-0.5">
-                <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <div className="mb-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-snug text-muted-foreground">
+              <strong className="mb-0.5 flex items-center gap-1.5 font-medium text-foreground">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-500" aria-hidden="true" />
                 {t('{{n}} items without dimensions', { n: itemsMissingDims })}
               </strong>
               {t('Carton and carrier fit calculations use only items with L×W×H set. Their weight still counts. Add dimensions on the product or batch to include them.')}
             </div>
           )}
-          <div className="space-y-1 text-[11px] font-mono text-slate-300">
+          <div className="space-y-1 text-xs tabular-nums text-muted-foreground">
             {items.map((it, i) => {
               const q = it.quantity ?? 1;
               const lineKg = it.weightKg * q;
@@ -344,32 +349,32 @@ export function SmartPackingCard({
               return (
                 <div
                   key={i}
-                  className={`flex items-center justify-between ${flag ? 'text-rose-300' : ''}`}
+                  className={`flex items-center justify-between gap-3 ${flag ? 'text-destructive' : ''}`}
                 >
                   <span className="truncate">
                     #{i + 1}: {q}× {it.lengthCm}×{it.widthCm}×{it.heightCm} cm @ {it.weightKg.toFixed(2)} kg
-                    {flag && <AlertTriangle className="inline-block h-3 w-3 ml-1 -mt-0.5" aria-hidden="true" />}
+                    {flag && <AlertTriangle className="-mt-0.5 ml-1 inline-block h-3 w-3" aria-hidden="true" />}
                   </span>
-                  <span className={flag ? 'text-rose-300' : 'text-white'}>{lineKg.toFixed(2)} kg</span>
+                  <span className={`shrink-0 ${flag ? 'text-destructive' : 'text-foreground'}`}>{lineKg.toFixed(2)} kg</span>
                 </div>
               );
             })}
-            <div className="flex items-center justify-between border-t border-white/10 pt-1 mt-1">
+            <div className="mt-1.5 flex items-center justify-between gap-3 border-t pt-1.5">
               <span>{t('Items subtotal')}</span>
-              <span className="text-white font-semibold">{itemsTotalWeightKg.toFixed(2)} kg</span>
+              <span className="text-foreground">{itemsTotalWeightKg.toFixed(2)} kg</span>
             </div>
-            <div className="flex items-center justify-between text-slate-400">
+            <div className="flex items-center justify-between gap-3">
               <span>+ {t('Packaging tare')}</span>
               <span>{tareKg.toFixed(2).replace('.', ',')} kg</span>
             </div>
-            <div className="flex items-center justify-between border-t border-white/10 pt-1">
-              <span className="font-semibold text-white">
+            <div className="flex items-center justify-between gap-3 border-t pt-1.5 text-sm">
+              <span className="font-medium text-foreground">
                 {usingComputedWeight ? t('Calculated gross') : t('Form override')}
               </span>
-              <span className="text-white font-bold">{effectiveWeightKg.toFixed(2)} kg</span>
+              <span className="font-medium text-foreground">{effectiveWeightKg.toFixed(2)} kg</span>
             </div>
             {bestCarton && (
-              <div className="flex items-center justify-between text-slate-400 mt-1">
+              <div className="mt-1 flex items-center justify-between gap-3">
                 <span>{t('Carton')}: {bestCarton.carton.label}</span>
                 <span>{(bestCarton.fillPct).toFixed(0)}% {t('Fill')}</span>
               </div>
@@ -379,13 +384,8 @@ export function SmartPackingCard({
 
         {/* Carton Recommendations */}
         <section>
-          <div className="flex items-center gap-2 mb-2">
-            <Box className="h-3.5 w-3.5 text-violet-400" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-              {t('Recommended carton')}
-            </h3>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <SubHeading icon={Box}>{t('Recommended carton')}</SubHeading>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {cartonRecs.slice(0, 6).map((rec) => {
               const isBest = rec === bestCarton && rec.fits;
               return (
@@ -393,28 +393,31 @@ export function SmartPackingCard({
                   key={rec.carton.id}
                   type="button"
                   onClick={() => onPickCarton?.(rec.carton.id)}
-                  className={`relative rounded-xl border p-2.5 text-left transition-all ${
+                  aria-pressed={isBest}
+                  className={`min-h-11 rounded-lg border p-3 text-left transition-[background-color,border-color,transform] duration-150 ease-out active:scale-[0.97] ${
                     !rec.fits
-                      ? 'border-rose-500/30 bg-rose-500/5 opacity-60'
+                      ? 'border-border bg-card opacity-60'
                       : isBest
-                      ? 'border-emerald-500/50 bg-emerald-500/10 ring-2 ring-emerald-500/30 shadow-lg shadow-emerald-500/10'
-                      : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-border bg-card hover:bg-muted/50'
                   }`}
                 >
-                  {isBest && (
-                    <span className="absolute -top-1.5 -right-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-blue-500 px-1.5 py-0.5 text-[8px] font-bold text-white shadow">
-                      {t('BEST')}
-                    </span>
-                  )}
-                  <p className="text-xs font-semibold text-white">{rec.carton.label}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-medium text-foreground">{rec.carton.label}</p>
+                    {isBest && (
+                      <span className="shrink-0 text-xs font-medium text-primary">
+                        {t('BEST')}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
                     ≤ {rec.carton.maxLoadKg} kg · {t('Fill')}: {rec.fillPct.toFixed(0)}%
                   </p>
                   {!rec.fits && rec.reason && (
-                    <p className="text-[9px] text-rose-400 mt-1 leading-tight">{rec.reason}</p>
+                    <p className="mt-1 text-xs leading-tight text-destructive">{rec.reason}</p>
                   )}
                   {rec.fits && rec.fillPct > 95 && (
-                    <p className="text-[9px] text-amber-300 mt-1">
+                    <p className="mt-1 text-xs leading-tight text-amber-700 dark:text-amber-500">
                       {t('Very tight fit — allow room for padding')}
                     </p>
                   )}
@@ -426,28 +429,28 @@ export function SmartPackingCard({
 
         {/* Package facts */}
         {pkgInput && (
-          <section className="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-center">
-            <div>
-              <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
-                <Ruler className="h-3 w-3" /> L×B×H
+          <section className="grid grid-cols-3 divide-x rounded-lg border">
+            <div className="min-w-0 px-2 py-3 text-center sm:px-3">
+              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                <Ruler className="h-3.5 w-3.5" aria-hidden="true" /> L×B×H
               </div>
-              <div className="text-xs font-semibold text-white mt-0.5">
+              <div className="mt-1 text-sm font-medium tabular-nums text-foreground [overflow-wrap:anywhere]">
                 {pkgInput.lengthCm}×{pkgInput.widthCm}×{pkgInput.heightCm} cm
               </div>
             </div>
-            <div>
-              <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
-                <Scale className="h-3 w-3" /> {t('Gross')}
+            <div className="min-w-0 px-2 py-3 text-center sm:px-3">
+              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                <Scale className="h-3.5 w-3.5" aria-hidden="true" /> {t('Gross')}
               </div>
-              <div className={`text-xs font-semibold mt-0.5 ${hasWeight ? 'text-white' : 'text-amber-300'}`}>
+              <div className={`mt-1 text-sm font-medium tabular-nums ${hasWeight ? 'text-foreground' : 'text-amber-700 dark:text-amber-500'}`}>
                 {hasWeight ? `${pkgInput.weightKg.toFixed(1)} kg` : t('Set weight')}
               </div>
             </div>
-            <div>
-              <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
-                <Package className="h-3 w-3" /> {t('Volume')}
+            <div className="min-w-0 px-2 py-3 text-center sm:px-3">
+              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                <Package className="h-3.5 w-3.5" aria-hidden="true" /> {t('Volume')}
               </div>
-              <div className="text-xs font-semibold text-white mt-0.5">
+              <div className="mt-1 text-sm font-medium tabular-nums text-foreground">
                 {((pkgInput.lengthCm * pkgInput.widthCm * pkgInput.heightCm) / 1000).toFixed(1)} L
               </div>
             </div>
@@ -457,53 +460,39 @@ export function SmartPackingCard({
         {/* Per-carrier package recommendation with tier ladder */}
         {pkgInput && carrierGroups.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-2">
-              <Package className="h-3.5 w-3.5 text-blue-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                {t('Recommended package per carrier')}
-              </h3>
-            </div>
-            <ul className="space-y-2">
+            <SubHeading icon={Package}>{t('Recommended package per carrier')}</SubHeading>
+            <ul className="divide-y rounded-lg border">
               {(showAllServices ? carrierGroups : carrierGroups.slice(0, 6)).map((group) => {
                 const rec = group.recommended;
                 if (!rec) {
                   return (
-                    <li
-                      key={group.carrier}
-                      className="rounded-xl border border-rose-500/25 bg-rose-500/5 p-3"
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-sm font-semibold text-white">{group.carrier}</span>
-                        <span className="rounded-full bg-rose-500/15 text-rose-300 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-rose-500/30">
+                    <li key={group.carrier} className="p-3 sm:p-4">
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium text-foreground">{group.carrier}</span>
+                        <span className={pillBase}>
+                          <XCircle className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
                           {t('No fitting tier')}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400">
-                        {t('Package exceeds max weight or dimensions for all of this carrier\u2019s services.')}
+                      <p className="text-xs text-muted-foreground">
+                        {t('Package exceeds max weight or dimensions for all of this carrier’s services.')}
                       </p>
                     </li>
                   );
                 }
                 return (
-                  <li
-                    key={group.carrier}
-                    className={`rounded-xl border p-3 transition-colors ${
-                      rec.status === 'ok'
-                        ? 'border-emerald-500/30 bg-emerald-500/5'
-                        : 'border-amber-500/30 bg-amber-500/5'
-                    }`}
-                  >
+                  <li key={group.carrier} className="p-3 sm:p-4">
                     {/* Recommendation headline */}
-                    <div className="flex items-start justify-between gap-2 mb-2 flex-wrap">
+                    <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-bold text-white">{group.carrier}</span>
-                          <span className="rounded-md bg-gradient-to-r from-blue-500 to-violet-500 text-white px-2 py-0.5 text-[10px] font-bold shadow">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="text-sm font-medium text-foreground">{group.carrier}</span>
+                          <span className="rounded border px-1.5 py-0.5 text-xs text-foreground">
                             {rec.service.service}
                           </span>
-                          <span className="text-[10px] text-slate-500">{rec.service.region}</span>
+                          <span className="text-xs text-muted-foreground">{rec.service.region}</span>
                         </div>
-                        <p className="text-[11px] text-slate-300 mt-1">
+                        <p className="mt-1 text-xs tabular-nums text-muted-foreground">
                           {t('Up to {{kg}} kg', { kg: rec.service.maxWeightKg })}
                           {rec.service.maxDim &&
                             ` · ${rec.service.maxDim.l}×${rec.service.maxDim.w}×${rec.service.maxDim.h} cm`}
@@ -511,9 +500,9 @@ export function SmartPackingCard({
                             ` · ${t('max length')} ${rec.service.maxLengthCm} cm`}
                         </p>
                       </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <div className="flex shrink-0 flex-col items-end gap-1">
                         {rec.service.priceFromEur != null && (
-                          <span className="text-sm font-mono font-bold text-white">
+                          <span className="text-sm font-medium tabular-nums text-foreground">
                             ab {rec.service.priceFromEur.toFixed(2).replace('.', ',')} €
                           </span>
                         )}
@@ -523,7 +512,7 @@ export function SmartPackingCard({
 
                     {/* Tier ladder — all services from this carrier */}
                     {group.tiers.length > 1 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
+                      <div className="mb-2 flex flex-wrap gap-1.5">
                         {group.tiers.map((tier) => {
                           const isRec = tier.service.id === rec.service.id;
                           const dot =
@@ -533,19 +522,17 @@ export function SmartPackingCard({
                               key={tier.service.id}
                               type="button"
                               onClick={() => onPickService?.(tier.service.id)}
-                              className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+                              className={`inline-flex min-h-8 items-center gap-1 rounded-md border px-2 py-1 text-xs tabular-nums transition-[background-color,border-color,color] duration-150 ease-out ${
                                 tier.status === 'blocked'
-                                  ? 'bg-slate-800 text-slate-500 line-through cursor-not-allowed'
+                                  ? 'cursor-not-allowed border-border text-muted-foreground/60 line-through'
                                   : isRec
-                                  ? 'bg-emerald-500/30 text-emerald-100 ring-1 ring-emerald-400'
-                                  : tier.status === 'warning'
-                                  ? 'bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/30 hover:bg-amber-500/25'
-                                  : 'bg-white/5 text-slate-300 ring-1 ring-white/10 hover:bg-white/10'
+                                  ? 'border-primary bg-primary/5 font-medium text-foreground'
+                                  : 'border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                               }`}
                               title={`${tier.service.service} — bis ${tier.service.maxWeightKg} kg${tier.service.priceFromEur ? `, ab ${tier.service.priceFromEur.toFixed(2)} €` : ''}`}
                               disabled={tier.status === 'blocked'}
                             >
-                              <span className="opacity-60">{dot}</span>
+                              <span className={tier.status === 'warning' ? 'text-amber-600 dark:text-amber-500' : 'opacity-60'}>{dot}</span>
                               {tier.service.service}
                               <span className="opacity-60">≤{tier.service.maxWeightKg}kg</span>
                             </button>
@@ -558,7 +545,7 @@ export function SmartPackingCard({
                     {rec.violations.filter((v) => v.level !== 'info').slice(0, 2).map((v, idx) => (
                       <div
                         key={idx}
-                        className="flex items-start gap-1.5 text-[11px] text-slate-300 mt-1"
+                        className="mt-1 flex items-start gap-1.5 text-xs text-muted-foreground"
                       >
                         {violationIcon(v.level)}
                         <span className="leading-snug">{v.message}</span>
@@ -567,7 +554,7 @@ export function SmartPackingCard({
 
                     {/* Girth + volumetric footer */}
                     {(rec.girthCm != null || rec.volumetricWeightKg != null) && (
-                      <div className="mt-1.5 text-[10px] text-slate-500 font-mono">
+                      <div className="mt-1.5 text-xs tabular-nums text-muted-foreground">
                         {rec.girthCm != null &&
                           rec.service.girth &&
                           `${t('Girth')} ${rec.girthCm}/${rec.service.girth.maxCm} cm`}
@@ -582,7 +569,7 @@ export function SmartPackingCard({
                       <button
                         type="button"
                         onClick={() => onPickService(rec.service.id)}
-                        className="mt-2 inline-flex items-center gap-1 text-[11px] text-blue-300 hover:text-blue-200 font-semibold transition-colors"
+                        className="-ml-1 mt-1.5 inline-flex min-h-9 items-center gap-1 rounded-md px-1 text-xs font-medium text-primary transition-colors duration-150 hover:text-primary/80"
                       >
                         {t('Use this tier')} →
                       </button>
@@ -595,15 +582,15 @@ export function SmartPackingCard({
               <button
                 type="button"
                 onClick={() => setShowAllServices((v) => !v)}
-                className="mt-2 inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white transition-colors"
+                className="mt-2 inline-flex min-h-9 items-center gap-1 text-xs text-muted-foreground transition-colors duration-150 hover:text-foreground"
               >
                 {showAllServices ? (
                   <>
-                    <ChevronUp className="h-3 w-3" /> {t('Show fewer')}
+                    <ChevronUp className="h-3.5 w-3.5" /> {t('Show fewer')}
                   </>
                 ) : (
                   <>
-                    <ChevronDown className="h-3 w-3" /> {t('Show all {{n}} carriers', { n: carrierGroups.length })}
+                    <ChevronDown className="h-3.5 w-3.5" /> {t('Show all {{n}} carriers', { n: carrierGroups.length })}
                   </>
                 )}
               </button>
@@ -614,40 +601,34 @@ export function SmartPackingCard({
         {/* Destination zone banner */}
         {destZone && (
           <section
-            className={`rounded-xl border p-3 ${
-              destZone.zone === 'third_country'
-                ? 'border-amber-500/30 bg-amber-500/10'
-                : destZone.zone === 'special_zone'
-                ? 'border-orange-500/30 bg-orange-500/10'
-                : 'border-emerald-500/20 bg-emerald-500/5'
+            className={`rounded-lg border p-3 sm:p-4 ${
+              destZone.zone === 'third_country' || destZone.zone === 'special_zone'
+                ? 'border-amber-500/30 bg-amber-500/5'
+                : 'bg-muted/30'
             }`}
           >
-            <div className="flex items-center gap-2 mb-1.5">
-              <Globe className={`h-3.5 w-3.5 ${destZone.zone === 'third_country' ? 'text-amber-400' : 'text-emerald-400'}`} />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-white">
-                {destZone.nameDe} ({destZone.iso2})
-              </h3>
-              <span className={`ml-auto text-[10px] font-bold uppercase ${destZone.zone === 'third_country' ? 'text-amber-300' : 'text-emerald-300'}`}>
-                {destZone.zone === 'third_country'
+            <SubHeading
+              icon={Globe}
+              aside={
+                destZone.zone === 'third_country'
                   ? t('Third country')
                   : destZone.zone === 'eea_non_eu'
                   ? 'EEA'
-                  : 'EU'}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300 leading-snug">
+                  : 'EU'
+              }
+            >
+              {destZone.nameDe} ({destZone.iso2})
+            </SubHeading>
+            <p className="-mt-1.5 text-xs leading-snug tabular-nums text-muted-foreground">
               {t('VAT')}: {destZone.vatStandardPct}%
               {destZone.vatReducedPct != null ? ` / ${destZone.vatReducedPct}%` : ''} ·{' '}
               {t('Currency')}: {destZone.currency}
               {destZone.dutiesRequired ? ` · ${t('Duties required')}` : ''}
             </p>
             {hints.length > 0 && (
-              <ul className="mt-2 space-y-0.5">
+              <ul className="mt-2 list-inside list-disc space-y-0.5 text-xs leading-snug text-muted-foreground">
                 {hints.map((h, i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-slate-400 leading-snug">
-                    <span className="flex-shrink-0 mt-0.5 text-amber-400">•</span>
-                    <span>{h}</span>
-                  </li>
+                  <li key={i}>{h}</li>
                 ))}
               </ul>
             )}
@@ -657,40 +638,35 @@ export function SmartPackingCard({
         {/* Price estimates */}
         {priceEstimates.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-2">
-              <Coins className="h-3.5 w-3.5 text-emerald-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                {t('Price estimate')}
-              </h3>
-              <span className="ml-auto text-[10px] text-slate-500 italic">
-                ~{packageWeightKg.toFixed(1)} kg {originCountry} → {destinationCountry}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <SubHeading
+              icon={Coins}
+              aside={<span className="tabular-nums">~{packageWeightKg.toFixed(1)} kg {originCountry} → {destinationCountry}</span>}
+            >
+              {t('Price estimate')}
+            </SubHeading>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {priceEstimates.slice(0, 6).map((p, i) => (
                 <div
                   key={p.carrier}
-                  className={`rounded-lg border p-2 ${
-                    i === 0
-                      ? 'border-emerald-500/40 bg-emerald-500/10'
-                      : 'border-white/10 bg-white/5'
+                  className={`rounded-lg border p-3 ${
+                    i === 0 ? 'border-primary bg-primary/5' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-[11px] font-semibold text-white truncate">{p.carrier}</span>
+                    <span className="truncate text-xs text-muted-foreground">{p.carrier}</span>
                     {i === 0 && (
-                      <Star className="h-2.5 w-2.5 shrink-0 fill-emerald-300 text-emerald-300" aria-hidden="true" />
+                      <Star className="h-3 w-3 shrink-0 fill-primary text-primary" aria-hidden="true" />
                     )}
                   </div>
-                  <div className="text-sm font-mono font-semibold text-white mt-0.5">
+                  <div className="mt-0.5 text-sm font-medium tabular-nums text-foreground">
                     {p.currency === 'CHF' ? 'CHF ' : p.currency === 'GBP' ? '£' : '€'}
                     {p.priceFrom.toFixed(2).replace('.', ',')}
                   </div>
-                  <div className="text-[9px] text-slate-500">{p.weightTierUsed}</div>
+                  <div className="truncate text-xs text-muted-foreground">{p.weightTierUsed}</div>
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-slate-500 italic mt-2">
+            <p className="mt-2 text-xs text-muted-foreground">
               {t('Prices exclude customs, duties, fuel surcharge, island/peak. ±15–25% accuracy.')}
             </p>
           </section>
@@ -698,32 +674,21 @@ export function SmartPackingCard({
 
         {/* Customs forms */}
         {customs.needed && (
-          <section className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
-            <div className="flex items-center gap-2 mb-1.5">
-              <FileText className="h-3.5 w-3.5 text-amber-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-200">
-                {t('Customs forms required')}
-              </h3>
-            </div>
-            <p className="text-[11px] text-slate-300 mb-2">{customs.reason}</p>
-            <div className="flex flex-wrap gap-1.5 mb-2">
+          <section className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 sm:p-4">
+            <SubHeading icon={FileText}>{t('Customs forms required')}</SubHeading>
+            <p className="-mt-1.5 mb-2 text-xs text-muted-foreground">{customs.reason}</p>
+            <div className="mb-2 flex flex-wrap gap-1.5">
               {customs.forms.map((f) => (
-                <span
-                  key={f}
-                  className="inline-flex items-center gap-1 rounded-md bg-amber-500/20 text-amber-200 px-2 py-0.5 text-[10px] font-semibold ring-1 ring-amber-500/40"
-                >
-                  <FileText className="h-3 w-3" />
+                <span key={f} className={pillBase}>
+                  <FileText className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   {f}
                 </span>
               ))}
             </div>
             {customs.hints.length > 0 && (
-              <ul className="space-y-0.5 mt-2">
+              <ul className="mt-2 list-inside list-disc space-y-0.5 text-xs leading-snug text-muted-foreground">
                 {customs.hints.map((h, i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-slate-400 leading-snug">
-                    <span className="flex-shrink-0 mt-0.5 text-amber-400">•</span>
-                    <span>{h}</span>
-                  </li>
+                  <li key={i}>{h}</li>
                 ))}
               </ul>
             )}
@@ -733,25 +698,17 @@ export function SmartPackingCard({
         {/* Incoterms recommendation */}
         {incoterms.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-2">
-              <Flag className="h-3.5 w-3.5 text-violet-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                {t('Recommended Incoterms')}
-              </h3>
-            </div>
-            <div className="space-y-1.5">
+            <SubHeading icon={Flag}>{t('Recommended Incoterms')}</SubHeading>
+            <div className="divide-y rounded-lg border">
               {incoterms.map((inc) => (
-                <div
-                  key={inc.code}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"
-                >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="rounded bg-violet-500/20 text-violet-200 px-2 py-0.5 text-[10px] font-bold ring-1 ring-violet-500/40">
+                <div key={inc.code} className="px-3 py-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded border px-1.5 py-0.5 text-xs font-medium text-foreground">
                       {inc.code}
                     </span>
-                    <span className="text-xs font-semibold text-white">{inc.labelDe}</span>
+                    <span className="text-sm text-foreground">{inc.labelDe}</span>
                   </div>
-                  <p className="mt-1 text-[10px] text-slate-400 leading-snug">{inc.typicalUse}</p>
+                  <p className="mt-1 text-xs leading-snug text-muted-foreground">{inc.typicalUse}</p>
                 </div>
               ))}
             </div>
@@ -761,20 +718,12 @@ export function SmartPackingCard({
         {/* Transit time */}
         {transits.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="h-3.5 w-3.5 text-cyan-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                {t('Transit time estimate')}
-              </h3>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
+            <SubHeading icon={Clock}>{t('Transit time estimate')}</SubHeading>
+            <div className="grid grid-cols-2 gap-2">
               {transits.map((t2) => (
-                <div
-                  key={t2.carrier}
-                  className="rounded-lg border border-white/10 bg-white/5 p-2"
-                >
-                  <div className="text-[10px] text-slate-400 truncate">{t2.carrier}</div>
-                  <div className="text-sm font-semibold text-white">{t2.days} {t('days')}</div>
+                <div key={t2.carrier} className="rounded-lg border p-3">
+                  <div className="truncate text-xs text-muted-foreground">{t2.carrier}</div>
+                  <div className="text-sm font-medium tabular-nums text-foreground">{t2.days} {t('days')}</div>
                 </div>
               ))}
             </div>
@@ -784,24 +733,16 @@ export function SmartPackingCard({
         {/* Surcharges */}
         {surcharges.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-2">
-              <Percent className="h-3.5 w-3.5 text-rose-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                {t('Applicable surcharges')}
-              </h3>
-            </div>
-            <ul className="space-y-1">
+            <SubHeading icon={Percent}>{t('Applicable surcharges')}</SubHeading>
+            <ul className="divide-y rounded-lg border">
               {surcharges.map(({ rule }) => (
-                <li
-                  key={rule.id}
-                  className="flex items-start gap-2 rounded-lg border border-rose-500/20 bg-rose-500/5 px-2 py-1.5"
-                >
-                  <AlertTriangle className="h-3 w-3 text-rose-400 flex-shrink-0 mt-0.5" />
+                <li key={rule.id} className="flex flex-wrap items-start gap-x-2 gap-y-1 px-3 py-2.5 sm:flex-nowrap">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-500" aria-hidden="true" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-[11px] font-semibold text-white">{rule.labelDe}</div>
-                    <div className="text-[10px] text-slate-400 truncate">{rule.note}</div>
+                    <div className="text-sm text-foreground">{rule.labelDe}</div>
+                    <div className="truncate text-xs text-muted-foreground">{rule.note}</div>
                   </div>
-                  <div className="text-[10px] text-rose-300 font-mono text-right flex-shrink-0">
+                  <div className="basis-full pl-[22px] text-xs tabular-nums text-muted-foreground sm:basis-auto sm:shrink-0 sm:pl-0 sm:text-right">
                     {Object.entries(rule.amounts)
                       .slice(0, 3)
                       .map(([c, v]) => `${c}: ${typeof v === 'number' ? `€${v}` : v}`)
@@ -815,17 +756,12 @@ export function SmartPackingCard({
 
         {/* PPWR Compliance Info */}
         {ppwr.length > 0 && (
-          <section className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Shield className="h-3.5 w-3.5 text-blue-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-blue-200">
-                {t('EU PPWR upcoming')}
-              </h3>
-            </div>
-            <ul className="space-y-1">
+          <section className="rounded-lg border bg-muted/30 p-3 sm:p-4">
+            <SubHeading icon={Shield}>{t('EU PPWR upcoming')}</SubHeading>
+            <ul className="-mt-1.5 space-y-1">
               {ppwr.slice(0, 2).map((d) => (
-                <li key={d.date} className="flex items-start gap-2 text-[11px] text-slate-300">
-                  <span className="font-mono text-blue-300 flex-shrink-0">{d.date}</span>
+                <li key={d.date} className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <span className="shrink-0 font-medium tabular-nums text-foreground">{d.date}</span>
                   <span className="leading-snug">{d.description}</span>
                 </li>
               ))}

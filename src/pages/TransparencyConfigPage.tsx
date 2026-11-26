@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
 import {
   Save,
   ChevronUp,
@@ -18,7 +20,7 @@ import {
   Lock,
   Unlock,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { FormSection, FormGrid, FormField, FormToggleRow, FormActions, FormSectionNav } from '@/components/ui/form-layout';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -39,12 +41,13 @@ interface MergedProduct {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  live: { label: 'Live', className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-  draft: { label: 'Draft', className: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-  archived: { label: 'Archived', className: 'bg-slate-500/10 text-slate-500 border-slate-500/20' },
+  live: { label: 'Live', className: 'bg-success/10 text-success border-success/20' },
+  draft: { label: 'Draft', className: 'bg-warning/10 text-warning border-warning/20' },
+  archived: { label: 'Archived', className: 'bg-muted text-muted-foreground border-border' },
 };
 
 export function TransparencyConfigPage() {
+  const { t } = useTranslation('dpp');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<TransparencyPageConfig | null>(null);
@@ -53,6 +56,7 @@ export function TransparencyConfigPage() {
   const [pageTitle, setPageTitle] = useState('');
   const [pageDescription, setPageDescription] = useState('');
   const [heroImageUrl, setHeroImageUrl] = useState('');
+  const [section, setSection] = useState('page');
   const [design, setDesign] = useState<TransparencyDesignSettings>({ ...DEFAULT_TRANSPARENCY_DESIGN });
   const [accessControl, setAccessControl] = useState<TransparencyAccessControl>({ ...DEFAULT_TRANSPARENCY_ACCESS_CONTROL });
   const [hasChanges, setHasChanges] = useState(false);
@@ -107,7 +111,7 @@ export function TransparencyConfigPage() {
         setMergedProducts(merged);
       } catch (err) {
         console.error('Failed to load transparency config:', err);
-        toast.error('Failed to load configuration');
+        toast.error(i18n.t('Failed to load configuration', { ns: 'dpp' }));
       } finally {
         setLoading(false);
       }
@@ -177,13 +181,13 @@ export function TransparencyConfigPage() {
     const result = await saveTransparencyConfig(updatedConfig);
 
     if (result.success) {
-      toast.success('Configuration saved');
+      toast.success(t('Configuration saved'));
       setHasChanges(false);
       // Reload to get the ID if it was a new insert
       const refreshed = await getTransparencyConfig();
       if (refreshed) setConfig(refreshed);
     } else {
-      toast.error(`Failed to save: ${result.error}`);
+      toast.error(t('Failed to save: {{error}}', { error: result.error }));
     }
 
     setSaving(false);
@@ -203,102 +207,104 @@ export function TransparencyConfigPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
             <Globe className="h-5 w-5 text-primary" />
           </div>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">Transparency Page</h1>
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold tracking-tight">{t('Transparency Page')}</h1>
             <p className="text-sm text-muted-foreground">
-              Configure the public product transparency page
+              {t('Configure the public product transparency page')}
             </p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={!hasChanges || saving} size="sm">
-          {saving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          Save
-        </Button>
       </div>
 
+      <FormSectionNav
+        label={t('Transparency Page')}
+        value={section}
+        onValueChange={setSection}
+        sections={[
+          { id: 'page', label: t('Page'), icon: Globe },
+          { id: 'access', label: t('Access'), icon: accessControl.enabled ? Lock : Unlock },
+          { id: 'products', label: t('Products'), icon: Package, badge: undefined },
+          { id: 'design', label: t('Design'), icon: Palette },
+          ...(tenantSlug ? [{ id: 'share', label: t('Share & Embed'), icon: Code }] : []),
+        ]}
+      >
       {/* Page Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Page Settings</CardTitle>
-          <CardDescription>
-            Override the default title and description shown on the transparency page.
-            Leave empty to use defaults.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="page-title">Page Title</Label>
+      {section === 'page' && (
+      <FormSection
+        layout="stacked"
+        title={t('Page Settings')}
+        description={t('Override the default title and description shown on the transparency page. Leave empty to use defaults.')}
+      >
+        <FormGrid cols={2}>
+          <FormField label={t('Page Title')} htmlFor="page-title" optional span="full">
             <Input
               id="page-title"
               value={pageTitle}
               onChange={(e) => { setPageTitle(e.target.value); markChanged(); }}
-              placeholder="e.g. Product Transparency"
+              placeholder={t('e.g. Product Transparency')}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="page-desc">Page Description</Label>
+          </FormField>
+          <FormField label={t('Page Description')} htmlFor="page-desc" optional span="full">
             <Textarea
               id="page-desc"
               value={pageDescription}
               onChange={(e) => { setPageDescription(e.target.value); markChanged(); }}
-              placeholder="e.g. Materials, certificates & packaging — everything at a glance"
-              rows={2}
+              placeholder={t('e.g. Materials, certificates & packaging — everything at a glance')}
+              rows={3}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="hero-img">Hero Image URL</Label>
+          </FormField>
+          <FormField label={t('Hero Image URL')} htmlFor="hero-img" optional span="full">
             <Input
               id="hero-img"
+              type="url"
+              inputMode="url"
               value={heroImageUrl}
               onChange={(e) => { setHeroImageUrl(e.target.value); markChanged(); }}
               placeholder="https://..."
             />
-          </div>
-        </CardContent>
-      </Card>
+          </FormField>
+        </FormGrid>
+      </FormSection>
+      )}
 
       {/* Access Control */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            {accessControl.enabled ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-            Access Control
-          </CardTitle>
-          <CardDescription>
-            Restrict access to the transparency page by requiring a valid order number.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Require Order Number</Label>
-              <p className="text-xs text-muted-foreground">
-                {accessControl.enabled
-                  ? 'Visitors must enter a valid order number to view products'
-                  : 'Anyone with the link can view the transparency page'}
-              </p>
-            </div>
+      {section === 'access' && (
+      <FormSection
+        layout="stacked"
+        icon={accessControl.enabled ? Lock : Unlock}
+        title={t('Access Control')}
+        description={t('Restrict access to the transparency page by requiring a valid order number.')}
+      >
+        <div className="space-y-5">
+          <FormToggleRow
+            htmlFor="require-order"
+            label={t('Require Order Number')}
+            description={accessControl.enabled
+              ? t('Visitors must enter a valid order number to view products')
+              : t('Anyone with the link can view the transparency page')}
+          >
             <Switch
+              id="require-order"
+              aria-describedby="require-order-description"
               checked={accessControl.enabled}
               onCheckedChange={(checked) => {
                 setAccessControl((prev) => ({ ...prev, enabled: checked }));
                 markChanged();
               }}
             />
-          </div>
+          </FormToggleRow>
           {accessControl.enabled && (
             <>
-              <div className="space-y-2">
-                <Label htmlFor="order-prefix">Order Number Prefix</Label>
+              <FormField
+                label={t('Order Number Prefix')}
+                htmlFor="order-prefix"
+                hint={t('The visitor\'s order number must start with this prefix. E.g. if you set "FB", order numbers like "FB-20240301-001" or "FB12345" will be accepted.')}
+              >
                 <Input
                   id="order-prefix"
                   value={accessControl.orderPrefix}
@@ -307,43 +313,40 @@ export function TransparencyConfigPage() {
                     setAccessControl((prev) => ({ ...prev, orderPrefix: val }));
                     markChanged();
                   }}
-                  placeholder="e.g. 1234 or FB"
+                  placeholder={t('e.g. 1234 or FB')}
                   maxLength={10}
                   className="font-mono"
+                  autoCapitalize="characters"
+                  spellCheck={false}
                 />
-                <p className="text-xs text-muted-foreground">
-                  The visitor's order number must start with this prefix. E.g. if you set &quot;FB&quot;,
-                  order numbers like &quot;FB-20240301-001&quot; or &quot;FB12345&quot; will be accepted.
-                </p>
-              </div>
+              </FormField>
               {accessControl.orderPrefix && (
                 <div className="rounded-lg border bg-muted/30 p-3">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Preview</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">{t('Preview')}</p>
                   <p className="text-sm">
-                    Accepted: <code className="bg-emerald-500/10 text-emerald-700 px-1.5 py-0.5 rounded text-xs font-mono">{accessControl.orderPrefix}20240301-001</code>
+                    {t('Accepted:')} <code className="bg-success/10 text-success px-1.5 py-0.5 rounded text-xs font-mono">{accessControl.orderPrefix}20240301-001</code>
                   </p>
                   <p className="text-sm mt-1">
-                    Rejected: <code className="bg-red-500/10 text-red-700 px-1.5 py-0.5 rounded text-xs font-mono">XX9999</code>
+                    {t('Rejected:')} <code className="bg-destructive/10 text-destructive px-1.5 py-0.5 rounded text-xs font-mono">XX9999</code>
                   </p>
                 </div>
               )}
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
+      )}
 
       {/* Products */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Products</CardTitle>
-          <CardDescription>
-            {enabledCount} of {allProducts.length} products enabled for the transparency page
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      {section === 'products' && (
+      <FormSection
+        layout="stacked"
+        title={t('Products')}
+        description={t('{{enabled}} of {{total}} products enabled for the transparency page', { enabled: enabledCount, total: allProducts.length })}
+      >
           {allProducts.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              No products found. Create products first.
+              {t('No products found. Create products first.')}
             </p>
           ) : (
             <div className="divide-y divide-border rounded-lg border">
@@ -383,8 +386,8 @@ export function TransparencyConfigPage() {
                     </div>
 
                     {/* Status */}
-                    <Badge variant="outline" className={`shrink-0 text-[11px] ${status.className}`}>
-                      {status.label}
+                    <Badge variant="outline" className={`shrink-0 text-xs ${status.className}`}>
+                      {t(status.label)}
                     </Badge>
 
                     {/* Reorder (only for enabled) */}
@@ -396,6 +399,7 @@ export function TransparencyConfigPage() {
                             size="icon"
                             className="h-7 w-7"
                             disabled={isFirst}
+                            aria-label={t('Move up')}
                             onClick={() => handleMoveUp(product.id)}
                           >
                             <ChevronUp className="h-4 w-4" />
@@ -405,6 +409,7 @@ export function TransparencyConfigPage() {
                             size="icon"
                             className="h-7 w-7"
                             disabled={isLast}
+                            aria-label={t('Move down')}
                             onClick={() => handleMoveDown(product.id)}
                           >
                             <ChevronDown className="h-4 w-4" />
@@ -419,31 +424,29 @@ export function TransparencyConfigPage() {
                     <Switch
                       checked={enabled}
                       onCheckedChange={(checked) => handleToggle(product.id, checked)}
+                      aria-label={t('Show {{name}} on the transparency page', { name: product.name })}
                     />
                   </div>
                 );
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </FormSection>
+      )}
 
       {/* Design */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            Design
-          </CardTitle>
-          <CardDescription>
-            Customize the look and feel of your transparency page.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      {section === 'design' && (
+      <FormSection
+        layout="stacked"
+        icon={Palette}
+        title={t('Design')}
+        description={t('Customize the look and feel of your transparency page.')}
+      >
+        <div className="space-y-6">
           {/* Theme Presets */}
           <div className="space-y-2">
-            <Label>Theme Preset</Label>
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+            <Label>{t('Theme Preset')}</Label>
+            <div className="grid grid-cols-3 min-[400px]:grid-cols-4 sm:grid-cols-7 gap-2">
               {(Object.entries(TRANSPARENCY_THEME_PRESETS) as [TransparencyThemePreset, typeof TRANSPARENCY_THEME_PRESETS[TransparencyThemePreset]][]).map(([key, preset]) => (
                 <button
                   key={key}
@@ -476,7 +479,7 @@ export function TransparencyConfigPage() {
                     <div className="h-4 w-4 rounded-full border" style={{ backgroundColor: preset.primaryColor || '#3B82F6' }} />
                     <div className="h-4 w-4 rounded-full border" style={{ backgroundColor: preset.pageBackground }} />
                   </div>
-                  <span className="text-[10px] font-medium">{preset.label}</span>
+                  <span className="text-xs font-medium">{t(preset.label)}</span>
                   {design.preset === key && (
                     <Check className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground p-0.5" />
                   )}
@@ -487,8 +490,8 @@ export function TransparencyConfigPage() {
 
           {/* Color Scheme */}
           <div className="space-y-2">
-            <Label>Color Scheme</Label>
-            <div className="flex gap-2">
+            <Label>{t('Color Scheme')}</Label>
+            <div className="flex flex-wrap gap-2">
               {([
                 { value: 'light' as TransparencyColorScheme, icon: Sun, label: 'Light' },
                 { value: 'dark' as TransparencyColorScheme, icon: Moon, label: 'Dark' },
@@ -502,17 +505,17 @@ export function TransparencyConfigPage() {
                   }`}
                 >
                   <Icon className="h-4 w-4" />
-                  {label}
+                  {t(label)}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Colors */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="design-primary">Primary Color</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="design-primary">{t('Primary Color')}</Label>
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="color"
                   value={design.primaryColor || '#3B82F6'}
@@ -523,14 +526,14 @@ export function TransparencyConfigPage() {
                   id="design-primary"
                   value={design.primaryColor || ''}
                   onChange={(e) => { setDesign((d) => ({ ...d, primaryColor: e.target.value || null, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
-                  placeholder="Tenant default"
+                  placeholder={t('Tenant default')}
                   className="font-mono text-xs"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="design-accent">Accent Color</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="design-accent">{t('Accent Color')}</Label>
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="color"
                   value={design.accentColor || '#06B6D4'}
@@ -541,14 +544,14 @@ export function TransparencyConfigPage() {
                   id="design-accent"
                   value={design.accentColor || ''}
                   onChange={(e) => { setDesign((d) => ({ ...d, accentColor: e.target.value || null, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
-                  placeholder="Auto"
+                  placeholder={t('Auto')}
                   className="font-mono text-xs"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="design-bg">Page Background</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="design-bg">{t('Page Background')}</Label>
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="color"
                   value={design.pageBackground || '#fafaf9'}
@@ -559,14 +562,14 @@ export function TransparencyConfigPage() {
                   id="design-bg"
                   value={design.pageBackground || ''}
                   onChange={(e) => { setDesign((d) => ({ ...d, pageBackground: e.target.value || null, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
-                  placeholder="Default"
+                  placeholder={t('Default')}
                   className="font-mono text-xs"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="design-card-bg">Card Background</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="design-card-bg">{t('Card Background')}</Label>
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="color"
                   value={design.cardBackground || '#ffffff'}
@@ -577,7 +580,7 @@ export function TransparencyConfigPage() {
                   id="design-card-bg"
                   value={design.cardBackground || ''}
                   onChange={(e) => { setDesign((d) => ({ ...d, cardBackground: e.target.value || null, preset: 'default' as TransparencyThemePreset })); markChanged(); }}
-                  placeholder="Default"
+                  placeholder={t('Default')}
                   className="font-mono text-xs"
                 />
               </div>
@@ -586,7 +589,7 @@ export function TransparencyConfigPage() {
 
           {/* Font Family */}
           <div className="space-y-2">
-            <Label>Font Family</Label>
+            <Label>{t('Font Family')}</Label>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {([
                 { value: 'dm-serif' as TransparencyFontFamily, label: 'DM Serif', preview: 'font-serif' },
@@ -604,7 +607,7 @@ export function TransparencyConfigPage() {
                   }`}
                 >
                   <span className={`text-lg ${preview}`}>Aa</span>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{value === 'system' ? t(label) : label}</p>
                 </button>
               ))}
             </div>
@@ -612,8 +615,8 @@ export function TransparencyConfigPage() {
 
           {/* Hero Style */}
           <div className="space-y-2">
-            <Label>Hero Style</Label>
-            <div className="flex gap-2">
+            <Label>{t('Hero Style')}</Label>
+            <div className="flex flex-wrap gap-2">
               {([
                 { value: 'gradient' as TransparencyHeroStyle, label: 'Gradient' },
                 { value: 'solid' as TransparencyHeroStyle, label: 'Solid' },
@@ -627,7 +630,7 @@ export function TransparencyConfigPage() {
                     design.heroStyle === value ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30'
                   }`}
                 >
-                  {label}
+                  {t(label)}
                 </button>
               ))}
             </div>
@@ -636,7 +639,7 @@ export function TransparencyConfigPage() {
           {/* Hero Overlay Opacity */}
           {(design.heroStyle === 'gradient' || design.heroStyle === 'image') && (
             <div className="space-y-2">
-              <Label>Hero Overlay Opacity: {design.heroOverlayOpacity}%</Label>
+              <Label>{t('Hero Overlay Opacity: {{value}}%', { value: design.heroOverlayOpacity })}</Label>
               <Slider
                 value={[design.heroOverlayOpacity]}
                 onValueChange={([v]) => { setDesign((d) => ({ ...d, heroOverlayOpacity: v })); markChanged(); }}
@@ -648,10 +651,10 @@ export function TransparencyConfigPage() {
           )}
 
           {/* Card Style */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Card Corners</Label>
-              <div className="flex gap-2">
+              <Label>{t('Card Corners')}</Label>
+              <div className="flex flex-wrap gap-2">
                 {([
                   { value: 'sharp' as TransparencyCardStyle, label: 'Sharp' },
                   { value: 'rounded' as TransparencyCardStyle, label: 'Rounded' },
@@ -664,14 +667,14 @@ export function TransparencyConfigPage() {
                       design.cardStyle === value ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30'
                     }`}
                   >
-                    {label}
+                    {t(label)}
                   </button>
                 ))}
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Card Shadow</Label>
-              <div className="flex gap-2">
+              <Label>{t('Card Shadow')}</Label>
+              <div className="flex flex-wrap gap-2">
                 {([
                   { value: 'none' as const, label: 'None' },
                   { value: 'subtle' as const, label: 'Subtle' },
@@ -685,7 +688,7 @@ export function TransparencyConfigPage() {
                       design.cardShadow === value ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30'
                     }`}
                   >
-                    {label}
+                    {t(label)}
                   </button>
                 ))}
               </div>
@@ -693,36 +696,33 @@ export function TransparencyConfigPage() {
           </div>
 
           {/* Show Powered By */}
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Show &quot;Powered by Trackbliss&quot;</Label>
-              <p className="text-xs text-muted-foreground">Display branding in the footer</p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <Label>{t('Show "Powered by Trackbliss"')}</Label>
+              <p className="text-xs text-muted-foreground">{t('Display branding in the footer')}</p>
             </div>
             <Switch
               checked={design.showPoweredBy}
               onCheckedChange={(checked) => { setDesign((d) => ({ ...d, showPoweredBy: checked })); markChanged(); }}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
+      )}
 
       {/* Share & Embed */}
-      {tenantSlug && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Code className="h-4 w-4" />
-              Share & Embed
-            </CardTitle>
-            <CardDescription>
-              Preview your transparency page or embed it on your website.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {section === 'share' && tenantSlug && (
+        <FormSection
+          layout="stacked"
+          icon={Code}
+          title={t('Share & Embed')}
+          description={t('Preview your transparency page or embed it on your website.')}
+        >
+          <div className="space-y-4">
             {/* Public URL */}
             <div className="space-y-2">
-              <Label>Public URL</Label>
-              <div className="flex gap-2">
+              <Label>{t('Public URL')}</Label>
+              <div className="flex flex-wrap gap-2">
                 <Input
                   readOnly
                   value={`${getPublicBaseUrl()}/transparency/${tenantSlug}`}
@@ -733,8 +733,9 @@ export function TransparencyConfigPage() {
                   size="icon"
                   onClick={() => {
                     navigator.clipboard.writeText(`${getPublicBaseUrl()}/transparency/${tenantSlug}`);
-                    toast.success('URL copied');
+                    toast.success(t('URL copied'));
                   }}
+                  aria-label={t('Copy URL')}
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -743,7 +744,7 @@ export function TransparencyConfigPage() {
                   size="icon"
                   asChild
                 >
-                  <a href={`/transparency/${tenantSlug}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`/transparency/${tenantSlug}`} target="_blank" rel="noopener noreferrer" aria-label={t('Open public page')}>
                     <ExternalLink className="h-4 w-4" />
                   </a>
                 </Button>
@@ -752,7 +753,7 @@ export function TransparencyConfigPage() {
 
             {/* Embed Code */}
             <div className="space-y-2">
-              <Label>Embed Code</Label>
+              <Label>{t('Embed Code')}</Label>
               <div className="relative">
                 <pre className="rounded-lg border bg-muted/30 p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all text-muted-foreground">
                   {`<iframe\n  src="${getPublicBaseUrl()}/embed/transparency/${tenantSlug}?lang=de"\n  width="100%"\n  height="800"\n  frameborder="0"\n  style="border:none; border-radius:12px;"\n></iframe>`}
@@ -765,19 +766,19 @@ export function TransparencyConfigPage() {
                     navigator.clipboard.writeText(
                       `<iframe src="${getPublicBaseUrl()}/embed/transparency/${tenantSlug}?lang=de" width="100%" height="800" frameborder="0" style="border:none; border-radius:12px;"></iframe>`
                     );
-                    toast.success('Embed code copied');
+                    toast.success(t('Embed code copied'));
                   }}
                 >
                   <Copy className="mr-1 h-3 w-3" />
-                  Copy
+                  {t('Copy')}
                 </Button>
               </div>
             </div>
 
             {/* API Endpoint */}
             <div className="space-y-2">
-              <Label>API Endpoint (JSON)</Label>
-              <div className="flex gap-2">
+              <Label>{t('API Endpoint (JSON)')}</Label>
+              <div className="flex flex-wrap gap-2">
                 <Input
                   readOnly
                   value={`${getPublicBaseUrl()}/api/v1/public/products?tenant=${tenantSlug}`}
@@ -788,16 +789,29 @@ export function TransparencyConfigPage() {
                   size="icon"
                   onClick={() => {
                     navigator.clipboard.writeText(`${getPublicBaseUrl()}/api/v1/public/products?tenant=${tenantSlug}`);
-                    toast.success('API URL copied');
+                    toast.success(t('API URL copied'));
                   }}
+                  aria-label={t('Copy API URL')}
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </FormSection>
       )}
+      </FormSectionNav>
+
+      <FormActions sticky="page" dirty={hasChanges}>
+        <Button onClick={handleSave} disabled={!hasChanges || saving}>
+          {saving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          {t('Save')}
+        </Button>
+      </FormActions>
     </div>
   );
 }

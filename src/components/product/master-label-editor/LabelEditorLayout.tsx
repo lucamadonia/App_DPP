@@ -65,7 +65,7 @@ export function ResponsiveLabelEditorLayout({
 
       {/* Mobile element palette sheet — left side */}
       <Sheet open={showMobilePalette} onOpenChange={onMobilePaletteChange}>
-        <SheetContent side="left" className="w-[260px] sm:w-[300px] p-0 flex flex-col">
+        <SheetContent side="left" className="w-[min(85vw,300px)] p-0 flex flex-col">
           <SheetHeader className="px-4 pt-4 pb-2">
             <SheetTitle className="text-sm">{t('ml.editor.mobileElements')}</SheetTitle>
             <SheetDescription className="text-xs">{t('ml.editor.mobileElementsHint')}</SheetDescription>
@@ -78,7 +78,7 @@ export function ResponsiveLabelEditorLayout({
 
       {/* Mobile settings pane sheet — right side */}
       <Sheet open={showMobileRightPane} onOpenChange={onMobileRightPaneChange}>
-        <SheetContent side="right" className="w-[340px] sm:w-[380px] p-0 flex flex-col">
+        <SheetContent side="right" className="w-[min(92vw,380px)] p-0 flex flex-col">
           <SheetHeader className="sr-only">
             <SheetTitle>{t('ml.editor.mobileSettings')}</SheetTitle>
           </SheetHeader>

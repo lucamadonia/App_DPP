@@ -265,7 +265,13 @@ export type InvoiceStatus = 'draft' | 'open' | 'paid' | 'void' | 'uncollectible'
 export interface BillingInvoice {
   id: string;
   tenantId: string;
+  projectCode: string;
   stripeInvoiceId: string;
+  invoiceNumber: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  stripePaymentIntentId: string | null;
+  stripeCreatedAt: string | null;
   stripeInvoiceUrl: string | null;
   stripePdfUrl: string | null;
   amountDue: number;

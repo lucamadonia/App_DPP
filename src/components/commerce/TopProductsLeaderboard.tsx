@@ -96,7 +96,7 @@ function LeaderboardRow({ entry: e, index: i, t }: LeaderboardRowProps) {
     </>
   );
 
-  const rowClass = 'grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-5 py-3.5';
+  const rowClass = 'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-5 py-3.5';
 
   return (
     <motion.li

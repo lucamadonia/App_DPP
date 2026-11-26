@@ -1,4 +1,7 @@
+import { useTranslation } from 'react-i18next';
+
 export function DashboardMockup() {
+  const { t } = useTranslation('common');
   return (
     <div className="p-4">
       {/* Fake browser chrome */}
@@ -18,10 +21,10 @@ export function DashboardMockup() {
             { label: 'Score', value: '82%', color: 'bg-violet-500' },
             { label: 'Returns', value: '5', color: 'bg-amber-500' },
           ].map((kpi) => (
-            <div key={kpi.label} className="rounded-lg bg-white p-2 border border-slate-100 shadow-sm">
+            <div key={kpi.label} className="min-w-0 rounded-lg bg-white p-2 border border-slate-100 shadow-sm">
               <div className={`h-1 w-6 rounded-full ${kpi.color} mb-1.5 opacity-70`} />
               <div className="text-[11px] font-bold text-slate-700">{kpi.value}</div>
-              <div className="text-[8px] text-slate-400">{kpi.label}</div>
+              <div className="text-[9px] leading-tight text-slate-400 break-words hyphens-auto">{t(kpi.label)}</div>
             </div>
           ))}
         </div>

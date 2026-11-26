@@ -411,7 +411,7 @@ export function LandingDPPShowcase() {
                     <button
                       key={tmpl}
                       onClick={() => setActive(tmpl)}
-                      className={`group relative rounded-lg overflow-hidden transition-all h-14 ${
+                      className={`group relative rounded-lg overflow-hidden transition-[opacity,scale,box-shadow] h-14 ${
                         active === tmpl ? 'ring-2 ring-blue-400 scale-105' : 'opacity-70 hover:opacity-100'
                       }`}
                       title={t(`dppShowcase.template.${tmpl}`)}

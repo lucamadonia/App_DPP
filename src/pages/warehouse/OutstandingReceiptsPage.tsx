@@ -170,7 +170,7 @@ export function OutstandingReceiptsPage() {
   // Toolbar filter content (inline on desktop, bottom drawer on mobile)
   // -------------------------------------------------------------------------
   const filtersNode = (
-    <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-3">
+    <div className="flex flex-col xl:flex-row xl:items-center gap-4 xl:gap-3">
       <div className="space-y-1.5 md:space-y-0">
         <Label className="md:sr-only text-xs text-muted-foreground">{t('Receipt status')}</Label>
         <div
@@ -185,7 +185,7 @@ export function OutstandingReceiptsPage() {
               onClick={() => setReceiptFilter(opt.value)}
               aria-pressed={receiptFilter === opt.value}
               className={cn(
-                'flex-1 md:flex-none h-11 md:h-8 px-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+                'flex-1 md:flex-none h-11 md:pointer-fine:h-8 px-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
                 receiptFilter === opt.value
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -356,7 +356,7 @@ export function OutstandingReceiptsPage() {
   // KPI cards
   // -------------------------------------------------------------------------
   const kpiCardClass =
-    'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md h-full';
+    'transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md h-full';
 
   return (
     <PageContainer
@@ -419,8 +419,8 @@ export function OutstandingReceiptsPage() {
             <Card className={kpiCardClass}>
               <CardContent className="pt-4 pb-3 px-4 space-y-1">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                  {t('Overall progress')}
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                  <span className="min-w-0 hyphens-auto break-words">{t('Overall progress')}</span>
                 </div>
                 <div className="text-2xl font-bold">
                   {loading ? (

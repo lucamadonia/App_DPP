@@ -231,17 +231,17 @@ export function IntegrationsHubPage() {
   return (
     <div className="space-y-6 sm:space-y-8 pb-8">
       {/* Header */}
-      <motion.div variants={headerVariants} initial="initial" animate="animate" className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+      <motion.div variants={headerVariants} initial="initial" animate="animate" className="flex flex-wrap items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
           <Plug className="h-5 w-5 text-primary" />
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('Integrations')}</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground text-pretty">
             {t('Connect carriers and commerce platforms in one place.')}
           </p>
         </div>
-        <Button asChild variant="outline" size="sm" className="min-h-[44px] sm:min-h-9 shrink-0">
+        <Button asChild variant="outline" size="sm" className="min-h-[44px] sm:min-h-9 w-full sm:w-auto shrink-0">
           <Link to="/warehouse/shipping-rates">
             {t('Price comparison')}
             <ArrowRight className="h-4 w-4 ml-1.5" />
@@ -280,7 +280,7 @@ export function IntegrationsHubPage() {
                       <h3 className="font-semibold truncate">{catalog.name}</h3>
                       <StatusDot connected={connected} />
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground truncate">
                       {connected
                         ? integration.accountHint || t('Connected')
                         : t('Not connected')}

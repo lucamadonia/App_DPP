@@ -556,7 +556,7 @@ export function InventoryListPage() {
       <TableRow
         key={s.id}
         data-state={isSelected ? 'selected' : undefined}
-        className={`transition-all duration-200 hover:bg-muted/50 ${isLow ? 'border-l-2 border-l-orange-400' : ''} ${isSelected ? 'bg-primary/5' : ''} ${rowStagger[idx] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
+        className={`transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 hover:bg-muted/50 ${isLow ? 'border-l-2 border-l-orange-400' : ''} ${isSelected ? 'bg-primary/5' : ''} ${rowStagger[idx] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
         style={{ transition: 'opacity 0.3s ease, transform 0.3s ease' }}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -945,7 +945,7 @@ export function InventoryListPage() {
           type="button"
           onClick={() => setLowStockOnly(v => !v)}
           aria-pressed={lowStockOnly}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors min-h-11 sm:min-h-7 sm:px-2.5 ${
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors min-h-11 sm:px-2.5 sm:pointer-fine:min-h-7 ${
             lowStockOnly
               ? 'bg-primary text-primary-foreground border-primary'
               : 'bg-background text-foreground hover:bg-muted'

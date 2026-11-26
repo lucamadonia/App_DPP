@@ -105,6 +105,7 @@ function TechnicalConsumerView({ data, tenantId }: ViewProps) {
       <div key="packaging" className="p-4 sm:p-6 border-b border-gray-200">
         <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-2"><Package className="h-4 w-4" />{t('Packaging Materials')}</h2>
         {isFieldVisible('packagingMaterials') && packagingMats.length > 0 && (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-gray-300">
@@ -119,12 +120,13 @@ function TechnicalConsumerView({ data, tenantId }: ViewProps) {
                 <tr key={i} className="border-b last:border-0">
                   <td className="py-2 font-mono">{m.name}</td>
                   <td className="py-2 text-right font-mono">{m.percentage}%</td>
-                  <td className="py-2 text-center">{m.recyclable ? 'âœ“' : 'â€”'}</td>
-                  {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || 'â€”'}</td>}
+                  <td className="py-2 text-center">{m.recyclable ? '✓' : '—'}</td>
+                  {isFieldVisible('materialOrigins') && <td className="py-2">{m.origin || '—'}</td>}
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         )}
         {isFieldVisible('packagingRecyclability') && product.recyclability?.packagingRecyclablePercentage != null && product.recyclability.packagingRecyclablePercentage > 0 && (
           <div className="mt-3 flex items-center justify-between text-sm font-mono">
@@ -338,7 +340,7 @@ function TechnicalConsumerView({ data, tenantId }: ViewProps) {
                 <ShieldCheck className="h-3 w-3" />
                 {t('Warranty')}
               </p>
-              <table className="w-full text-sm">
+              <table className="w-full [&_td]:[overflow-wrap:anywhere] text-sm">
                 <tbody className="divide-y divide-gray-100">
                   {sr.warranty.durationMonths != null && (
                     <tr>
@@ -383,7 +385,7 @@ function TechnicalConsumerView({ data, tenantId }: ViewProps) {
                 </div>
               )}
               {sr.repairInfo.repairabilityScore != null && (
-                <table className="w-full text-sm mb-2">
+                <table className="w-full [&_td]:[overflow-wrap:anywhere] text-sm mb-2">
                   <tbody>
                     <tr className="border-b border-gray-100">
                       <td className="py-1.5 text-gray-500 font-mono text-xs">{t('Repairability Score')}</td>
@@ -598,7 +600,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
         <div className="p-4 sm:p-6 border-b border-gray-200">
           <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">{t('Customs Data')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <table className="w-full text-sm">
+            <table className="w-full [&_td]:[overflow-wrap:anywhere] text-sm">
               <caption className="text-left text-xs font-semibold text-gray-600 mb-2">{t('Product Data')}</caption>
               <tbody className="divide-y divide-gray-100">
                 {isFieldVisible('countryOfOrigin') && product.countryOfOrigin && (
@@ -625,7 +627,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
                 </tr>
               </tbody>
             </table>
-            <table className="w-full text-sm">
+            <table className="w-full [&_td]:[overflow-wrap:anywhere] text-sm">
               <caption className="text-left text-xs font-semibold text-gray-600 mb-2">{t('Manufacturer Data')}</caption>
               <tbody className="divide-y divide-gray-100">
                 <tr>
@@ -892,7 +894,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
                       <ShieldCheck className="h-3 w-3" />
                       {t('Warranty')}
                     </p>
-                    <table className="w-full text-sm">
+                    <table className="w-full [&_td]:[overflow-wrap:anywhere] text-sm">
                       <tbody className="divide-y divide-gray-100">
                         {sr.warranty.durationMonths != null && (
                           <tr>
@@ -937,7 +939,7 @@ function TechnicalCustomsView({ data }: ViewProps) {
                       </div>
                     )}
                     {sr.repairInfo.repairabilityScore != null && (
-                      <table className="w-full text-sm mb-2">
+                      <table className="w-full [&_td]:[overflow-wrap:anywhere] text-sm mb-2">
                         <tbody>
                           <tr className="border-b border-gray-100">
                             <td className="py-1.5 text-gray-500 font-mono text-xs">{t('Repairability Score')}</td>

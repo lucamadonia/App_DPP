@@ -64,17 +64,19 @@
         body { background: #0F172A; }
         #boot-splash { background: #0F172A; }
       }
+      html[data-native="true"] body,
+      html[data-native="true"] #boot-splash { background: #0F172A; }
     </style>
     <div
       id="boot-splash"
       style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center"
     >
       <img
-        src="/trackbliss-logo.png"
+        src="/icons/splash-mark.png"
         alt=""
-        width="96"
-        height="96"
-        style="width:96px;height:96px;object-fit:contain"
+        width="160"
+        height="160"
+        style="width:160px;height:160px;object-fit:contain"
       />
     </div>
     <div id="root"></div>

@@ -51,7 +51,7 @@ function KPICard({ label, value, icon: Icon, color, bgColor, loading }: {
   loading: boolean;
 }) {
   return (
-    <Card className="h-full hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+    <Card className="h-full hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 hover:-translate-y-0.5">
       <CardContent className="pt-4 sm:pt-5 pb-3 sm:pb-4">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className={`rounded-lg p-2 sm:p-2.5 ${bgColor}`}>
@@ -759,7 +759,7 @@ export function ShipmentListPage() {
               <motion.div key={s.id} variants={prefersReduced ? undefined : gridItem}>
               <Link
                 to={`/warehouse/shipments/${s.id}`}
-                className="block rounded-lg border bg-card p-3 hover:bg-muted/50 hover:shadow-md transition-all active:scale-[0.99]"
+                className="block rounded-lg border bg-card p-3 hover:bg-muted/50 hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] active:scale-[0.99]"
               >
                 <div className="flex flex-col items-start gap-2 mb-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">

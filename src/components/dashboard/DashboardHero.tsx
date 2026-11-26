@@ -247,7 +247,7 @@ export function DashboardHero({ products, docStats, isLoading, isNewUser }: Dash
                       <div className={cn('dashboard-kpi-icon', `dashboard-kpi-icon--${stat.tone}`)}>
                         <stat.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
-                      <ArrowUpRight className="h-4 w-4 text-slate-500 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-white" />
+                      <ArrowUpRight className="h-4 w-4 text-slate-500 transition-[translate,color] duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-white" />
                     </div>
                     <div className="mt-5 flex items-end gap-2">
                       <span className="text-3xl font-semibold tabular-nums tracking-[-0.04em] text-white sm:text-4xl">

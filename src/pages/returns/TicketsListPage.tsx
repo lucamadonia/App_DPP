@@ -3,19 +3,20 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Search, Filter, Loader2,
+  Plus, Search, Filter, FileText, Flag, MessageSquare,
   LayoutList, LayoutGrid, Download, ArrowUpDown, ArrowUp, ArrowDown, X, MessageSquareText, ChevronRight,
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormGrid, FormField, ChoiceCards } from '@/components/ui/form-layout';
+import { FormWizard } from '@/components/ui/form-wizard';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/adaptive-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
 import {
   getRhTickets, createRhTicket, addRhTicketMessage, getRhCustomers,
   getTicketStats, bulkUpdateTickets, updateRhTicket,
@@ -578,74 +579,104 @@ export function TicketsListPage() {
 
       {/* Create Ticket Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="pb-0 sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t('New Ticket')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>{t('Subject')} *</Label>
-              <Input
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder={t('Ticket subject...')}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Customer')}</Label>
-              <Select value={customerId} onValueChange={setCustomerId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('No customer')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t('No customer')}</SelectItem>
-                  {customers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {[c.firstName, c.lastName].filter(Boolean).join(' ') || c.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{t('Priority')}</Label>
-                <Select value={ticketPriority} onValueChange={setTicketPriority}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">{t('Low')}</SelectItem>
-                    <SelectItem value="normal">{t('Normal')}</SelectItem>
-                    <SelectItem value="high">{t('High')}</SelectItem>
-                    <SelectItem value="urgent">{t('Urgent')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('Category')}</Label>
-                <Input
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder={t('Category')}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Initial Message')}</Label>
-              <Textarea
-                value={initialMessage}
-                onChange={(e) => setInitialMessage(e.target.value)}
-                placeholder={t('Initial Message')}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('Cancel')}</Button>
-            <Button onClick={handleCreateTicket} disabled={creating || !subject.trim()}>
-              {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {t('Create')}
-            </Button>
-          </DialogFooter>
+          <FormWizard
+            variant="dialog"
+            onCancel={() => setDialogOpen(false)}
+            cancelLabel={t('Cancel')}
+            onFinish={handleCreateTicket}
+            finishing={creating}
+            finishLabel={t('Create')}
+            steps={[
+              {
+                id: 'details',
+                title: t('Ticket details'),
+                shortTitle: t('Subject'),
+                description: t('What is the ticket about?'),
+                icon: FileText,
+                canNext: !!subject.trim(),
+                content: (
+                  <FormGrid cols={1}>
+                    <FormField label={t('Subject')} required>
+                      <Input
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
+                        placeholder={t('Ticket subject...')}
+                        autoFocus
+                      />
+                    </FormField>
+                    <FormField label={t('Customer')} htmlFor="nt-customer" optional>
+                      <Select value={customerId} onValueChange={setCustomerId}>
+                        <SelectTrigger id="nt-customer" className="w-full">
+                          <SelectValue placeholder={t('No customer')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{t('No customer')}</SelectItem>
+                          {customers.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {[c.firstName, c.lastName].filter(Boolean).join(' ') || c.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                  </FormGrid>
+                ),
+              },
+              {
+                id: 'classify',
+                title: t('Classification'),
+                shortTitle: t('Priority'),
+                description: t('How urgent is it, and where does it belong?'),
+                icon: Flag,
+                content: (
+                  <FormGrid cols={1}>
+                    <FormField label={t('Priority')}>
+                      <ChoiceCards
+                        columns={4}
+                        value={ticketPriority}
+                        onValueChange={setTicketPriority}
+                        options={[
+                          { value: 'low', label: t('Low') },
+                          { value: 'normal', label: t('Normal') },
+                          { value: 'high', label: t('High') },
+                          { value: 'urgent', label: t('Urgent') },
+                        ]}
+                      />
+                    </FormField>
+                    <FormField label={t('Category')} optional>
+                      <Input
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        placeholder={t('Category')}
+                      />
+                    </FormField>
+                  </FormGrid>
+                ),
+              },
+              {
+                id: 'message',
+                title: t('Initial Message'),
+                shortTitle: t('Message'),
+                description: t('Start the conversation (optional).'),
+                icon: MessageSquare,
+                canNext: !!subject.trim(),
+                content: (
+                  <FormField label={t('Initial Message')} optional>
+                    <Textarea
+                      value={initialMessage}
+                      onChange={(e) => setInitialMessage(e.target.value)}
+                      placeholder={t('Initial Message')}
+                      rows={5}
+                    />
+                  </FormField>
+                ),
+              },
+            ]}
+          />
         </DialogContent>
       </Dialog>
       </Wrapper>

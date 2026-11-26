@@ -30,7 +30,9 @@ export function PullToRefresh({ onRefresh, scrollRef, children, className }: Pul
   const y = useMotionValue(0);
   const [refreshing, setRefreshing] = React.useState(false);
   const startY = React.useRef<number | null>(null);
+  const startX = React.useRef(0);
   const armed = React.useRef(false);
+  const surfaceRef = React.useRef<HTMLDivElement>(null);
 
   // Rubber-band: 160px of finger travel maps to 80px of indicator movement.
   const pull = useTransform(y, [0, MAX_PULL], [0, THRESHOLD], { clamp: true });
@@ -40,20 +42,33 @@ export function PullToRefresh({ onRefresh, scrollRef, children, className }: Pul
   const enabled = budget !== 'reduced';
 
   const atTop = () => {
-    const el = scrollRef?.current;
-    if (!el) return (document.scrollingElement?.scrollTop ?? 0) <= 0;
-    return el.scrollTop <= 0;
+    if (scrollRef?.current) return scrollRef.current.scrollTop <= 0;
+    // AppLayout scrolls main, while the document stays at zero. Checking only
+    // document.scrollingElement arms a pull from the middle of every list.
+    let el = surfaceRef.current?.parentElement;
+    while (el) {
+      if (/(auto|scroll)/.test(getComputedStyle(el).overflowY)) return el.scrollTop <= 0;
+      el = el.parentElement;
+    }
+    return (document.scrollingElement?.scrollTop ?? 0) <= 0;
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (!enabled || refreshing || e.pointerType === 'mouse') return;
     armed.current = atTop();
+    startX.current = e.clientX;
     startY.current = armed.current ? e.clientY : null;
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!armed.current || startY.current === null || refreshing) return;
     const delta = e.clientY - startY.current;
+    if (Math.abs(e.clientX - startX.current) > Math.max(12, Math.abs(delta))) {
+      armed.current = false;
+      startY.current = null;
+      y.set(0);
+      return;
+    }
     if (delta <= 0) {
       y.set(0);
       return;
@@ -92,13 +107,20 @@ export function PullToRefresh({ onRefresh, scrollRef, children, className }: Pul
     }
   };
 
+  const cancel = () => {
+    armed.current = false;
+    startY.current = null;
+    if (!refreshing) void animate(y, 0, spring.gentle);
+  };
+
   return (
     <div
+      ref={surfaceRef}
       className={cn('relative', className)}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={finish}
-      onPointerCancel={finish}
+      onPointerCancel={cancel}
     >
       <motion.div
         className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center"

@@ -154,7 +154,7 @@ function EcoFriendlyConsumerView({ data, tenantId }: ViewProps) {
               </div>
               <div className="h-2 bg-green-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all"
+                  className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-[width,background-color]"
                   style={{ width: `${material.percentage}%` }}
                 />
               </div>
@@ -651,7 +651,7 @@ function EcoFriendlyCustomsView({ data }: ViewProps) {
                   </div>
                   <div className="h-2 bg-green-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all"
+                      className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-[width,background-color]"
                       style={{ width: `${material.percentage}%` }}
                     />
                   </div>

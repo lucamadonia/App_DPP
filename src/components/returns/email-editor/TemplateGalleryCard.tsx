@@ -38,7 +38,7 @@ export function TemplateGalleryCard({ template, index, onEdit, onToggleEnabled }
 
   return (
     <div
-      className="group relative rounded-xl border bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
+      className="group relative rounded-xl border bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-lg hover:-translate-y-1 transition-[translate,box-shadow] duration-200 overflow-hidden"
       style={{ animationDelay: `${index * 50}ms` }}
     >
       {/* Mini iframe preview */}

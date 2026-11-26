@@ -33,11 +33,17 @@ export function InvoiceTable({ invoices, isLoading }: InvoiceTableProps) {
 
   const columns: ResponsiveTableColumn<BillingInvoice>[] = [
     {
+      id: 'number',
+      header: t('Invoice number'),
+      mobilePriority: 'meta',
+      cell: (invoice) => invoice.invoiceNumber || '—',
+    },
+    {
       id: 'date',
       header: t('Date'),
       className: 'font-medium',
       mobilePriority: 'title',
-      cell: (invoice) => formatDate(invoice.createdAt),
+      cell: (invoice) => formatDate(invoice.stripeCreatedAt || invoice.createdAt),
     },
     {
       id: 'amount',

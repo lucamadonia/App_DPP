@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Star, ChevronUp, Loader2, Lightbulb } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,7 @@ import { cn } from '@/lib/utils';
 export function PublicIdeaBoardPage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const [params] = useSearchParams();
+  const { t } = useTranslation('warehouse');
   const voteToken = params.get('vote');
 
   // Persist voted-state locally so the partner sees their up-vote
@@ -61,7 +63,7 @@ export function PublicIdeaBoardPage() {
 
   async function handleVote(idea: PublicFeedbackIdea) {
     if (!voteToken) {
-      toast.error('Zum Voten brauchst du den Link aus deiner Email.');
+      toast.error(t('To vote, you need the link from your email.'));
       return;
     }
     setVoting(idea.id);
@@ -71,7 +73,7 @@ export function PublicIdeaBoardPage() {
       : await voteIdea(voteToken, idea.id);
     setVoting(null);
     if (!res.ok) {
-      toast.error(res.error || 'Fehler beim Voten');
+      toast.error(res.error || t('Voting failed'));
       return;
     }
     setIdeas(curr =>
@@ -102,29 +104,29 @@ export function PublicIdeaBoardPage() {
         <header className="text-center mb-6">
           <Badge variant="outline" className="mb-3 gap-1 bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-200">
             <Star className="h-3 w-3" />
-            Ideen-Board
+            {t('Idea board')}
           </Badge>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
-            Was kommt als nächstes?
+            {t("What's next?")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground max-w-xl mx-auto">
-            Vorschläge unserer Partner. Stimme mit einem ⭐ für die Ideen ab, die du am wichtigsten findest.
+            {t('Suggestions from our partners. Vote with a ⭐ for the ideas you find most important.')}
           </p>
         </header>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          <StatCard label="Gesamt" value={totalCount} />
-          <StatCard label="In Prüfung" value={inProgressCount} accent />
-          <StatCard label="Umgesetzt ✨" value={doneCount} />
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
+          <StatCard label={t('Total')} value={totalCount} />
+          <StatCard label={t('In review')} value={inProgressCount} accent />
+          <StatCard label={t('Implemented ✨')} value={doneCount} />
         </div>
 
         <Tabs value={tab} onValueChange={v => setTab(v as FeedbackIdeaStatus | 'all')}>
           <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="all">Alle</TabsTrigger>
-            <TabsTrigger value="published">Vorgeschlagen</TabsTrigger>
-            <TabsTrigger value="in_progress">In Prüfung</TabsTrigger>
-            <TabsTrigger value="done">Umgesetzt</TabsTrigger>
+            <TabsTrigger value="all">{t('All')}</TabsTrigger>
+            <TabsTrigger value="published">{t('Suggested')}</TabsTrigger>
+            <TabsTrigger value="in_progress">{t('In review')}</TabsTrigger>
+            <TabsTrigger value="done">{t('Implemented')}</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -138,7 +140,7 @@ export function PublicIdeaBoardPage() {
           ) : ideas.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                Noch keine Ideen in diesem Bereich. Werde der/die Erste!
+                {t('No ideas in this section yet. Be the first!')}
               </CardContent>
             </Card>
           ) : (
@@ -160,13 +162,13 @@ export function PublicIdeaBoardPage() {
                         onClick={() => handleVote(idea)}
                         disabled={!voteToken || voting === idea.id}
                         className={cn(
-                          'flex flex-col items-center justify-center rounded-lg border-2 shrink-0 w-14 h-14 transition-all',
+                          'flex flex-col items-center justify-center rounded-lg border-2 shrink-0 w-14 h-14 transition-[border-color,background-color,color] duration-150',
                           isVoted
                             ? 'bg-primary text-primary-foreground border-primary scale-105'
                             : 'bg-card hover:bg-muted border-border',
                           !voteToken && 'opacity-60 cursor-not-allowed',
                         )}
-                        aria-label={isVoted ? 'Vote entfernen' : 'Voten'}
+                        aria-label={isVoted ? t('Remove vote') : t('Vote')}
                       >
                         {voting === idea.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -190,7 +192,7 @@ export function PublicIdeaBoardPage() {
                         </p>
                         {idea.admin_response && (
                           <div className="mt-2 rounded-md bg-primary/5 border-l-2 border-primary p-2.5 text-xs">
-                            <div className="font-semibold mb-0.5">Antwort vom Team:</div>
+                            <div className="font-semibold mb-0.5">{t('Reply from the team:')}</div>
                             <p className="text-muted-foreground leading-relaxed">{idea.admin_response}</p>
                           </div>
                         )}
@@ -211,7 +213,7 @@ export function PublicIdeaBoardPage() {
           <Card className="mt-6 bg-muted/30 border-dashed">
             <CardContent className="p-4 flex items-center justify-center gap-2 text-center text-sm text-muted-foreground">
               <Lightbulb className="h-4 w-4 shrink-0" aria-hidden="true" />
-              Zum Voten brauchst du den persönlichen Link aus deiner Einladungs-Email.
+              {t('To vote, you need the personal link from your invitation email.')}
             </CardContent>
           </Card>
         )}
@@ -223,46 +225,49 @@ export function PublicIdeaBoardPage() {
 function StatCard({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
     <Card className={accent ? 'border-amber-300 bg-amber-50/50 dark:bg-amber-900/10' : ''}>
-      <CardContent className="p-3 text-center">
+      <CardContent className="p-2.5 sm:p-3 text-center">
         <div className="text-2xl font-bold tabular-nums">{value}</div>
-        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="text-xs text-muted-foreground text-balance">{label}</div>
       </CardContent>
     </Card>
   );
 }
 
 function CategoryBadge({ category }: { category: string }) {
+  const { t } = useTranslation('warehouse');
   const map: Record<string, { label: string; cls: string }> = {
-    improvement: { label: 'Verbesserung', cls: 'bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-200' },
-    new_idea: { label: 'Neue Idee', cls: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-200' },
-    bug: { label: 'Fehler', cls: 'bg-red-50 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-200' },
-    praise: { label: 'Lob', cls: 'bg-pink-50 text-pink-800 border-pink-300 dark:bg-pink-900/30 dark:text-pink-200' },
-    other: { label: 'Sonstiges', cls: 'bg-slate-50 text-slate-800 border-slate-300 dark:bg-slate-900/30 dark:text-slate-200' },
+    improvement: { label: 'Improvement', cls: 'bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-200' },
+    new_idea: { label: 'New idea', cls: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-200' },
+    bug: { label: 'Bug', cls: 'bg-red-50 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-200' },
+    praise: { label: 'Praise', cls: 'bg-pink-50 text-pink-800 border-pink-300 dark:bg-pink-900/30 dark:text-pink-200' },
+    other: { label: 'Other', cls: 'bg-slate-50 text-slate-800 border-slate-300 dark:bg-slate-900/30 dark:text-slate-200' },
   };
   const v = map[category] || map.other;
-  return <Badge variant="outline" className={cn('text-[10px]', v.cls)}>{v.label}</Badge>;
+  return <Badge variant="outline" className={cn('text-[10px]', v.cls)}>{t(v.label)}</Badge>;
 }
 
 function AreaBadge({ area }: { area: string }) {
+  const { t } = useTranslation('warehouse');
   const map: Record<string, string> = {
     app_portal: 'App & Portal',
-    products: 'Produkte',
-    general: 'Allgemein',
+    products: 'Products',
+    general: 'General',
   };
   return (
     <Badge variant="outline" className="text-[10px] bg-muted">
-      {map[area] || area}
+      {map[area] ? t(map[area]) : area}
     </Badge>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation('warehouse');
   if (status === 'published') return null;
   const map: Record<string, { label: string; cls: string }> = {
-    in_progress: { label: 'In Prüfung', cls: 'bg-amber-100 text-amber-900 border-amber-400 dark:bg-amber-900/40 dark:text-amber-100' },
-    done: { label: '✨ Umgesetzt', cls: 'bg-emerald-100 text-emerald-900 border-emerald-400 dark:bg-emerald-900/40 dark:text-emerald-100' },
+    in_progress: { label: 'In review', cls: 'bg-amber-100 text-amber-900 border-amber-400 dark:bg-amber-900/40 dark:text-amber-100' },
+    done: { label: '✨ Implemented', cls: 'bg-emerald-100 text-emerald-900 border-emerald-400 dark:bg-emerald-900/40 dark:text-emerald-100' },
   };
   const v = map[status];
   if (!v) return null;
-  return <Badge variant="outline" className={cn('text-[10px] font-semibold', v.cls)}>{v.label}</Badge>;
+  return <Badge variant="outline" className={cn('text-[10px] font-semibold', v.cls)}>{t(v.label)}</Badge>;
 }

@@ -18,7 +18,7 @@ export function LeftSidebar({ onPresetApply, onBulkAction }: LeftSidebarProps) {
   const { t } = useTranslation('dpp');
 
   return (
-    <div className="w-[220px] border-r bg-muted/10 p-4 space-y-4">
+    <div className="w-full xl:w-[220px] xl:shrink-0 xl:border-r bg-muted/10 p-4 space-y-4">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">{t('Quick Presets')}</CardTitle>

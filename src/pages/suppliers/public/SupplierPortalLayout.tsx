@@ -103,7 +103,7 @@ export function SupplierPortalLayout() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted/40 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="mt-3 text-sm text-muted-foreground">{t('Loading...')}</p>
@@ -114,11 +114,11 @@ export function SupplierPortalLayout() {
 
   if (error || !contextData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted/40 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <p className="text-red-800 font-medium">{t('Error loading invitation')}</p>
-            <p className="text-sm text-red-600 mt-2">{error}</p>
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6">
+            <p className="font-medium text-destructive">{t('Error loading invitation')}</p>
+            <p className="mt-2 text-sm text-destructive/80">{error}</p>
           </div>
         </div>
       </div>
@@ -127,9 +127,9 @@ export function SupplierPortalLayout() {
 
   return (
     <SupplierPortalContext.Provider value={contextData}>
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="min-h-screen flex flex-col bg-muted/40">
         {/* Header */}
-        <header className="bg-white border-b sticky top-0 z-50">
+        <header className="sticky top-0 z-50 border-b bg-background/95 pt-[var(--safe-top)] backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {contextData.branding.logoUrl ? (
@@ -174,7 +174,7 @@ export function SupplierPortalLayout() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t py-6 bg-white">
+        <footer className="border-t bg-background py-6 pb-[max(1.5rem,var(--safe-bottom))]">
           <div className="max-w-5xl mx-auto px-4 text-center text-sm text-muted-foreground">
             <span>Powered by Trackbliss</span>
           </div>

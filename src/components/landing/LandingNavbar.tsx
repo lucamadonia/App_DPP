@@ -216,7 +216,7 @@ export function LandingNavbar() {
               </button>
               <button
                 onClick={() => navigate('/login')}
-                className="inline-flex min-h-10 items-center whitespace-nowrap rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition-all hover:-translate-y-px hover:shadow-violet-600/40"
+                className="inline-flex min-h-10 items-center whitespace-nowrap rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition-[translate,box-shadow,background-color,color] hover:-translate-y-px hover:shadow-violet-600/40"
               >
                 {t('nav.getStarted')}
               </button>
@@ -243,13 +243,13 @@ export function LandingNavbar() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <div className="absolute right-0 top-[calc(4rem+var(--safe-top))] max-h-[calc(100dvh-4rem-var(--safe-top))] w-[min(300px,92vw)] overflow-y-auto rounded-bl-2xl border-l border-slate-200 bg-white/95 pb-[var(--safe-bottom)] shadow-xl backdrop-blur-xl animate-landing-reveal dark:border-white/10 dark:bg-slate-900/95">
+          <div className="absolute right-0 top-[calc(4rem+var(--safe-top))] max-h-[calc(100dvh-4rem-var(--safe-top))] w-[min(300px,92vw)] overflow-y-auto rounded-bl-2xl border-l border-slate-200 bg-white/95 pb-[var(--safe-bottom)] pr-[var(--safe-right)] shadow-xl backdrop-blur-xl animate-landing-reveal dark:border-white/10 dark:bg-slate-900/95">
             <div className="space-y-1 p-4">
               {allLinks.map((link) => (
                 <button
                   key={link.id}
                   onClick={() => scrollTo(link.id)}
-                  className={`w-full rounded-xl px-4 py-3 text-left text-sm font-medium transition-all ${
+                  className={`w-full rounded-xl px-4 py-3 text-left text-sm font-medium transition-[background-color,color] ${
                     link.mdOnly ? 'hidden md:block' : 'block'
                   } ${
                     activeSection === link.id
@@ -271,7 +271,7 @@ export function LandingNavbar() {
                       <button
                         key={lang.code}
                         onClick={() => changeLang(lang.code)}
-                        className={`min-h-11 flex-1 rounded-lg px-2 py-2 text-center text-xs font-medium transition-all ${
+                        className={`min-h-11 flex-1 rounded-lg px-2 py-2 text-center text-xs font-medium transition-[box-shadow,background-color,color] ${
                           i18n.language === lang.code
                             ? 'bg-blue-600 text-white shadow-sm'
                             : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-200'

@@ -10,7 +10,7 @@ export function SupplyChainEmptyState({ onCreateFirst }: SupplyChainEmptyStatePr
   const { t } = useTranslation('settings');
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 animate-in fade-in zoom-in-95 duration-500">
+    <div className="flex flex-col items-center justify-center py-16 px-4 animate-in fade-in zoom-in-95 duration-300">
       {/* Illustration */}
       <div className="relative mb-6">
         <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center">
@@ -30,7 +30,7 @@ export function SupplyChainEmptyState({ onCreateFirst }: SupplyChainEmptyStatePr
       </p>
 
       {/* Action */}
-      <Button onClick={onCreateFirst} size="lg">
+      <Button onClick={onCreateFirst} size="lg" className="min-h-11">
         <Plus className="mr-2 h-4 w-4" />
         {t('Add First Entry')}
       </Button>

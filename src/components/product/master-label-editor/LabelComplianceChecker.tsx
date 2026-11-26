@@ -75,7 +75,7 @@ function ScoreRing({ score, size = 80 }: { score: number; size?: number }) {
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className="transition-all duration-300"
+          className="transition-[stroke-dashoffset] duration-300"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -122,7 +122,7 @@ function CheckGroup({
       </button>
 
       <div
-        className="overflow-hidden transition-all duration-200"
+        className="overflow-hidden transition-[max-height,opacity] duration-200"
         style={{
           maxHeight: expanded ? `${items.length * 70}px` : '0px',
           opacity: expanded ? 1 : 0,
@@ -186,7 +186,7 @@ function PassedList({ items }: { items: ComplianceCheckItem[] }) {
       </button>
 
       <div
-        className="overflow-hidden transition-all duration-200"
+        className="overflow-hidden transition-[max-height,opacity] duration-200"
         style={{
           maxHeight: expanded ? `${items.length * 24}px` : '0px',
           opacity: expanded ? 1 : 0,

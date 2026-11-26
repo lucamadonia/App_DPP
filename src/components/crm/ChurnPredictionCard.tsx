@@ -59,7 +59,7 @@ export function ChurnPredictionCard({ customer }: ChurnPredictionCardProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         {churn.state !== 'unknown' && (
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
             <Metric label="Ø Rhythmus" value={churn.avgGap != null ? `${Math.round(churn.avgGap)} T` : '—'} />
             <Metric label="Seit letztem" value={churn.daysSinceLast != null ? `${churn.daysSinceLast} T` : '—'} />
             <Metric

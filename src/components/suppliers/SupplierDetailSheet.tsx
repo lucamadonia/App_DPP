@@ -49,7 +49,7 @@ export function SupplierDetailSheet({
     <Sheet open={!!supplier} onOpenChange={onOpenChange}>
       <SheetContent
         side={isMobile ? 'bottom' : 'right'}
-        className={isMobile ? 'h-[88vh] overflow-y-auto' : 'w-full overflow-y-auto sm:max-w-lg'}
+        className={isMobile ? 'h-[88dvh] overflow-y-auto pb-[calc(var(--safe-bottom)+1rem)]' : 'w-full overflow-y-auto sm:max-w-lg'}
       >
         {supplier && (
           <SupplierDetailBody
@@ -324,10 +324,10 @@ function SupplierDetailBody({
               <div className="space-y-2">
                 {products.map(sp => (
                   <div key={sp.id} className="flex items-center justify-between rounded border bg-card p-2">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm font-medium">{getProductName(sp)}</div>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Package className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium break-words">{getProductName(sp)}</div>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                           <span>{t(SUPPLIER_ROLES.find(r => r.value === sp.role)?.labelKey || sp.role)}</span>
                           {sp.price_per_unit != null && <span className="tabular-nums">{sp.price_per_unit.toFixed(2)} {sp.currency || 'EUR'}</span>}

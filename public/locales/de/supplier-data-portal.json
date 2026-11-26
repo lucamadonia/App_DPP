@@ -175,5 +175,10 @@
   "Loading products...": "Produkte werden geladen...",
   "Too many failed attempts. Please try again in 15 minutes.": "Zu viele Fehlversuche. Bitte versuchen Sie es in 15 Minuten erneut.",
   "This data request is no longer active": "Diese Datenanfrage ist nicht mehr aktiv",
-  "The password could not be checked. Please try again.": "Das Passwort konnte nicht geprüft werden. Bitte versuchen Sie es erneut."
+  "The password could not be checked. Please try again.": "Das Passwort konnte nicht geprüft werden. Bitte versuchen Sie es erneut.",
+  "Choose products": "Produkte wählen",
+  "Which products the supplier may fill in": "Welche Produkte der Lieferant ausfüllen darf",
+  "Fields": "Felder",
+  "Which data the supplier may edit": "Welche Daten der Lieferant bearbeiten darf",
+  "Password, validity and a note for the supplier": "Passwort, Gültigkeit und eine Nachricht an den Lieferanten"
 }

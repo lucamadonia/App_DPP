@@ -120,7 +120,7 @@ function DPPCardStack() {
       {[-2, 0, 2].map((rot, i) => (
         <div
           key={i}
-          className="absolute inset-x-4 top-0 rounded-lg border border-slate-200 bg-white p-2.5 shadow-lg transition-all duration-500 dark:border-slate-700 dark:bg-slate-800"
+          className="absolute inset-x-4 top-0 rounded-lg border border-slate-200 bg-white p-2.5 shadow-lg transition-[box-shadow,background-color,border-color] duration-300 dark:border-slate-700 dark:bg-slate-800"
           style={{
             transform: `rotate(${rot}deg) translateY(${i * 6}px)`,
             zIndex: 3 - i,

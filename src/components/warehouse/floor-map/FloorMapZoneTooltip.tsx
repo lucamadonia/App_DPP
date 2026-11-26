@@ -110,7 +110,7 @@ export function FloorMapZoneTooltip({
             </div>
             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-[width] duration-500"
                 style={{
                   width: `${fillPercent}%`,
                   background: `linear-gradient(90deg, #22C55E, ${fillPercent > 70 ? '#F59E0B' : '#22C55E'}, ${fillPercent > 90 ? '#EF4444' : fillPercent > 70 ? '#F59E0B' : '#22C55E'})`,

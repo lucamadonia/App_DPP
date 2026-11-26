@@ -667,7 +667,7 @@ function ScientificCustomsView({ data }: ViewProps) {
             <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b border-gray-200 pb-1">
               {t('Product Data')}
             </h3>
-            <table className="w-full text-sm">
+            <table className="w-full [&_td]:[overflow-wrap:anywhere] text-sm">
               <tbody>
                 {isFieldVisible('countryOfOrigin') && product.countryOfOrigin && (
                   <tr className="border-b border-gray-100">
@@ -698,7 +698,7 @@ function ScientificCustomsView({ data }: ViewProps) {
             <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b border-gray-200 pb-1">
               {t('Manufacturer Data')}
             </h3>
-            <table className="w-full text-sm">
+            <table className="w-full [&_td]:[overflow-wrap:anywhere] text-sm">
               <tbody>
                 <tr className="border-b border-gray-100">
                   <td className="py-1.5 text-gray-500">{t('Company')}</td>

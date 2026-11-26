@@ -10,7 +10,7 @@ export function MasterLabelPreview({ data }: MasterLabelPreviewProps) {
 
   if (!data) {
     return (
-      <div className="w-[280px] h-[396px] bg-muted/50 rounded-lg border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
+      <div className="w-full max-w-[280px] aspect-[280/396] bg-muted/50 rounded-lg border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
         <p className="text-sm text-muted-foreground">{t('ml.selectBatchForPreview')}</p>
       </div>
     );

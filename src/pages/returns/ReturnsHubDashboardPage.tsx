@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReturnKPICards } from '@/components/returns/ReturnKPICards';
 import { ReturnCharts } from '@/components/returns/ReturnCharts';
 import { ReturnStatusBadge } from '@/components/returns/ReturnStatusBadge';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { SkeletonKPICards } from '@/components/returns/SkeletonKPICards';
 import { SkeletonTable } from '@/components/returns/SkeletonTable';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { EmptyState } from '@/components/returns/EmptyState';
 import { ErrorState } from '@/components/ui/state-feedback';
 import { relativeTime } from '@/lib/animations';
-import { pageVariants, pageTransition, staggerContainer, staggerItem, scrollRevealVariants, useReducedMotion } from '@/lib/motion';
+import { pageVariants, pageTransition, scrollRevealVariants, useReducedMotion } from '@/lib/motion';
 import { getReturnStats, getReturns } from '@/services/supabase';
 import { Package } from 'lucide-react';
 import type { ReturnsHubStats, RhReturn } from '@/types/returns-hub';
@@ -109,7 +110,7 @@ export function ReturnsHubDashboardPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">{t('Recent Returns')}</CardTitle>
-                    <Link to="/returns/list" className="text-sm text-primary hover:underline">
+                    <Link to="/returns/list" className="touch-hit text-sm text-primary hover:underline">
                       {t('View all')}
                     </Link>
                   </div>
@@ -124,67 +125,49 @@ export function ReturnsHubDashboardPage() {
                       onAction={() => navigate('/returns/new')}
                     />
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b text-left">
-                            <th className="pb-2 font-medium">{t('Return Number')}</th>
-                            <th className="pb-2 font-medium">{t('Status')}</th>
-                            <th className="pb-2 font-medium">{t('Date')}</th>
-                            <th className="pb-2 font-medium">{t('Reason Category')}</th>
-                            <th className="pb-2 font-medium text-right">{t('Refund Amount')}</th>
-                          </tr>
-                        </thead>
-                        {prefersReduced ? (
-                          <tbody>
-                            {recentReturns.map((ret) => (
-                              <tr
-                                key={ret.id}
-                                className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors"
-                                onClick={() => navigate(`/returns/${ret.id}`)}
-                              >
-                                <td className="py-2.5 relative">
-                                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  <span className="text-primary font-medium pl-2">{ret.returnNumber}</span>
-                                </td>
-                                <td className="py-2.5"><ReturnStatusBadge status={ret.status} /></td>
-                                <td className="py-2.5 text-muted-foreground text-xs">
-                                  {relativeTime(ret.createdAt, i18n.language)}
-                                </td>
-                                <td className="py-2.5">{ret.reasonCategory || '—'}</td>
-                                <td className="py-2.5 text-right font-medium">
-                                  {ret.refundAmount != null ? `\u20AC${ret.refundAmount.toFixed(2)}` : '—'}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        ) : (
-                          <motion.tbody variants={staggerContainer} initial="initial" animate="animate">
-                            {recentReturns.map((ret) => (
-                              <motion.tr
-                                key={ret.id}
-                                variants={staggerItem}
-                                className="border-b last:border-0 cursor-pointer group hover:bg-muted/50 transition-colors"
-                                onClick={() => navigate(`/returns/${ret.id}`)}
-                              >
-                                <td className="py-2.5 relative">
-                                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  <span className="text-primary font-medium pl-2">{ret.returnNumber}</span>
-                                </td>
-                                <td className="py-2.5"><ReturnStatusBadge status={ret.status} /></td>
-                                <td className="py-2.5 text-muted-foreground text-xs">
-                                  {relativeTime(ret.createdAt, i18n.language)}
-                                </td>
-                                <td className="py-2.5">{ret.reasonCategory || '—'}</td>
-                                <td className="py-2.5 text-right font-medium">
-                                  {ret.refundAmount != null ? `\u20AC${ret.refundAmount.toFixed(2)}` : '—'}
-                                </td>
-                              </motion.tr>
-                            ))}
-                          </motion.tbody>
-                        )}
-                      </table>
-                    </div>
+                    <ResponsiveTable
+                      data={recentReturns}
+                      rowKey={(ret) => ret.id}
+                      rowHref={(ret) => `/returns/${ret.id}`}
+                      columns={[
+                      {
+                        id: 'number',
+                        header: t('Return Number'),
+                        mobilePriority: 'title',
+                        cell: (ret) => <span className="text-primary font-medium break-all">{ret.returnNumber}</span>,
+                      },
+                      {
+                        id: 'status',
+                        header: t('Status'),
+                        mobilePriority: 'badge',
+                        cell: (ret) => <ReturnStatusBadge status={ret.status} />,
+                      },
+                      {
+                        id: 'date',
+                        header: t('Date'),
+                        mobilePriority: 'subtitle',
+                        cell: (ret) => <span className="text-muted-foreground text-xs">{relativeTime(ret.createdAt, i18n.language)}</span>,
+                      },
+                      {
+                        id: 'reason',
+                        header: t('Reason Category'),
+                        hideBelow: 'lg',
+                        mobilePriority: 'meta',
+                        cell: (ret) => ret.reasonCategory || '—',
+                      },
+                      {
+                        id: 'refund',
+                        header: t('Refund Amount'),
+                        className: 'text-right',
+                        mobilePriority: 'meta',
+                        cell: (ret) => (
+                          <span className="font-medium tabular-nums">
+                            {ret.refundAmount != null ? `\u20AC${ret.refundAmount.toFixed(2)}` : '\u2014'}
+                          </span>
+                        ),
+                      },
+                    ]}
+                    />
                   )}
                 </CardContent>
               </Card>

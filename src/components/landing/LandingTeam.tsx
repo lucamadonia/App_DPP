@@ -29,7 +29,7 @@ export function LandingTeam() {
     <section ref={sectionRef} className="py-20 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className={`text-center mb-14 transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+        <div className={`text-center mb-14 transition-[opacity,translate] duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
           <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-4 py-1.5 text-sm font-medium text-blue-700 mb-4">
             <Sparkles className="h-4 w-4" />
             {t('team.badge')}
@@ -46,7 +46,7 @@ export function LandingTeam() {
         <div className="grid md:grid-cols-2 gap-8">
           {/* Team Collaboration */}
           <div
-            className={`group relative rounded-2xl overflow-hidden shadow-lg transition-all duration-700 ${
+            className={`group relative rounded-2xl overflow-hidden shadow-lg transition-[opacity,translate,box-shadow] duration-500 ${
               visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}
             style={{ transitionDelay: '200ms' }}
@@ -75,7 +75,7 @@ export function LandingTeam() {
 
           {/* Daily Operations */}
           <div
-            className={`group relative rounded-2xl overflow-hidden shadow-lg transition-all duration-700 ${
+            className={`group relative rounded-2xl overflow-hidden shadow-lg transition-[opacity,translate,box-shadow] duration-500 ${
               visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}
             style={{ transitionDelay: '400ms' }}

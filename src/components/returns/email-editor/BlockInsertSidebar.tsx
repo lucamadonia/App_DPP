@@ -34,7 +34,7 @@ export function BlockInsertSidebarContent({ onDragStart, onAddBlock, layout = 'v
             key={opt.type}
             type="button"
             onClick={() => onAddBlock(opt.type)}
-            className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all border border-transparent hover:border-border"
+            className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150 border border-transparent hover:border-border"
           >
             <opt.icon className="h-5 w-5" />
             <span className="text-xs font-medium leading-tight text-center">{t(opt.label)}</span>
@@ -57,10 +57,10 @@ export function BlockInsertSidebarContent({ onDragStart, onAddBlock, layout = 'v
             onDragStart(opt.type);
           }}
           onClick={() => onAddBlock(opt.type)}
-          className="w-full flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all cursor-grab active:cursor-grabbing group"
+          className="w-full flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150 cursor-grab active:cursor-grabbing group"
           title={t(opt.label)}
         >
-          <opt.icon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+          <opt.icon className="h-4 w-4 group-hover:scale-110 transition-[scale] duration-150" />
           <span className="text-[9px] font-medium leading-tight text-center">{t(opt.label)}</span>
         </button>
       ))}

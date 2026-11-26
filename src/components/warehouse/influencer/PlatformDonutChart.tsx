@@ -80,7 +80,7 @@ export function PlatformDonutChart({ data, className }: PlatformDonutChartProps)
                 strokeWidth="30"
                 strokeDasharray={`${seg.dashArray} ${CIRCUMFERENCE - seg.dashArray}`}
                 strokeDashoffset={seg.dashOffset}
-                className="transition-all duration-500"
+                className="transition-[stroke-dasharray,stroke-dashoffset] duration-500"
                 transform={`rotate(-90 ${CX} ${CY})`}
               />
             ))}

@@ -26,7 +26,7 @@
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14?target=deno';
-import { isAllowedRedirectUrl, resolvePrice, type CatalogEntry } from '../_shared/stripe-catalog.ts';
+import { ACCOUNTING_PROJECT_CODE, isAllowedRedirectUrl, resolvePrice, type CatalogEntry } from '../_shared/stripe-catalog.ts';
 
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY') || '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -184,7 +184,7 @@ async function linkNewStripeCustomer(
   const customer = await stripe.customers.create({
     email: user.email,
     name: tenantName || undefined,
-    metadata: { tenant_id: tenantId, user_id: user.id },
+    metadata: { tenant_id: tenantId, user_id: user.id, project_code: ACCOUNTING_PROJECT_CODE },
   });
 
   // Service role — the tenants guard trigger blocks every other caller from
@@ -241,6 +241,7 @@ function buildServerMetadata(
     user_id: userId,
     price_id: priceId,
     kind: entry.kind,
+    project_code: ACCOUNTING_PROJECT_CODE,
     locale,
   };
   if (entry.kind === 'plan') base.plan = entry.plan;

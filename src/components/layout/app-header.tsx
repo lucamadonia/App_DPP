@@ -40,7 +40,7 @@ export function AppHeader({ onSearch }: AppHeaderProps) {
 
   const goBack = () => {
     haptic.light();
-    if (window.history.length > 1) navigate(-1);
+    if (window.history.state?.idx > 0) navigate(-1);
     else navigate(parentPath ?? '/');
   };
 
@@ -74,6 +74,18 @@ export function AppHeader({ onSearch }: AppHeaderProps) {
         )}
 
         <Separator orientation="vertical" className="mr-1 h-4 max-md:hidden" />
+
+        <img
+          src={branding.logo || '/icons/icon-96.png'}
+          alt={branding.logo ? branding.appName : 'Trackbliss'}
+          width={32}
+          height={32}
+          className="size-8 shrink-0 rounded-lg object-contain md:hidden"
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = '/icons/icon-96.png';
+          }}
+        />
 
         <h1 className="min-w-0 flex-1 truncate text-base font-semibold md:text-sm md:font-medium">
           {title}

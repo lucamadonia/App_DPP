@@ -147,13 +147,13 @@ export function WorkflowRulesPage() {
 
   return (
     <Wrapper className="space-y-6" {...wrapperProps as any}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t('Workflow Rules')}</h1>
           <p className="text-muted-foreground">{t('Automate return processing')}</p>
         </div>
         {!creating && !editing && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setCreating(true)} className="flex-1 sm:flex-none">
               <Plus className="h-4 w-4 mr-2" /> {t('New Rule')}
             </Button>

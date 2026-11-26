@@ -25,6 +25,7 @@ export interface ProductPackaging {
 
 export interface Product {
   id: string;
+  status?: 'draft' | 'live' | 'archived';
   name: string;
   manufacturer: string;
   gtin: string; // Global Trade Item Number

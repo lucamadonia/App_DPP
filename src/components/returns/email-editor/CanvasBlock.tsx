@@ -165,7 +165,7 @@ export function CanvasBlock({
 
   return (
     <div
-      className={`group relative transition-all duration-150 ${
+      className={`group relative transition-opacity duration-150 ${
         isDragSource ? 'opacity-40 border-dashed' : ''
       }`}
     >
@@ -182,7 +182,7 @@ export function CanvasBlock({
 
       {/* Block card */}
       <div
-        className={`rounded-lg border transition-all cursor-pointer ${
+        className={`rounded-lg border transition-[translate,border-color,box-shadow] duration-150 cursor-pointer ${
           isSelected
             ? 'border-primary ring-2 ring-primary/20 shadow-md'
             : 'border-transparent hover:border-primary/30 hover:-translate-y-0.5 hover:shadow-sm'

@@ -75,6 +75,8 @@ import { ErrorState, EmptyState } from '@/components/ui/state-feedback';
 import { PageContainer } from '@/components/layout/page-container';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { ProductFadeImage } from '@/components/product/ProductHero';
+import { IconTile } from '@/components/ui/icon-tile';
 
 // ---------------------------------------------------------------------------
 // Status config
@@ -124,7 +126,7 @@ function KPICard({
     <button
       onClick={onClick}
       className={cn(
-        'flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200',
+        'flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition duration-200',
         'hover:shadow-sm cursor-pointer',
         active
           ? 'border-primary/40 bg-primary/5 ring-1 ring-primary/20'
@@ -146,18 +148,24 @@ function KPICard({
 // Product thumbnail
 // ---------------------------------------------------------------------------
 function ProductThumb({ src, name }: { src?: string; name: string }) {
-  if (src) {
+  // Remember which URL failed, so a new src gets a fresh attempt.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (src && failedSrc !== src) {
     return (
       <img
         src={src}
         alt={name}
-        className="h-9 w-9 rounded-lg object-cover border border-border/50"
+        onError={() => setFailedSrc(src)}
+        className="h-10 w-10 rounded-lg bg-muted/60 object-cover ring-1 ring-inset ring-border/60"
         loading="lazy"
+        decoding="async"
+        width={40}
+        height={40}
       />
     );
   }
   return (
-    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
       <Package className="h-4 w-4" />
     </div>
   );
@@ -522,95 +530,92 @@ export function ProductsPage() {
           </CardContent>
         </Card>
       ) : isMobile ? (
-        /* ---- Mobile Card Layout ---- */
-        <MotionDiv className="space-y-2" {...motionProps(staggerContainer)}>
+        /* ---- Mobile Card Grid ---- */
+        <MotionDiv className="grid grid-cols-2 gap-3" {...motionProps(staggerContainer)}>
           {filteredProducts.map((product) => {
             const status =
               statusConfig[(product.status as keyof typeof statusConfig) || 'draft'];
             const Wrapper = prefersReduced ? 'div' : motion.div;
             return (
-              <Wrapper key={product.id} {...motionProps(staggerItem)}>
-                <Card className="overflow-hidden transition-colors hover:bg-muted/30">
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-3">
-                      <Link to={`/products/${product.id}`} className="shrink-0">
-                        <ProductThumb src={product.imageUrl} name={product.name} />
-                      </Link>
-                      <Link
-                        to={`/products/${product.id}`}
-                        className="flex-1 min-w-0"
-                      >
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="font-medium text-sm truncate">
-                            {product.name}
-                          </span>
-                          {product.productType === 'set' && (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] px-1.5 py-0 shrink-0"
-                            >
-                              {t('Set')}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <code className="font-mono">{product.gtin}</code>
-                          <span className="truncate">{product.manufacturer}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          {status && (
-                            <Badge
-                              variant="outline"
-                              className={cn('text-[10px] px-1.5 py-0', status.className)}
-                            >
-                              <status.icon className="mr-1 h-3 w-3" />
-                              {status.label}
-                            </Badge>
-                          )}
-                          <span className="text-[11px] text-muted-foreground">
-                            {product.batchCount}{' '}
-                            {product.batchCount === 1 ? t('Batch') : t('Batches')}
-                          </span>
-                        </div>
-                      </Link>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0 cursor-pointer"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link to={`/products/${product.id}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              {t('View')}
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to={`/products/${product.id}/edit`}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              {t('Edit')}
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() =>
-                              setDeleteTarget({ id: product.id, name: product.name })
-                            }
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {t('Delete')}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              <Wrapper key={product.id} {...motionProps(staggerItem)} className="relative min-w-0">
+                <Link
+                  to={`/products/${product.id}`}
+                  className="group block h-full overflow-hidden rounded-xl border bg-card transition-[scale,border-color] duration-150 ease-out active:scale-[0.97] motion-reduce:active:scale-100 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  <div className="relative aspect-square overflow-hidden bg-muted/60">
+                    {product.imageUrl ? (
+                      <ProductFadeImage
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="h-full w-full object-contain p-3"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <IconTile icon={Package} size="md" tone="muted" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1.5 p-3">
+                    <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+                      {product.name}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {product.productType === 'set' ? `${t('Set')} · ` : ''}
+                      {product.manufacturer}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-0.5">
+                      {status && (
+                        <Badge
+                          variant="outline"
+                          className={cn('px-1.5 py-0 text-[11px]', status.className)}
+                        >
+                          {status.label}
+                        </Badge>
+                      )}
+                      <span className="text-[11px] tabular-nums text-muted-foreground">
+                        {product.batchCount}{' '}
+                        {product.batchCount === 1 ? t('Batch') : t('Batches')}
+                      </span>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="absolute right-0 top-0 flex size-11 cursor-pointer items-center justify-center outline-none"
+                      aria-label={tCommon('Actions')}
+                    >
+                      <span className="flex size-8 items-center justify-center rounded-full bg-background/85 text-foreground shadow-xs ring-1 ring-border/60 backdrop-blur-sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link to={`/products/${product.id}`}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        {t('View')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to={`/products/${product.id}/edit`}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        {t('Edit')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() =>
+                        setDeleteTarget({ id: product.id, name: product.name })
+                      }
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {t('Delete')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </Wrapper>
             );
           })}
@@ -713,7 +718,8 @@ export function ProductsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                className="h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 transition-opacity cursor-pointer"
+                                aria-label={tCommon('Actions')}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>

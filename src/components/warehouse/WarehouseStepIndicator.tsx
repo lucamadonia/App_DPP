@@ -23,7 +23,7 @@ export function WarehouseStepIndicator({ steps, currentStep }: WarehouseStepIndi
         <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200" />
         {/* Progress line fill */}
         <div
-          className="absolute top-5 left-0 h-0.5 bg-primary transition-all duration-500 ease-out"
+          className="absolute top-5 left-0 h-0.5 bg-primary transition-[width] duration-500 ease-out"
           style={{ width: `${(currentStep / (totalSteps - 1)) * 100}%` }}
         />
 
@@ -35,7 +35,7 @@ export function WarehouseStepIndicator({ steps, currentStep }: WarehouseStepIndi
           return (
             <div key={i} className="flex flex-col items-center relative z-10" style={{ width: `${100 / totalSteps}%` }}>
               <div
-                className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300 ${
                   isCompleted
                     ? 'bg-primary border-primary text-primary-foreground'
                     : isCurrent
@@ -69,7 +69,7 @@ export function WarehouseStepIndicator({ steps, currentStep }: WarehouseStepIndi
           {steps.map((_, i) => (
             <div
               key={i}
-              className={`flex-1 h-1.5 rounded-full transition-all duration-300 ${
+              className={`flex-1 h-1.5 rounded-full transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300 ${
                 i <= currentStep ? 'bg-primary' : 'bg-gray-200'
               }`}
             />

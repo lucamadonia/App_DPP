@@ -38,7 +38,7 @@ export function SubjectLineEditor({ value, onChange, eventType }: SubjectLineEdi
       {/* Progress bar */}
       <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
         <div
-          className={`h-full ${barColor} rounded-full transition-all duration-300`}
+          className={`h-full ${barColor} rounded-full transition-[width,background-color] duration-300 ease-out`}
           style={{ width: `${pct}%` }}
         />
       </div>

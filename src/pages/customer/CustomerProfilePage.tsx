@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Loader2, Save, Plus, Trash2, MapPin } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, MapPin, UserRound, Bell, KeyRound } from 'lucide-react';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { FormSections, FormSection, FormGrid, FormField, ChoiceCards, FormToggleRow, FormActions } from '@/components/ui/form-layout';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/adaptive-dialog';
 import { DeleteAccountCard } from '@/components/account/DeleteAccountCard';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
@@ -185,130 +184,100 @@ export function CustomerProfilePage() {
         <p className="text-muted-foreground">{t('Manage your account information')}</p>
       </motion.div>
 
-      {/* Personal Information */}
       <motion.div variants={prefersReduced ? undefined : staggerItem}>
-      <Card>
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="text-base">{t('Personal Information')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>{t('First Name')}</Label>
-              <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Last Name')}</Label>
-              <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>{t('Email')}</Label>
-            <Input value={customerProfile.email} disabled className="bg-muted" />
-            <p className="text-xs text-muted-foreground">{t('Contact support to change your email')}</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>{t('Phone')}</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Company')}</Label>
-              <Input value={company} onChange={(e) => setCompany(e.target.value)} />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      </motion.div>
+        <FormSections>
+          <FormSection title={t('Personal Information')} icon={UserRound}>
+            <FormGrid cols={2}>
+              <FormField label={t('First Name')}>
+                <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} autoComplete="given-name" />
+              </FormField>
+              <FormField label={t('Last Name')}>
+                <Input value={lastName} onChange={(e) => setLastName(e.target.value)} autoComplete="family-name" />
+              </FormField>
+              <FormField label={t('Email')} hint={t('Contact support to change your email')} span="full">
+                <Input value={customerProfile.email} disabled className="bg-muted" />
+              </FormField>
+              <FormField label={t('Phone')} optional>
+                <Input type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
+              </FormField>
+              <FormField label={t('Company')} optional>
+                <Input value={company} onChange={(e) => setCompany(e.target.value)} autoComplete="organization" />
+              </FormField>
+            </FormGrid>
+          </FormSection>
 
-      {/* Addresses */}
-      <motion.div variants={prefersReduced ? undefined : staggerItem}>
-      <Card>
-        <CardHeader className="p-4 sm:p-6">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">{t('Addresses')}</CardTitle>
-            <Button variant="outline" size="sm" onClick={openAddAddress} className="gap-1">
-              <Plus className="h-3 w-3" />
-              {t('Add Address')}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-          {addresses.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">{t('No addresses saved')}</p>
-          ) : (
-            <div className="space-y-3">
-              {addresses.map((addr, i) => (
-                <div key={i} className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between p-3 rounded-lg border">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                    <div className="text-sm">
+          <FormSection
+            title={t('Addresses')}
+            icon={MapPin}
+            aside={
+              <Button variant="outline" size="sm" onClick={openAddAddress} className="gap-1 pointer-coarse:h-11">
+                <Plus className="h-3.5 w-3.5" />
+                {t('Add Address')}
+              </Button>
+            }
+          >
+            {addresses.length === 0 ? (
+              <p className="py-2 text-center text-sm text-muted-foreground">{t('No addresses saved')}</p>
+            ) : (
+              <ul className="divide-y rounded-lg border">
+                {addresses.map((addr, i) => (
+                  <li key={i} className="flex items-start gap-3 px-3 py-3 sm:px-4">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1 text-sm">
                       <span className="text-xs font-medium uppercase text-muted-foreground">{addr.type}</span>
                       <p>{addr.street}</p>
                       <p>{addr.postalCode} {addr.city}</p>
                       <p>{addr.country}</p>
                     </div>
-                  </div>
-                  <div className="flex gap-1 sm:shrink-0">
-                    <Button variant="ghost" size="sm" onClick={() => openEditAddress(i)}>
+                    <Button variant="ghost" size="sm" className="shrink-0 pointer-coarse:h-11" onClick={() => openEditAddress(i)}>
                       {t('Edit', { ns: 'common' })}
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeAddress(i)}>
-                      <Trash2 className="h-3 w-3" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-11 shrink-0 text-destructive sm:size-9"
+                      onClick={() => removeAddress(i)}
+                      aria-label={t('Delete', { ns: 'common' })}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  </div>
-                </div>
-              ))}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </FormSection>
+
+          <FormSection
+            title={t('Communication Preferences')}
+            description={t('Choose how you want to be notified')}
+            icon={Bell}
+          >
+            <div className="space-y-2">
+              <FormToggleRow htmlFor="pref-email" label={t('Email Notifications')}>
+                <Switch id="pref-email" checked={commPrefs.email} onCheckedChange={(v) => setCommPrefs({ ...commPrefs, email: v })} />
+              </FormToggleRow>
+              <FormToggleRow htmlFor="pref-sms" label={t('SMS Notifications')}>
+                <Switch id="pref-sms" checked={commPrefs.sms} onCheckedChange={(v) => setCommPrefs({ ...commPrefs, sms: v })} />
+              </FormToggleRow>
+              <FormToggleRow htmlFor="pref-marketing" label={t('Marketing Emails')}>
+                <Switch id="pref-marketing" checked={commPrefs.marketing} onCheckedChange={(v) => setCommPrefs({ ...commPrefs, marketing: v })} />
+              </FormToggleRow>
             </div>
-          )}
-        </CardContent>
-      </Card>
-      </motion.div>
+          </FormSection>
 
-      {/* Communication Preferences */}
-      <motion.div variants={prefersReduced ? undefined : staggerItem}>
-      <Card>
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="text-base">{t('Communication Preferences')}</CardTitle>
-          <CardDescription>{t('Choose how you want to be notified')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
-          <div className="flex items-center justify-between">
-            <Label>{t('Email Notifications')}</Label>
-            <Switch checked={commPrefs.email} onCheckedChange={(v) => setCommPrefs({ ...commPrefs, email: v })} />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>{t('SMS Notifications')}</Label>
-            <Switch checked={commPrefs.sms} onCheckedChange={(v) => setCommPrefs({ ...commPrefs, sms: v })} />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>{t('Marketing Emails')}</Label>
-            <Switch checked={commPrefs.marketing} onCheckedChange={(v) => setCommPrefs({ ...commPrefs, marketing: v })} />
-          </div>
-        </CardContent>
-      </Card>
-      </motion.div>
+          <FormSection title={t('Security')} icon={KeyRound}>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setPwDialogOpen(true)}>
+              {t('Change Password')}
+            </Button>
+          </FormSection>
 
-      {/* Security */}
-      <motion.div variants={prefersReduced ? undefined : staggerItem}>
-      <Card>
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="text-base">{t('Security')}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-          <Button variant="outline" className="w-full sm:w-auto" onClick={() => setPwDialogOpen(true)}>
-            {t('Change Password')}
-          </Button>
-        </CardContent>
-      </Card>
-      </motion.div>
-
-      {/* Save Button */}
-      <motion.div variants={prefersReduced ? undefined : staggerItem} className="flex justify-end gap-3">
-        <Button onClick={handleSaveProfile} disabled={saving} className="gap-2 w-full sm:w-auto">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {saved ? t('Saved!') : t('Save Changes')}
-        </Button>
+          <FormActions sticky="page">
+            <Button onClick={handleSaveProfile} disabled={saving} className="gap-2">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saved ? t('Saved!') : t('Save Changes')}
+            </Button>
+          </FormActions>
+        </FormSections>
       </motion.div>
 
       {/*
@@ -328,18 +297,16 @@ export function CustomerProfilePage() {
           <DialogHeader>
             <DialogTitle>{t('Change Password')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-5 py-2">
             {pwError && (
-              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{pwError}</div>
+              <div role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{pwError}</div>
             )}
-            <div className="space-y-2">
-              <Label>{t('New Password')}</Label>
-              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Confirm Password')}</Label>
-              <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-            </div>
+            <FormField label={t('New Password')} hint={t('Password must be at least {{count}} characters', { count: MIN_PASSWORD_LENGTH })}>
+              <Input type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </FormField>
+            <FormField label={t('Confirm Password')}>
+              <Input type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            </FormField>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPwDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>
@@ -357,37 +324,31 @@ export function CustomerProfilePage() {
           <DialogHeader>
             <DialogTitle>{editAddrIndex !== null ? t('Edit Address') : t('Add Address')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>{t('Type')}</Label>
-              <Select value={addrType} onValueChange={(v) => setAddrType(v as 'billing' | 'shipping')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="shipping">{t('Shipping')}</SelectItem>
-                  <SelectItem value="billing">{t('Billing')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Street')}</Label>
-              <Input value={addrStreet} onChange={(e) => setAddrStreet(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{t('Postal Code')}</Label>
-                <Input value={addrPostalCode} onChange={(e) => setAddrPostalCode(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('City')}</Label>
-                <Input value={addrCity} onChange={(e) => setAddrCity(e.target.value)} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('Country')}</Label>
-              <Input value={addrCountry} onChange={(e) => setAddrCountry(e.target.value)} />
-            </div>
+          <div className="py-2">
+            <FormGrid cols={6}>
+              <FormField label={t('Type')} span="full">
+                <ChoiceCards
+                  value={addrType}
+                  onValueChange={(v) => setAddrType(v)}
+                  options={[
+                    { value: 'shipping' as const, label: t('Shipping') },
+                    { value: 'billing' as const, label: t('Billing') },
+                  ]}
+                />
+              </FormField>
+              <FormField label={t('Street')} span="full">
+                <Input value={addrStreet} onChange={(e) => setAddrStreet(e.target.value)} autoComplete="street-address" />
+              </FormField>
+              <FormField label={t('Postal Code')} span={2}>
+                <Input value={addrPostalCode} onChange={(e) => setAddrPostalCode(e.target.value)} autoComplete="postal-code" />
+              </FormField>
+              <FormField label={t('City')} span={4}>
+                <Input value={addrCity} onChange={(e) => setAddrCity(e.target.value)} autoComplete="address-level2" />
+              </FormField>
+              <FormField label={t('Country')} span="full">
+                <Input value={addrCountry} onChange={(e) => setAddrCountry(e.target.value)} autoComplete="country-name" />
+              </FormField>
+            </FormGrid>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddrDialogOpen(false)}>{t('Cancel', { ns: 'common' })}</Button>

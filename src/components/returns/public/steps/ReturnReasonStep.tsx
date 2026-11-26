@@ -81,7 +81,7 @@ export function ReturnReasonStep({
                   onCategoryChange(reason.category);
                   onSubcategoryChange('');
                 }}
-                className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-lg border-2 text-center transition-all min-h-[5.5rem] ${
+                className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-lg border-2 text-center transition-[border-color,background-color,color,box-shadow] duration-150 min-h-[5.5rem] ${
                   isSelected
                     ? 'border-primary bg-primary/5 shadow-sm'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-muted/30'
@@ -107,7 +107,7 @@ export function ReturnReasonStep({
                 onCategoryChange('other');
                 onSubcategoryChange('');
               }}
-              className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-lg border-2 text-center transition-all min-h-[5.5rem] ${
+              className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-lg border-2 text-center transition-[border-color,background-color,color,box-shadow] duration-150 min-h-[5.5rem] ${
                 selectedCategory === 'other'
                   ? 'border-primary bg-primary/5 shadow-sm'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-muted/30'
@@ -135,7 +135,7 @@ export function ReturnReasonStep({
                 key={sub}
                 type="button"
                 onClick={() => onSubcategoryChange(sub)}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-all ${
+                className={`px-3 py-1.5 rounded-full text-sm border transition-[border-color,background-color,color,box-shadow] duration-150 ${
                   selectedSubcategory === sub
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-gray-200 hover:border-gray-300 bg-white'
@@ -167,7 +167,7 @@ export function ReturnReasonStep({
                       key={opt}
                       type="button"
                       onClick={() => onFollowUpChange(q.id, opt)}
-                      className={`px-3 py-1.5 rounded-full text-sm border transition-all ${
+                      className={`px-3 py-1.5 rounded-full text-sm border transition-[border-color,background-color,color,box-shadow] duration-150 ${
                         followUpAnswers[q.id] === opt
                           ? 'border-primary bg-primary text-primary-foreground'
                           : 'border-gray-200 hover:border-gray-300 bg-white'
@@ -185,7 +185,7 @@ export function ReturnReasonStep({
                       key={opt}
                       type="button"
                       onClick={() => onFollowUpChange(q.id, opt)}
-                      className={`px-4 py-1.5 rounded-full text-sm border transition-all ${
+                      className={`px-4 py-1.5 rounded-full text-sm border transition-[border-color,background-color,color,box-shadow] duration-150 ${
                         followUpAnswers[q.id] === opt
                           ? 'border-primary bg-primary text-primary-foreground'
                           : 'border-gray-200 hover:border-gray-300 bg-white'

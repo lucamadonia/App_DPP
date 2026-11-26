@@ -29,7 +29,7 @@ export function LandingFeaturesBento() {
   return (
     <section id="features" className="py-24 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div ref={ref} className={`text-center max-w-3xl mx-auto mb-16 transition-all duration-700 ${isVisible ? 'animate-landing-reveal' : 'opacity-0 translate-y-8'}`}>
+        <div ref={ref} className={`text-center max-w-3xl mx-auto mb-16 transition-[opacity,translate] duration-500 ${isVisible ? 'animate-landing-reveal' : 'opacity-0 translate-y-8'}`}>
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
             {t('features.title')}
           </h2>
@@ -52,7 +52,7 @@ export function LandingFeaturesBento() {
               {/* Hover gradient border glow */}
               <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-sm bg-gradient-to-br from-blue-100/50 to-violet-100/50" />
 
-              <div className={`inline-flex rounded-xl p-2.5 bg-gradient-to-br ${f.gradient} text-white shadow-sm transition-all group-hover:shadow-md group-hover:scale-105`}>
+              <div className={`inline-flex rounded-xl p-2.5 bg-gradient-to-br ${f.gradient} text-white shadow-sm transition-[scale,box-shadow,background-color,color] group-hover:shadow-md group-hover:scale-105`}>
                 <f.icon className="h-5 w-5" />
               </div>
               <h3 className="mt-4 text-lg font-semibold text-slate-900">

@@ -4,8 +4,9 @@ import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FormField, InputAffix } from '@/components/ui/form-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Apple, Loader2, Mail, Lock, User, KeyRound, LogOut, Eye, EyeOff } from 'lucide-react';
+import { Apple, Loader2, Mail, Lock, User, KeyRound, LogOut, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import {
   signInWithEmail,
   signUpWithEmail,
@@ -212,7 +213,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
           <CardDescription>{user.email}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleSignOut} variant="outline" className="w-full">
+          <Button onClick={handleSignOut} variant="outline" className="w-full pointer-coarse:h-11">
             <LogOut className="mr-2 h-4 w-4" />
             {t('Sign Out', { ns: 'common' })}
           </Button>
@@ -240,8 +241,9 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
-          <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-            {error}
+          <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="min-w-0 text-pretty">{error}</span>
           </div>
         )}
 
@@ -250,21 +252,22 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
           <div className="space-y-4">
             {!resetSent ? (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="reset-email">{t('E-Mail')}</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <FormField label={t('E-Mail')} htmlFor="reset-email">
+                  <InputAffix prefix={<Mail className="h-4 w-4" />}>
                     <Input
                       id="reset-email"
                       type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
                       placeholder="you@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pl-9"
                     />
-                  </div>
-                </div>
-                <Button onClick={handleSendPasswordReset} disabled={formLoading} className="w-full">
+                  </InputAffix>
+                </FormField>
+                <Button onClick={handleSendPasswordReset} disabled={formLoading} className="w-full pointer-coarse:h-11">
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -284,7 +287,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
             <Button
               variant="ghost"
               onClick={() => { setResetSent(false); setCurrentView('signin'); }}
-              className="w-full"
+              className="w-full pointer-coarse:h-11"
             >
               {t('Back to Sign In')}
             </Button>
@@ -294,21 +297,22 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
           <div className="space-y-4">
             {!otpSent ? (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="otp-email">{t('E-Mail')}</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <FormField label={t('E-Mail')} htmlFor="otp-email">
+                  <InputAffix prefix={<Mail className="h-4 w-4" />}>
                     <Input
                       id="otp-email"
                       type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
                       placeholder="you@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pl-9"
                     />
-                  </div>
-                </div>
-                <Button onClick={handleSendOTP} disabled={formLoading} className="w-full">
+                  </InputAffix>
+                </FormField>
+                <Button onClick={handleSendOTP} disabled={formLoading} className="w-full pointer-coarse:h-11">
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -327,19 +331,20 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                 <p className="text-sm text-muted-foreground text-center">
                   {t('Link sent to {{email}}. Click the link in the email or enter the code.', { email })}
                 </p>
-                <div className="space-y-2">
-                  <Label htmlFor="otp-code">{t('6-digit Code')}</Label>
+                <FormField label={t('6-digit Code')} htmlFor="otp-code">
                   <Input
                     id="otp-code"
                     type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
                     placeholder="000000"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
-                    className="text-center text-xl tracking-widest"
+                    className="h-12 text-center text-xl font-mono tabular-nums tracking-widest"
                     maxLength={6}
                   />
-                </div>
-                <Button onClick={handleVerifyOTP} disabled={formLoading} className="w-full">
+                </FormField>
+                <Button onClick={handleVerifyOTP} disabled={formLoading} className="w-full pointer-coarse:h-11">
                   {formLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -354,7 +359,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
             <Button
               variant="ghost"
               onClick={() => { setOtpSent(false); setCurrentView('signin'); }}
-              className="w-full"
+              className="w-full pointer-coarse:h-11"
             >
               {t('Back to Sign In')}
             </Button>
@@ -373,7 +378,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
               </Button>
             )}
 
-            <Button variant="outline" onClick={handleGoogleAuth} className="w-full">
+            <Button variant="outline" onClick={handleGoogleAuth} className="w-full pointer-coarse:h-11">
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -383,7 +388,7 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
               {t('Continue with Google')}
             </Button>
 
-            <Button variant="outline" onClick={() => setCurrentView('otp')} className="w-full">
+            <Button variant="outline" onClick={() => setCurrentView('otp')} className="w-full pointer-coarse:h-11">
               <KeyRound className="mr-2 h-4 w-4" />
               {t('Sign in with Magic Link')}
             </Button>
@@ -400,48 +405,60 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
             {/* Email/Password Forms */}
             <form onSubmit={currentView === 'signin' ? handleEmailSignIn : handleEmailSignUp} className="space-y-4">
               {currentView === 'signup' && (
-                <div className="space-y-2">
-                  <Label htmlFor="name">{t('Name', { ns: 'common' })}</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <FormField label={t('Name', { ns: 'common' })} htmlFor="name">
+                  <InputAffix prefix={<User className="h-4 w-4" />}>
                     <Input
                       id="name"
                       type="text"
+                      autoComplete="name"
                       placeholder={t('Your Name')}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="pl-9"
                       required
                     />
-                  </div>
-                </div>
+                  </InputAffix>
+                </FormField>
               )}
-              <div className="space-y-2">
-                <Label htmlFor="email">{t('E-Mail')}</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <FormField label={t('E-Mail')} htmlFor="email">
+                <InputAffix prefix={<Mail className="h-4 w-4" />}>
                   <Input
                     id="email"
                     type="email"
+                    inputMode="email"
+                    autoComplete={currentView === 'signin' ? 'username' : 'email'}
+                    autoCapitalize="none"
+                    spellCheck={false}
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-9"
                     required
                   />
-                </div>
-              </div>
+                </InputAffix>
+              </FormField>
               <div className="space-y-2">
-                <Label htmlFor="password">{t('Password')}</Label>
+                <div className="flex min-h-5 items-center justify-between gap-2">
+                  <Label htmlFor="password">{t('Password')}</Label>
+                  {currentView === 'signin' && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="inline-flex min-h-11 -my-3 items-center px-1 h-auto text-xs text-muted-foreground hover:text-primary"
+                      onClick={() => setCurrentView('forgot')}
+                    >
+                      {t('Forgot password?')}
+                    </Button>
+                  )}
+                </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="********"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9 pr-12"
+                    autoComplete={currentView === 'signin' ? 'current-password' : 'new-password'}
+                    className="pl-9 pr-12 pointer-coarse:h-11"
                     required
                   />
                   {/* A raw <button>, so the coarse-pointer rule in index.css that sizes
@@ -452,26 +469,14 @@ export function SupabaseAuth({ mode = 'signin', onAuthSuccess, onAuthError }: Su
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     aria-label={showPassword ? t('Hide password') : t('Show password')}
-                    className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                    className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {currentView === 'signin' && (
-                  <div className="text-right">
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="inline-flex min-h-11 items-center px-1 h-auto text-xs text-muted-foreground hover:text-primary"
-                      onClick={() => setCurrentView('forgot')}
-                    >
-                      {t('Forgot password?')}
-                    </Button>
-                  </div>
-                )}
               </div>
-              <Button type="submit" disabled={formLoading} className="w-full">
+              <Button type="submit" disabled={formLoading} className="w-full pointer-coarse:h-11">
                 {formLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

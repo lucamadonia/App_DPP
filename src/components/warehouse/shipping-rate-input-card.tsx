@@ -124,7 +124,7 @@ function CountryCombobox({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[260px] p-0" align="start">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[min(260px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] p-0" align="start">
           <Command>
             <CommandInput placeholder={t('Search country…')} />
             <CommandList>
@@ -177,8 +177,8 @@ function NumberField({
   suffix?: string;
 }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+    <div className="min-w-0 space-y-1.5">
+      <Label className="block truncate text-xs text-muted-foreground">{label}</Label>
       <div className="relative">
         <Input
           type="number"
@@ -218,7 +218,7 @@ function WeightStepper({
   return (
     <div className="space-y-1.5">
       <Label className="text-xs text-muted-foreground">{label}</Label>
-      <div className="flex items-center rounded-xl border focus-within:ring-2 focus-within:ring-primary/30 transition-all">
+      <div className="flex items-center rounded-xl border focus-within:ring-2 focus-within:ring-primary/30 transition-[color,background-color,border-color,box-shadow,opacity,transform]">
         <button
           type="button"
           aria-label="−0.5 kg"
@@ -275,7 +275,7 @@ export function ShippingRateInputCard({
       </div>
 
       {/* Dimensions */}
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
         <NumberField
           label={t('Length (cm)')}
           value={form.lengthCm}

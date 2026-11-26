@@ -117,7 +117,7 @@ export function SupplyChainFilters({
       {/* Main filter bar */}
       <div className="flex flex-wrap items-center gap-2">
         <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px] [&>span]:truncate">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder={t('Filter by product')} />
           </SelectTrigger>
@@ -132,7 +132,7 @@ export function SupplyChainFilters({
         </Select>
 
         <Select value={processTypeFilter} onValueChange={setProcessTypeFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="min-w-0 flex-1 sm:flex-none sm:w-[160px] [&>span]:truncate">
             <SelectValue placeholder={t('Process Type')} />
           </SelectTrigger>
           <SelectContent>
@@ -146,7 +146,7 @@ export function SupplyChainFilters({
         </Select>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="min-w-0 flex-1 sm:flex-none sm:w-[140px] [&>span]:truncate">
             <SelectValue placeholder={t('Status')} />
           </SelectTrigger>
           <SelectContent>
@@ -173,7 +173,7 @@ export function SupplyChainFilters({
           </SelectContent>
         </Select>
 
-        <div className="relative w-48">
+        <div className="relative min-w-0 flex-1 sm:flex-none sm:w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('Search...', { ns: 'common' })}
@@ -206,11 +206,11 @@ export function SupplyChainFilters({
             <Badge
               key={filter.key}
               variant="outline"
-              className="gap-1.5 pl-2.5 pr-1 py-1 cursor-pointer hover:bg-muted/50 transition-colors"
+              className="max-w-full gap-1.5 pl-2.5 pr-1 py-1 cursor-pointer hover:bg-muted/50 transition-colors"
               onClick={filter.onClear}
             >
-              <span className="text-xs">{filter.label}</span>
-              <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+              <span className="text-xs truncate">{filter.label}</span>
+              <X className="h-3 w-3 shrink-0 text-muted-foreground hover:text-foreground" />
             </Badge>
           ))}
           {activeFilters.length > 1 && (

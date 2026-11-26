@@ -103,5 +103,8 @@
   "widget_submit": "Track package",
   "widget_not_found": "We couldn't find a shipment matching that order number and email. Please check both and try again.",
   "widget_powered_by": "Live tracking by Trackbliss",
-  "In this shipment": "In this shipment"
+  "In this shipment": "In this shipment",
+  "feedback_card_title": "How do you like it?",
+  "feedback_card_text": "Tell us about your experience in a few sentences. It helps other families and us.",
+  "feedback_card_cta": "Share your experience"
 }

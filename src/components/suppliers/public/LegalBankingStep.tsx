@@ -1,12 +1,12 @@
 /**
- * Supplier Registration - Step 3: Legal & Banking
+ * Supplier Registration - Step 4: Legal & Banking. Heading rendered by FormWizard.
  */
 
 import type { UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { FormGrid, FormField, OptionalDisclosure } from '@/components/ui/form-layout';
 import type { SupplierRegistrationData } from '@/types/supplier-portal';
 
 interface LegalBankingStepProps {
@@ -15,7 +15,8 @@ interface LegalBankingStepProps {
 
 export function LegalBankingStep({ form }: LegalBankingStepProps) {
   const { t } = useTranslation('supplier-portal');
-  const { register, formState: { errors } } = form;
+  const { register, formState: { errors }, watch } = form;
+  const [registerNo, bankName, paymentTerms] = watch(['commercialRegisterNumber', 'bankName', 'paymentTerms']);
 
   // Basic IBAN validation (length and format)
   const validateIBAN = (value: string): boolean | string => {
@@ -29,127 +30,83 @@ export function LegalBankingStep({ form }: LegalBankingStepProps) {
     return true;
   };
 
+  const idInput = 'font-mono uppercase placeholder:font-sans placeholder:normal-case';
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">{t('Legal & Banking Information')}</h3>
-        <p className="text-sm text-muted-foreground mb-6">
-          {t('Please provide your legal and banking details')}
-        </p>
-      </div>
-
-      {/* Legal Information */}
-      <div className="space-y-4">
-        <h4 className="font-medium">{t('Legal Information')}</h4>
-
-        {/* Tax Number */}
-        <div>
-          <Label htmlFor="taxNumber">
-            {t('Tax Number')} <span className="text-destructive">*</span>
-          </Label>
+    <>
+      <FormGrid cols={6}>
+        <FormField label={t('Tax Number')} htmlFor="taxNumber" required span={3} error={errors.taxNumber?.message}>
           <Input
             id="taxNumber"
             {...register('taxNumber', { required: t('This field is required') })}
             placeholder="123/456/78901"
+            className="font-mono placeholder:font-sans"
           />
-          {errors.taxNumber && (
-            <p className="text-sm text-destructive mt-1">{errors.taxNumber.message}</p>
-          )}
-        </div>
-
-        {/* VAT Number */}
-        <div>
-          <Label htmlFor="vatNumber">
-            {t('VAT Number')} <span className="text-destructive">*</span>
-          </Label>
+        </FormField>
+        <FormField label={t('VAT Number')} htmlFor="vatNumber" required span={3} error={errors.vatNumber?.message}>
           <Input
             id="vatNumber"
+            autoCapitalize="characters"
+            spellCheck={false}
             {...register('vatNumber', { required: t('This field is required') })}
             placeholder="DE123456789"
+            className={idInput}
           />
-          {errors.vatNumber && (
-            <p className="text-sm text-destructive mt-1">{errors.vatNumber.message}</p>
-          )}
-        </div>
-
-        {/* Commercial Register Number */}
-        <div>
-          <Label htmlFor="commercialRegisterNumber">{t('Commercial Register Number')}</Label>
-          <Input
-            id="commercialRegisterNumber"
-            {...register('commercialRegisterNumber')}
-            placeholder="HRB 12345"
-          />
-        </div>
-      </div>
-
-      {/* Banking Information */}
-      <div className="space-y-4 pt-4 border-t">
-        <h4 className="font-medium">{t('Banking Information')}</h4>
-
-        {/* Bank Name */}
-        <div>
-          <Label htmlFor="bankName">{t('Bank Name')}</Label>
-          <Input
-            id="bankName"
-            {...register('bankName')}
-            placeholder="Deutsche Bank"
-          />
-        </div>
-
-        {/* IBAN */}
-        <div>
-          <Label htmlFor="iban">
-            {t('IBAN')} <span className="text-destructive">*</span>
-          </Label>
+        </FormField>
+        <FormField
+          label={t('IBAN')}
+          htmlFor="iban"
+          required
+          span={4}
+          error={errors.iban?.message}
+          hint={t('Spaces are fine, we ignore them.')}
+        >
           <Input
             id="iban"
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
             {...register('iban', {
               required: t('This field is required'),
               validate: validateIBAN,
             })}
             placeholder="DE89 3704 0044 0532 0130 00"
+            className={`${idInput} tracking-wide`}
           />
-          {errors.iban && (
-            <p className="text-sm text-destructive mt-1">{errors.iban.message}</p>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">
-            {t('International Bank Account Number')}
-          </p>
-        </div>
-
-        {/* BIC */}
-        <div>
-          <Label htmlFor="bic">
-            {t('BIC/SWIFT')} <span className="text-destructive">*</span>
-          </Label>
+        </FormField>
+        <FormField label={t('BIC/SWIFT')} htmlFor="bic" required span={2} error={errors.bic?.message}>
           <Input
             id="bic"
+            autoCapitalize="characters"
+            spellCheck={false}
             {...register('bic', { required: t('This field is required') })}
             placeholder="COBADEFFXXX"
+            className={idInput}
           />
-          {errors.bic && (
-            <p className="text-sm text-destructive mt-1">{errors.bic.message}</p>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">
-            {t('Bank Identifier Code')}
-          </p>
-        </div>
+        </FormField>
+      </FormGrid>
 
-        {/* Payment Terms */}
-        <div>
-          <Label htmlFor="paymentTerms">{t('Payment Terms')}</Label>
-          <Textarea
-            id="paymentTerms"
-            {...register('paymentTerms')}
-            placeholder={t('e.g., Net 30 days, 2% discount if paid within 10 days')}
-            rows={3}
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            {t('Optional: Specify your preferred payment terms')}
-          </p>
-        </div>
-      </div>
-    </div>
+      <OptionalDisclosure
+        description={[t('Commercial Register Number'), t('Bank Name'), t('Payment Terms')].join(', ')}
+        filledCount={[registerNo, bankName, paymentTerms].filter(Boolean).length}
+      >
+        <FormGrid cols={2}>
+          <FormField label={t('Commercial Register Number')} htmlFor="commercialRegisterNumber" optional>
+            <Input id="commercialRegisterNumber" {...register('commercialRegisterNumber')} placeholder="HRB 12345" className="font-mono placeholder:font-sans" />
+          </FormField>
+          <FormField label={t('Bank Name')} htmlFor="bankName" optional>
+            <Input id="bankName" {...register('bankName')} placeholder="Deutsche Bank" />
+          </FormField>
+          <FormField label={t('Payment Terms')} htmlFor="paymentTerms" span="full" hint={t('Optional: Specify your preferred payment terms')}>
+            <Textarea
+              id="paymentTerms"
+              {...register('paymentTerms')}
+              placeholder={t('e.g., Net 30 days, 2% discount if paid within 10 days')}
+              rows={2}
+            />
+          </FormField>
+        </FormGrid>
+      </OptionalDisclosure>
+    </>
   );
 }

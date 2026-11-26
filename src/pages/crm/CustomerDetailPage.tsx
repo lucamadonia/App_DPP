@@ -50,23 +50,30 @@ export function CustomerDetailPage() {
   const [trend, setTrend] = useState<{ month: string; revenue: number; orders: number }[]>([]);
   const [shopDomain, setShopDomain] = useState<string>();
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const [c, tl, tr, sh] = await Promise.all([
-      getCustomerDetail(id),
-      getCustomerTimeline(id),
-      getCustomerCLVTrend(id, 12),
-      getShopifySettings(),
-    ]);
-    setCustomer(c);
-    setTimeline(tl);
-    setTrend(tr);
-    setShopDomain(sh?.shopDomain);
-    setLoading(false);
+    setLoadFailed(false);
+    try {
+      const [c, tl, tr, sh] = await Promise.all([
+        getCustomerDetail(id),
+        getCustomerTimeline(id),
+        getCustomerCLVTrend(id, 12),
+        getShopifySettings(),
+      ]);
+      setCustomer(c);
+      setTimeline(tl);
+      setTrend(tr);
+      setShopDomain(sh?.shopDomain);
+    } catch {
+      setLoadFailed(true);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
@@ -86,13 +93,25 @@ export function CustomerDetailPage() {
     }
   }
 
-  if (loading || !customer) {
+  if (loading) {
     return (
       <div className="px-4 py-4 sm:p-6 space-y-4">
         <ShimmerSkeleton className="h-16" />
         <ShimmerSkeleton className="h-32" />
         <ShimmerSkeleton className="h-64" />
       </div>
+    );
+  }
+
+  if (loadFailed || !customer) {
+    return (
+      <PageContainer title={t(loadFailed ? 'Customer could not be loaded' : 'Customer not found')} padding={false} stack>
+        <p className="text-muted-foreground">{t(loadFailed ? 'Please try loading the customer again.' : 'This customer is no longer available.')}</p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild><Link to="/crm/customers"><ArrowLeft className="mr-2 h-4 w-4" />{t('Back to customers')}</Link></Button>
+          {loadFailed && <Button onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />{t('Retry', { ns: 'common' })}</Button>}
+        </div>
+      </PageContainer>
     );
   }
 

@@ -6,12 +6,11 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormSections, FormSection, FormGrid, FormField, InputAffix, FormToggleRow, FormActions } from '@/components/ui/form-layout';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/adaptive-dialog';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -146,91 +145,87 @@ export function ProductAssignmentDialog({ supplier, products, onOpenChange, onCh
 
   return (
     <Dialog open={!!supplier} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto pb-0">
         <DialogHeader>
           <DialogTitle>{t('Assign Products')}</DialogTitle>
           <DialogDescription>{t('Supplier')}: {supplier?.name}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">{t('Assign New Product')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <Label>{t('Product')}</Label>
+        <FormSections>
+          <FormSection
+            title={t('Assign New Product')}
+            icon={Plus}
+            layout="stacked"
+          >
+            <FormGrid cols={6}>
+              <FormField label={t('Product')} required span="full" htmlFor="assign-product">
                 <Select value={formData.product_id || ''} onValueChange={v => updateForm('product_id', v)}>
-                  <SelectTrigger><SelectValue placeholder={t('Select product')} /></SelectTrigger>
+                  <SelectTrigger id="assign-product" className="w-full"><SelectValue placeholder={t('Select product')} /></SelectTrigger>
                   <SelectContent>
                     {availableProducts.map(product => (
                       <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <Label>{t('Role')}</Label>
-                  <Select value={formData.role || 'component'} onValueChange={v => updateForm('role', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {SUPPLIER_ROLES.map(role => (
-                        <SelectItem key={role.value} value={role.value}>{t(role.labelKey)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{t('Lead Time (Days)')}</Label>
-                  <Input type="number" value={formData.lead_time_days || ''} onChange={e => updateForm('lead_time_days', parseInt(e.target.value) || undefined)} />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div>
-                  <Label>{t('Price per Unit')}</Label>
-                  <Input type="number" step="0.01" placeholder="0.00" value={formData.price_per_unit ?? ''} onChange={e => updateForm('price_per_unit', e.target.value ? parseFloat(e.target.value) : undefined)} />
-                </div>
-                <div>
-                  <Label>{t('Currency')}</Label>
-                  <Select value={formData.currency || 'EUR'} onValueChange={v => updateForm('currency', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{t('Min. Order Qty')}</Label>
-                  <Input type="number" min="1" placeholder={t('e.g. 100')} value={formData.min_order_quantity ?? ''} onChange={e => updateForm('min_order_quantity', e.target.value ? parseInt(e.target.value) : undefined)} />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox id="assignment-is-primary" checked={formData.is_primary || false} onCheckedChange={v => updateForm('is_primary', v)} />
-                <Label htmlFor="assignment-is-primary">{t('Primary Supplier')}</Label>
-              </div>
-              <Button onClick={handleAssign} disabled={!formData.product_id || isBusy} className="min-h-[44px] w-full sm:min-h-10">
-                {isBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                {t('Assign')}
-              </Button>
-            </CardContent>
-          </Card>
+              </FormField>
+              <FormField label={t('Role')} span={3} htmlFor="assign-role">
+                <Select value={formData.role || 'component'} onValueChange={v => updateForm('role', v)}>
+                  <SelectTrigger id="assign-role" className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SUPPLIER_ROLES.map(role => (
+                      <SelectItem key={role.value} value={role.value}>{t(role.labelKey)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+              <FormField label={t('Lead Time')} optional span={3}>
+                <InputAffix suffix={t('days')}>
+                  <Input type="number" inputMode="numeric" min="0" value={formData.lead_time_days || ''} onChange={e => updateForm('lead_time_days', parseInt(e.target.value) || undefined)} />
+                </InputAffix>
+              </FormField>
+              <FormField label={t('Price per Unit')} optional span={2}>
+                <InputAffix suffix={formData.currency || 'EUR'}>
+                  <Input type="number" inputMode="decimal" step="0.01" placeholder="0.00" value={formData.price_per_unit ?? ''} onChange={e => updateForm('price_per_unit', e.target.value ? parseFloat(e.target.value) : undefined)} />
+                </InputAffix>
+              </FormField>
+              <FormField label={t('Currency')} span={2} htmlFor="assign-currency">
+                <Select value={formData.currency || 'EUR'} onValueChange={v => updateForm('currency', v)}>
+                  <SelectTrigger id="assign-currency" className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </FormField>
+              <FormField label={t('Min. Order Qty')} optional span={2}>
+                <Input type="number" inputMode="numeric" min="1" placeholder={t('e.g. 100')} value={formData.min_order_quantity ?? ''} onChange={e => updateForm('min_order_quantity', e.target.value ? parseInt(e.target.value) : undefined)} />
+              </FormField>
+            </FormGrid>
+            <FormToggleRow label={t('Primary Supplier')} htmlFor="assignment-is-primary" controlPosition="start">
+              <Checkbox id="assignment-is-primary" checked={formData.is_primary || false} onCheckedChange={v => updateForm('is_primary', v)} />
+            </FormToggleRow>
+            <Button onClick={handleAssign} disabled={!formData.product_id || isBusy} className="w-full pointer-coarse:min-h-11">
+              {isBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              {t('Assign')}
+            </Button>
+          </FormSection>
 
-          <div>
-            <h4 className="mb-2 text-sm font-medium tabular-nums">
-              {t('Assigned Products ({{count}})', { count: supplierProducts.length })}
-            </h4>
+          <FormSection
+            title={<span className="tabular-nums">{t('Assigned Products ({{count}})', { count: supplierProducts.length })}</span>}
+            icon={Package}
+            layout="stacked"
+            variant="plain"
+          >
             {supplierProducts.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t('No products assigned yet')}</p>
             ) : (
-              <div className="max-h-[400px] space-y-2 overflow-y-auto">
+              <div className="space-y-2">
                 {supplierProducts.map(sp => (
-                  <div key={sp.id} className="rounded border bg-card">
-                    <div className="flex items-center justify-between p-2">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <div className="text-sm font-medium">{getProductName(sp)}</div>
+                  <div key={sp.id} className="rounded-lg border bg-card">
+                    <div className="flex items-center justify-between gap-2 p-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Package className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium">{getProductName(sp)}</div>
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                             <span>{t(SUPPLIER_ROLES.find(r => r.value === sp.role)?.labelKey || sp.role)}</span>
                             {sp.price_per_unit != null && (
@@ -243,11 +238,12 @@ export function ProductAssignmentDialog({ supplier, products, onOpenChange, onCh
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex shrink-0 items-center gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 px-2 text-xs"
+                          className="px-2 text-xs pointer-coarse:min-h-11"
+                          aria-expanded={expandedPriceTiers === sp.id}
                           onClick={() => {
                             if (expandedPriceTiers === sp.id) {
                               setExpandedPriceTiers(null);
@@ -257,11 +253,11 @@ export function ProductAssignmentDialog({ supplier, products, onOpenChange, onCh
                             }
                           }}
                         >
-                          <Layers className="mr-1 h-3 w-3" />
-                          {t('Tiers')} ({sp.price_tiers?.length || 0})
-                          {expandedPriceTiers === sp.id ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />}
+                          <Layers className="mr-1 size-3.5" />
+                          <span className="tabular-nums">{t('Tiers')} ({sp.price_tiers?.length || 0})</span>
+                          {expandedPriceTiers === sp.id ? <ChevronUp className="ml-1 size-3.5" /> : <ChevronDown className="ml-1 size-3.5" />}
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemove(sp.id)}>
+                        <Button variant="ghost" size="icon" className="pointer-coarse:size-11" aria-label={t('Delete', { ns: 'common' })} onClick={() => handleRemove(sp.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -269,75 +265,79 @@ export function ProductAssignmentDialog({ supplier, products, onOpenChange, onCh
 
                     {/* Inline price tiers editor */}
                     {expandedPriceTiers === sp.id && (
-                      <div className="space-y-2 border-t bg-muted/30 p-2">
+                      <div className="space-y-3 border-t bg-muted/30 p-3">
                         <h5 className="text-xs font-medium">{t('Volume Pricing Tiers')}</h5>
                         {editingTiers.length === 0 ? (
                           <p className="text-xs text-muted-foreground">{t('No volume pricing configured')}</p>
                         ) : (
-                          <div className="space-y-1.5">
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-[1fr_1fr_1fr_2.25rem] gap-2 text-xs text-muted-foreground pointer-coarse:grid-cols-[1fr_1fr_1fr_2.75rem]" aria-hidden="true">
+                              <span>{t('From Qty')}</span>
+                              <span>{t('To Qty')}</span>
+                              <span>{t('Price/Unit')}</span>
+                              <span />
+                            </div>
                             {editingTiers.map((tier, i) => (
-                              <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-1.5">
-                                <div>
-                                  {i === 0 && <Label className="text-[10px]">{t('From Qty')}</Label>}
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    className="h-7 text-xs"
-                                    value={tier.minQty}
-                                    onChange={e => {
-                                      const updated = [...editingTiers];
-                                      updated[i] = { ...updated[i], minQty: parseInt(e.target.value) || 1 };
-                                      setEditingTiers(updated);
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  {i === 0 && <Label className="text-[10px]">{t('To Qty')}</Label>}
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    className="h-7 text-xs"
-                                    placeholder={t('unlimited')}
-                                    value={tier.maxQty ?? ''}
-                                    onChange={e => {
-                                      const updated = [...editingTiers];
-                                      updated[i] = { ...updated[i], maxQty: e.target.value ? parseInt(e.target.value) : null };
-                                      setEditingTiers(updated);
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  {i === 0 && <Label className="text-[10px]">{t('Price/Unit')}</Label>}
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min={0.01}
-                                    className="h-7 text-xs"
-                                    value={tier.pricePerUnit}
-                                    onChange={e => {
-                                      const updated = [...editingTiers];
-                                      updated[i] = { ...updated[i], pricePerUnit: parseFloat(e.target.value) || 0 };
-                                      setEditingTiers(updated);
-                                    }}
-                                  />
-                                </div>
+                              <div key={i} className="grid grid-cols-[1fr_1fr_1fr_2.25rem] items-center gap-2 pointer-coarse:grid-cols-[1fr_1fr_1fr_2.75rem] pointer-coarse:[&_[data-slot=input]]:h-11">
+                                <Input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min={1}
+                                  aria-label={t('From Qty')}
+                                  className="tabular-nums"
+                                  value={tier.minQty}
+                                  onChange={e => {
+                                    const updated = [...editingTiers];
+                                    updated[i] = { ...updated[i], minQty: parseInt(e.target.value) || 1 };
+                                    setEditingTiers(updated);
+                                  }}
+                                />
+                                <Input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min={1}
+                                  aria-label={t('To Qty')}
+                                  className="tabular-nums"
+                                  placeholder={t('unlimited')}
+                                  value={tier.maxQty ?? ''}
+                                  onChange={e => {
+                                    const updated = [...editingTiers];
+                                    updated[i] = { ...updated[i], maxQty: e.target.value ? parseInt(e.target.value) : null };
+                                    setEditingTiers(updated);
+                                  }}
+                                />
+                                <Input
+                                  type="number"
+                                  inputMode="decimal"
+                                  step="0.01"
+                                  min={0.01}
+                                  aria-label={t('Price/Unit')}
+                                  className="tabular-nums"
+                                  value={tier.pricePerUnit}
+                                  onChange={e => {
+                                    const updated = [...editingTiers];
+                                    updated[i] = { ...updated[i], pricePerUnit: parseFloat(e.target.value) || 0 };
+                                    setEditingTiers(updated);
+                                  }}
+                                />
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="pointer-coarse:size-11"
+                                  aria-label={t('Delete', { ns: 'common' })}
                                   onClick={() => setEditingTiers(editingTiers.filter((_, idx) => idx !== i))}
                                 >
-                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                  <Trash2 className="size-4 text-destructive" />
                                 </Button>
                               </div>
                             ))}
                           </div>
                         )}
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs"
+                            className="pointer-coarse:min-h-11"
                             onClick={() => {
                               const lastTier = editingTiers[editingTiers.length - 1];
                               const newMinQty = lastTier ? (lastTier.maxQty ? lastTier.maxQty + 1 : lastTier.minQty + 100) : 1;
@@ -352,15 +352,15 @@ export function ProductAssignmentDialog({ supplier, products, onOpenChange, onCh
                               ]);
                             }}
                           >
-                            <Plus className="mr-1 h-3 w-3" />{t('Add Tier')}
+                            <Plus className="mr-1 size-3.5" />{t('Add Tier')}
                           </Button>
                           <Button
                             size="sm"
-                            className="h-7 text-xs"
+                            className="pointer-coarse:min-h-11"
                             disabled={savingTiers}
                             onClick={() => handleSaveTiers(sp)}
                           >
-                            {savingTiers ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Save className="mr-1 h-3 w-3" />}
+                            {savingTiers ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : <Save className="mr-1 size-3.5" />}
                             {t('Save Tiers')}
                           </Button>
                         </div>
@@ -370,12 +370,12 @@ export function ProductAssignmentDialog({ supplier, products, onOpenChange, onCh
                 ))}
               </div>
             )}
-          </div>
-        </div>
+          </FormSection>
+        </FormSections>
 
-        <DialogFooter>
+        <FormActions sticky="dialog">
           <Button variant="outline" onClick={() => onOpenChange(false)}>{t('Close', { ns: 'common' })}</Button>
-        </DialogFooter>
+        </FormActions>
       </DialogContent>
     </Dialog>
   );

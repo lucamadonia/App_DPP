@@ -31,7 +31,7 @@ export function PlatformCard({ platform, connection, locked, onConnect, onSync, 
 
   return (
     <article
-      className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/40 hover:shadow-lg"
+      className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-[color,background-color,border-color,box-shadow,opacity,transform] hover:border-primary/40 hover:shadow-lg"
       data-status={connection?.status || 'available'}
     >
       {/* Gradient ribbon */}
@@ -121,7 +121,7 @@ export function PlatformCard({ platform, connection, locked, onConnect, onSync, 
             <button
               type="button"
               onClick={onConnect}
-              className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className="inline-flex min-h-11 items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <Plug className="h-3.5 w-3.5" />
               {t('Connect')}

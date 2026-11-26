@@ -50,7 +50,7 @@ export function LandingReturnFlow() {
               {statusSteps.map((step, i) => (
                 <div key={step.key} className="flex items-center">
                   <div className="flex flex-col items-center gap-2">
-                    <div className={`relative flex h-10 w-10 items-center justify-center rounded-full ${step.color} ring-4 ${step.ring} transition-all duration-500`}
+                    <div className={`relative flex h-10 w-10 items-center justify-center rounded-full ${step.color} ring-4 ${step.ring} transition-[box-shadow,color] duration-300`}
                       style={{ transitionDelay: `${i * 100}ms` }}
                     >
                       {i <= 5 && (

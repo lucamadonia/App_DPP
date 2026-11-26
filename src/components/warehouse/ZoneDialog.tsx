@@ -6,11 +6,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  FormActions, FormField, FormGrid, InputAffix, OptionalDisclosure,
+} from '@/components/ui/form-layout';
 import {
   Select,
   SelectContent,
@@ -148,107 +149,121 @@ export function ZoneDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto pb-0">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? t('Edit Zone') : t('Add Zone')}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-3 sm:gap-4 py-2">
-          {/* Zone Name */}
-          <div className="grid gap-1.5">
-            <Label htmlFor="zone-name">{t('Zone Name')} *</Label>
-            <Input
-              id="zone-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-            />
-          </div>
-
-          {/* Zone Code */}
-          <div className="grid gap-1.5">
-            <Label htmlFor="zone-code">{t('Zone Code')} *</Label>
-            <Input
-              id="zone-code"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              className={codeError ? 'border-destructive' : ''}
-            />
-            {codeError && (
-              <p className="text-xs text-destructive">{codeError}</p>
-            )}
-          </div>
-
-          {/* Zone Type */}
-          <div className="grid gap-1.5">
-            <Label>{t('Zone Type')}</Label>
-            <Select
-              value={type}
-              onValueChange={(v) => setType(v as WarehouseZoneType)}
+        <div className="space-y-5">
+          <FormGrid cols={6}>
+            <FormField label={t('Zone Name')} htmlFor="zone-name" required span={4}>
+              <Input
+                id="zone-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoFocus
+              />
+            </FormField>
+            <FormField
+              label={t('Zone Code')}
+              htmlFor="zone-code"
+              required
+              span={2}
+              error={codeError || undefined}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ZONE_TYPES.map((zt) => (
-                  <SelectItem key={zt} value={zt}>
-                    {t(zt)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Area & Volume */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="zone-area">{t('Area (m\u00B2)')}</Label>
               <Input
-                id="zone-area"
-                type="number"
-                min={0}
-                step="any"
-                value={areaM2}
-                onChange={(e) => setAreaM2(e.target.value)}
+                id="zone-code"
+                value={code}
+                autoCapitalize="characters"
+                className="font-mono"
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
               />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="zone-volume">{t('Volume (m\u00B3)')}</Label>
-              <Input
-                id="zone-volume"
-                type="number"
-                min={0}
-                step="any"
-                value={volumeM3}
-                onChange={(e) => setVolumeM3(e.target.value)}
-              />
-            </div>
-          </div>
+            </FormField>
+            <FormField label={t('Zone Type')} htmlFor="zone-type" span="full">
+              <Select
+                value={type}
+                onValueChange={(v) => setType(v as WarehouseZoneType)}
+              >
+                <SelectTrigger id="zone-type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ZONE_TYPES.map((zt) => (
+                    <SelectItem key={zt} value={zt}>
+                      {t(zt)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          </FormGrid>
 
-          {/* Bin Locations */}
-          <div className="grid gap-1.5">
-            <Label>{t('Bin Locations')}</Label>
-            <Input
-              placeholder={t('Add bin location...')}
-              value={binInput}
-              onChange={(e) => setBinInput(e.target.value)}
-              onKeyDown={handleBinKeyDown}
-            />
+          <OptionalDisclosure
+            label={t('Size & bin locations')}
+            description={t('Area, volume and bin locations')}
+            filledCount={[areaM2, volumeM3].filter(Boolean).length + (binLocations.length > 0 ? 1 : 0)}
+            defaultOpen={isEditing && Boolean(areaM2 || volumeM3 || binLocations.length)}
+          >
+            <FormGrid cols={2}>
+              <FormField label={t('Area')} htmlFor="zone-area" optional>
+                <InputAffix suffix="m²">
+                  <Input
+                    id="zone-area"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="any"
+                    value={areaM2}
+                    onChange={(e) => setAreaM2(e.target.value)}
+                  />
+                </InputAffix>
+              </FormField>
+              <FormField label={t('Capacity Volume')} htmlFor="zone-volume" optional>
+                <InputAffix suffix="m³">
+                  <Input
+                    id="zone-volume"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="any"
+                    value={volumeM3}
+                    onChange={(e) => setVolumeM3(e.target.value)}
+                  />
+                </InputAffix>
+              </FormField>
+              <FormField
+                label={t('Bin Locations')}
+                htmlFor="zone-bins"
+                optional
+                span="full"
+                hint={t('Press Enter to add each bin location.')}
+              >
+                <Input
+                  id="zone-bins"
+                  placeholder={t('Add bin location...')}
+                  enterKeyHint="done"
+                  value={binInput}
+                  onChange={(e) => setBinInput(e.target.value)}
+                  onKeyDown={handleBinKeyDown}
+                />
+              </FormField>
+            </FormGrid>
             {binLocations.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-1">
+              <div className="flex flex-wrap gap-1.5">
                 {binLocations.map((bin) => (
                   <Badge
                     key={bin}
                     variant="secondary"
-                    className="gap-1 pr-1"
+                    className="gap-1 pr-0.5 font-mono"
                   >
                     {bin}
                     <button
                       type="button"
                       onClick={() => removeBin(bin)}
-                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                      aria-label={`${t('Remove', { ns: 'common' })} ${bin}`}
+                      className="relative ml-0.5 rounded-full p-0.5 transition-colors duration-150 ease-out hover:bg-muted-foreground/20 after:absolute after:-inset-2.5 after:content-['']"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -256,7 +271,7 @@ export function ZoneDialog({
                 ))}
               </div>
             )}
-          </div>
+          </OptionalDisclosure>
 
           {/* Furniture summary (read-only, editing in ZoneFurnitureManager) */}
           {isEditing && zone?.furniture && zone.furniture.length > 0 && (
@@ -264,18 +279,18 @@ export function ZoneDialog({
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+                  className="group flex min-h-11 w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors duration-150 ease-out hover:bg-muted/50"
                 >
                   <Package className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">{t('Shelves & Racks')}</span>
-                  <Badge variant="secondary" className="ml-auto text-xs">
+                  <Badge variant="secondary" className="ml-auto text-xs tabular-nums">
                     {zone.furniture.length} {t('shelves')}
                   </Badge>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 ease-out group-data-[state=open]:rotate-180" />
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-2 space-y-1 rounded-md border p-2">
+                <div className="mt-2 space-y-1 rounded-lg border p-2">
                   {zone.furniture.map((f) => {
                     const catalog = FURNITURE_CATALOG[f.type];
                     return (
@@ -288,7 +303,7 @@ export function ZoneDialog({
                           style={{ backgroundColor: catalog.stroke }}
                         />
                         <span className="truncate">{f.name}</span>
-                        <span className="text-muted-foreground ml-auto">
+                        <span className="text-muted-foreground ml-auto tabular-nums">
                           {f.sections.length} {t('sections')}
                         </span>
                       </div>
@@ -303,14 +318,14 @@ export function ZoneDialog({
           )}
         </div>
 
-        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <FormActions sticky="dialog">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {t('Cancel', { ns: 'common' })}
           </Button>
           <Button onClick={handleSave} disabled={!canSave}>
-            {isEditing ? t('Edit Zone') : t('Add Zone')}
+            {isEditing ? t('Save', { ns: 'common' }) : t('Add Zone')}
           </Button>
-        </DialogFooter>
+        </FormActions>
       </DialogContent>
     </Dialog>
   );

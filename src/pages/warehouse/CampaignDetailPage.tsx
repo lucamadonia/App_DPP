@@ -263,7 +263,7 @@ export function CampaignDetailPage() {
           return (
             <Card
               key={kpi.label}
-              className={`transition-all duration-500 hover:-translate-y-0.5 hover:shadow-md ${
+              className={`transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300 hover:-translate-y-0.5 hover:shadow-md ${
                 kpiVisible[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
               }`}
             >

@@ -4,6 +4,7 @@ import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useDragDismiss } from "@/lib/motion-gestures"
 import {
   Dialog,
   DialogClose,
@@ -32,15 +33,34 @@ function AdaptiveDialogContent({
   className,
   children,
   showCloseButton = true,
+  ref,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
   const isMobile = useIsMobile()
+  const closeRef = React.useRef<HTMLButtonElement>(null)
+  // Dismiss through Radix's own close path so onOpenChange fires exactly as
+  // for the X button; callers that block closing keep that control.
+  const dismiss = React.useCallback(() => closeRef.current?.click(), [])
+  const { ref: dragRef, handlers: dragHandlers } = useDragDismiss({
+    onDismiss: dismiss,
+    enabled: isMobile,
+  })
+
+  const setContentRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      dragRef.current = node
+      if (typeof ref === "function") ref(node)
+      else if (ref) ref.current = node
+    },
+    [dragRef, ref]
+  )
 
   if (!isMobile) {
     return (
       <DesktopDialogContent
+        ref={ref}
         className={className}
         showCloseButton={showCloseButton}
         {...props}
@@ -59,11 +79,26 @@ function AdaptiveDialogContent({
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom fixed inset-x-0 bottom-0 z-50 flex max-h-[90vh] w-full flex-col gap-4 overflow-y-auto rounded-t-2xl border-t p-6 shadow-lg duration-300 outline-none",
           className,
           // Neutralise caller classes that would break the sheet.
-          "max-w-none overflow-y-auto rounded-b-none sm:max-w-none sm:rounded-b-none"
+          // overflow-x-hidden: with only overflow-y set, any child wider than
+          // the sheet makes the whole sheet pan sideways on iOS.
+          "max-w-none overflow-y-auto overflow-x-hidden overscroll-x-none rounded-b-none sm:max-w-none sm:rounded-b-none"
         )}
         {...props}
+        ref={setContentRef}
+        {...dragHandlers}
       >
+        {/* Grabber: the only one (mobile-app.css draws no ::before pill). Visual
+            cue and drag handle, pinned into the sheet's top padding. */}
+        <div
+          data-drag-handle
+          className="absolute inset-x-0 top-0 flex h-8 items-start justify-center pt-2.5"
+          aria-hidden="true"
+        >
+          <div className="h-1 w-9 rounded-full bg-muted-foreground/30" />
+        </div>
         {children}
+        {/* Hidden programmatic close for drag-dismiss (and no X button case). */}
+        <DialogPrimitive.Close ref={closeRef} className="hidden" tabIndex={-1} aria-hidden="true" />
         {/* Guarantees clearance of the home indicator regardless of caller padding. */}
         <div className="h-[var(--safe-bottom)] shrink-0" aria-hidden="true" />
         {showCloseButton && (

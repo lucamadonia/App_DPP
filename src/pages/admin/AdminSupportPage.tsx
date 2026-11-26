@@ -112,7 +112,7 @@ export function AdminSupportPage() {
       <Card>
         <CardContent className="p-3">
           <div className="flex flex-wrap gap-2 items-center">
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative min-w-0 basis-full sm:basis-auto sm:flex-1 sm:min-w-[200px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
@@ -122,7 +122,7 @@ export function AdminSupportPage() {
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger className="h-9 min-w-[8.5rem] flex-1 sm:w-[140px] sm:flex-none"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle Status</SelectItem>
                 <SelectItem value="open">Offen</SelectItem>
@@ -132,7 +132,7 @@ export function AdminSupportPage() {
               </SelectContent>
             </Select>
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="Priorität" /></SelectTrigger>
+              <SelectTrigger className="h-9 min-w-[8.5rem] flex-1 sm:w-[140px] sm:flex-none"><SelectValue placeholder="Priorität" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle Prioritäten</SelectItem>
                 <SelectItem value="urgent">Dringend</SelectItem>

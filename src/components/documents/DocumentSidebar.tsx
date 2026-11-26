@@ -98,7 +98,7 @@ export function DocumentSidebar({
           <button
             onClick={() => onSelectContext({ type: 'all' })}
             className={cn(
-              'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+              'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors pointer-coarse:min-h-11',
               selectedContext.type === 'all'
                 ? 'bg-primary/10 text-primary font-medium'
                 : 'text-foreground hover:bg-muted/50'
@@ -154,7 +154,7 @@ export function DocumentSidebar({
           <button
             onClick={() => onSelectContext({ type: 'unassigned' })}
             className={cn(
-              'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+              'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors pointer-coarse:min-h-11',
               selectedContext.type === 'unassigned'
                 ? 'bg-primary/10 text-primary font-medium'
                 : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'

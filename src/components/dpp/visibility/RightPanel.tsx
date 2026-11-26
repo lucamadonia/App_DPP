@@ -36,7 +36,7 @@ export function RightPanel({ stats, changes, onRevertChange }: RightPanelProps) 
   const { t } = useTranslation('dpp');
 
   return (
-    <div className="w-[300px] border-l bg-muted/10">
+    <div className="h-full w-full xl:w-[300px] xl:shrink-0 xl:border-l bg-muted/10">
       <Tabs defaultValue="stats" className="h-full flex flex-col">
         <TabsList className="w-full rounded-none border-b">
           <TabsTrigger value="stats" className="flex-1">

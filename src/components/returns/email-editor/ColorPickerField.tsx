@@ -211,7 +211,7 @@ export function ColorPickerField({ label, value, onChange }: ColorPickerFieldPro
                 <button
                   key={color}
                   type="button"
-                  className={`w-6 h-6 rounded border transition-all hover:scale-110 ${
+                  className={`w-6 h-6 rounded border transition-[scale,border-color,box-shadow] duration-150 hover:scale-110 ${
                     value === color ? 'ring-2 ring-primary ring-offset-1' : ''
                   }`}
                   style={{ backgroundColor: color }}

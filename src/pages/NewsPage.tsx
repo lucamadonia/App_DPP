@@ -1,100 +1,27 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import {
-  Newspaper,
-  ExternalLink,
-  Calendar,
-  Clock,
-  Search,
-  Globe,
-  AlertCircle,
-  RotateCw,
-} from 'lucide-react';
-import {
-  fadeIn,
-  staggerContainer,
-  staggerItem,
-  useReducedMotion,
-} from '@/lib/motion';
-import { GlassCard } from '@/components/ui/glass-card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { AlertTriangle, CalendarClock, Newspaper, Search, X, Flame } from 'lucide-react';
+import { staggerContainer, useReducedMotion } from '@/lib/motion';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+import { EmptyState, ErrorState } from '@/components/ui/state-feedback';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { getNews } from '@/services/supabase';
 import type { NewsItem } from '@/types/database';
-import { formatDate } from '@/lib/format';
-import { useLocale } from '@/hooks/use-locale';
 import { PageContainer } from '@/components/layout/page-container';
-
-const CATEGORIES = [
-  { value: 'all', label: 'All' },
-  { value: 'regulation', label: 'Regulation' },
-  { value: 'deadline', label: 'Deadline' },
-  { value: 'update', label: 'Update' },
-  { value: 'warning', label: 'Warning' },
-  { value: 'recall', label: 'Recall' },
-  { value: 'standard', label: 'Standard' },
-  { value: 'guidance', label: 'Guidance' },
-  { value: 'consultation', label: 'Consultation' },
-];
-
-const CATEGORY_COLORS: Record<string, string> = {
-  regulation: 'bg-blue-100 text-blue-800',
-  deadline: 'bg-red-100 text-red-800',
-  update: 'bg-green-100 text-green-800',
-  warning: 'bg-yellow-100 text-yellow-800',
-  recall: 'bg-red-100 text-red-800',
-  standard: 'bg-purple-100 text-purple-800',
-  guidance: 'bg-cyan-100 text-cyan-800',
-  consultation: 'bg-orange-100 text-orange-800',
-};
-
-const PRIORITY_COLORS: Record<string, string> = {
-  high: 'bg-destructive text-destructive-foreground',
-  medium: 'bg-warning text-warning-foreground',
-  low: 'bg-muted text-muted-foreground',
-};
-
-/** Whole days from now until the given date (negative = in the past). */
-function getDaysUntil(date: string): number {
-  return Math.ceil((new Date(date).getTime() - Date.now()) / 86_400_000);
-}
-
-function CountdownBadge({ effectiveDate }: { effectiveDate: string }) {
-  const { t } = useTranslation('compliance');
-  const days = getDaysUntil(effectiveDate);
-
-  if (days <= 0) {
-    return (
-      <Badge variant="outline" className="text-xs text-muted-foreground">
-        {t('In force')}
-      </Badge>
-    );
-  }
-
-  const colorClass =
-    days < 30
-      ? 'border-destructive/40 bg-destructive/10 text-destructive'
-      : days < 90
-        ? 'border-amber-300 bg-amber-100 text-amber-800'
-        : 'text-muted-foreground';
-
-  return (
-    <Badge variant="outline" className={`text-xs ${colorClass}`}>
-      {days === 1 ? t('in 1 day') : t('in {{days}} days', { days })}
-    </Badge>
-  );
-}
+import { KnowledgeHero, HeroStat, HeroStats } from '@/components/knowledge/KnowledgeHero';
+import { Chip, ChipRail } from '@/components/knowledge/ChipRail';
+import { getDaysUntil } from '@/components/knowledge/deadline-utils';
+import { NewsCard } from '@/components/news/NewsCard';
+import { NewsDeadlineRail } from '@/components/news/NewsDeadlineRail';
+import { NEWS_CATEGORIES, NEWS_CATEGORY_META } from '@/components/news/news-meta';
 
 export function NewsPage() {
   const { t } = useTranslation('compliance');
-  const locale = useLocale();
   const prefersReduced = useReducedMotion();
-  const MotionDiv = prefersReduced ? 'div' as const : motion.div;
+  const MotionDiv = prefersReduced ? ('div' as const) : motion.div;
   const [news, setNews] = useState<NewsItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -106,6 +33,7 @@ export function NewsPage() {
     return getNews()
       .then(data => {
         setNews(data);
+        setLoadError(false);
         setIsLoading(false);
       })
       .catch(error => {
@@ -125,281 +53,203 @@ export function NewsPage() {
     loadNews();
   };
 
+  const query = searchQuery.toLowerCase();
   const filteredNews = news.filter(item => {
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     const matchesPriority = priorityFilter === 'all' || item.priority === priorityFilter;
     const matchesSearch = !searchQuery ||
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.summary.toLowerCase().includes(searchQuery.toLowerCase());
+      item.title.toLowerCase().includes(query) ||
+      item.summary.toLowerCase().includes(query);
     return matchesCategory && matchesPriority && matchesSearch;
   });
 
-  // Upcoming deadlines
-  const now = new Date();
-  const upcomingDeadlines = news
-    .filter(item => item.effectiveDate && new Date(item.effectiveDate) > now)
-    .sort((a, b) => new Date(a.effectiveDate!).getTime() - new Date(b.effectiveDate!).getTime())
-    .slice(0, 5);
+  const { upcomingDeadlines, highCount, next90, nextDays, categoryCounts } = useMemo(() => {
+    const now = new Date();
+    const upcoming = news
+      .filter(item => item.effectiveDate && new Date(item.effectiveDate) > now)
+      .sort((a, b) => new Date(a.effectiveDate!).getTime() - new Date(b.effectiveDate!).getTime());
+    const counts: Record<string, number> = { all: news.length };
+    for (const item of news) counts[item.category] = (counts[item.category] ?? 0) + 1;
+    return {
+      upcomingDeadlines: upcoming.slice(0, 6),
+      highCount: news.filter(n => n.priority === 'high').length,
+      next90: upcoming.filter(n => getDaysUntil(n.effectiveDate!) <= 90).length,
+      nextDays: upcoming[0] ? getDaysUntil(upcoming[0].effectiveDate!) : null,
+      categoryCounts: counts,
+    };
+  }, [news]);
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <ShimmerSkeleton className="h-8 w-40" />
-          <ShimmerSkeleton className="h-4 w-72" />
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <ShimmerSkeleton className="h-10 flex-1 rounded" />
-          <ShimmerSkeleton className="h-10 w-44 rounded" />
-          <ShimmerSkeleton className="h-10 w-36 rounded" />
-        </div>
-        <div className="space-y-4">
-          {Array.from({ length: 4 }, (_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <ShimmerSkeleton className="sm:w-48 h-32 rounded-lg" />
-                  <div className="flex-1 space-y-3">
-                    <div className="flex gap-2">
-                      <ShimmerSkeleton className="h-5 w-20 rounded-full" />
-                      <ShimmerSkeleton className="h-5 w-16 rounded-full" />
-                    </div>
-                    <ShimmerSkeleton className="h-6 w-3/4" />
-                    <ShimmerSkeleton className="h-4 w-full" />
-                    <ShimmerSkeleton className="h-4 w-2/3" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <PageContainer
-        size="full"
-        padding={false}
-        onRefresh={loadNews}
-        title={
-          <span className="flex items-center gap-2">
-            <Newspaper className="h-6 w-6" />
-            {t('Regulatory News')}
-          </span>
-        }
-        description={t('Latest updates on EU regulations, standards, and deadlines')}
-      >
-        <Card>
-          <CardContent className="text-center py-12">
-            <AlertCircle className="mx-auto h-12 w-12 text-destructive/40 mb-4" />
-            <h3 className="text-lg font-medium">{t('Failed to load news')}</h3>
-            <p className="text-muted-foreground mt-1">
-              {t('Please check your connection and try again')}
-            </p>
-            <Button variant="outline" className="mt-4" onClick={handleRetry}>
-              <RotateCw className="mr-2 h-4 w-4" />
-              {t('Retry')}
-            </Button>
-          </CardContent>
-        </Card>
-      </PageContainer>
-    );
-  }
+  const filtersActive = categoryFilter !== 'all' || priorityFilter !== 'all' || searchQuery !== '';
+  const resetFilters = () => {
+    setCategoryFilter('all');
+    setPriorityFilter('all');
+    setSearchQuery('');
+  };
 
   return (
-    <PageContainer
-      size="full"
-      padding={false}
-      onRefresh={loadNews}
-      title={
-        <span className="flex items-center gap-2">
-          <Newspaper className="h-6 w-6" />
-          {t('Regulatory News')}
-        </span>
-      }
-      description={t('Latest updates on EU regulations, standards, and deadlines')}
-    >
-      <div className="space-y-6">
+    <PageContainer size="full" padding={false} onRefresh={loadNews}>
+      <div className="space-y-5 sm:space-y-6">
+        <KnowledgeHero
+          icon={Newspaper}
+          eyebrow={t('Compliance & Knowledge')}
+          title={t('Regulatory News')}
+          description={t('Latest updates on EU regulations, standards, and deadlines')}
+        >
+          {isLoading ? (
+            <HeroStats>
+              {Array.from({ length: 4 }, (_, i) => (
+                <ShimmerSkeleton key={i} className="h-[62px] rounded-xl" />
+              ))}
+            </HeroStats>
+          ) : !loadError && news.length > 0 ? (
+            <HeroStats>
+              <HeroStat icon={Newspaper} label={t('News items')} value={<AnimatedCounter value={news.length} />} />
+              <HeroStat
+                icon={Flame}
+                tone="danger"
+                label={t('High priority')}
+                value={<AnimatedCounter value={highCount} />}
+              />
+              <HeroStat
+                icon={CalendarClock}
+                tone="warning"
+                label={t('Deadlines in 90 days')}
+                value={<AnimatedCounter value={next90} />}
+              />
+              <HeroStat
+                icon={AlertTriangle}
+                tone="primary"
+                label={t('Next deadline')}
+                value={
+                  nextDays === null
+                    ? '—'
+                    : nextDays === 1
+                      ? t('in 1 day')
+                      : t('in {{days}} days', { days: nextDays })
+                }
+              />
+            </HeroStats>
+          ) : null}
+        </KnowledgeHero>
 
-        {/* Upcoming Deadlines */}
-        {upcomingDeadlines.length > 0 && (
-          <MotionDiv {...(!prefersReduced && { variants: fadeIn, initial: 'initial', animate: 'animate' })}>
-            <Card className="border-warning">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Clock className="h-4 w-4 text-warning" />
-                  {t('Upcoming Deadlines')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-3">
-                  {upcomingDeadlines.map(item => (
-                    <div key={item.id} className="flex items-center gap-2 text-sm p-2 rounded-lg bg-warning/5 border border-warning/20">
-                      <Calendar className="h-3 w-3 text-warning" />
-                      <span className="font-medium">{formatDate(item.effectiveDate!, locale)}</span>
-                      <CountdownBadge effectiveDate={item.effectiveDate!} />
-                      <span className="text-muted-foreground">-</span>
-                      <span>{item.title}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </MotionDiv>
-        )}
-
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t('Search news...')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+        {isLoading ? (
+          <div className="space-y-4" aria-busy="true">
+            <div className="flex gap-3 overflow-hidden">
+              {Array.from({ length: 3 }, (_, i) => (
+                <ShimmerSkeleton key={i} className="h-24 w-60 shrink-0 rounded-2xl" />
+              ))}
+            </div>
+            <ShimmerSkeleton className="h-11 rounded-xl" />
+            <div className="grid gap-4 md:grid-cols-2">
+              {Array.from({ length: 4 }, (_, i) => (
+                <ShimmerSkeleton key={i} className="h-52 rounded-2xl" />
+              ))}
+            </div>
+          </div>
+        ) : loadError ? (
+          <div className="rounded-2xl border bg-card">
+            <ErrorState
+              title={t('Failed to load news')}
+              message={t('Please check your connection and try again')}
+              onRetry={handleRetry}
             />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="sm:w-[180px]">
-              <SelectValue placeholder={t('Category')} />
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map(cat => (
-                <SelectItem key={cat.value} value={cat.value}>
-                  {t(cat.label)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="sm:w-[150px]">
-              <SelectValue placeholder={t('Priority')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('All Priorities')}</SelectItem>
-              <SelectItem value="high">{t('High')}</SelectItem>
-              <SelectItem value="medium">{t('Medium')}</SelectItem>
-              <SelectItem value="low">{t('Low')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        ) : (
+          <>
+            <NewsDeadlineRail items={upcomingDeadlines} />
 
-        {/* Category chips */}
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map(cat => (
-            <Badge
-              key={cat.value}
-              variant={categoryFilter === cat.value ? 'default' : 'outline'}
-              className="cursor-pointer"
-              onClick={() => setCategoryFilter(cat.value)}
-            >
-              {t(cat.label)}
-            </Badge>
-          ))}
-        </div>
+            {/* Filters */}
+            <div className="space-y-3">
+              <div className="flex flex-col gap-2 xs:flex-row">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder={t('Search news...')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-11 pl-9 pr-10 sm:h-10"
+                    aria-label={t('Search news...')}
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-0.5 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+                      aria-label={t('Clear search')}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                  <SelectTrigger className="h-11 w-full xs:w-[170px] sm:h-10" aria-label={t('Priority')}>
+                    <SelectValue placeholder={t('Priority')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('All Priorities')}</SelectItem>
+                    <SelectItem value="high">{t('High')}</SelectItem>
+                    <SelectItem value="medium">{t('Medium')}</SelectItem>
+                    <SelectItem value="low">{t('Low')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        {/* News cards */}
-        <MotionDiv
-          className="space-y-4"
-          {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
-        >
-          {filteredNews.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Newspaper className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-                <h3 className="text-lg font-medium">{t('No news found')}</h3>
-                <p className="text-muted-foreground mt-1">
-                  {t('Try adjusting your filters')}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredNews.map(item => (
-              <GlassCard key={item.id} className="hover:shadow-md transition-shadow" {...(!prefersReduced && { variants: staggerItem })}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    {item.imageUrl && (
-                      <div className="sm:w-48 flex-shrink-0">
-                        <img
-                          src={item.imageUrl}
-                          alt={item.title}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge className={CATEGORY_COLORS[item.category] || ''}>
-                            {t(item.category.charAt(0).toUpperCase() + item.category.slice(1))}
-                          </Badge>
-                          <Badge className={PRIORITY_COLORS[item.priority]}>
-                            {t(item.priority.charAt(0).toUpperCase() + item.priority.slice(1))}
-                          </Badge>
-                        </div>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">
-                          {formatDate(item.publishedAt, locale)}
+              <ChipRail label={t('Category')}>
+                {NEWS_CATEGORIES.map(cat => {
+                  const meta = cat.value === 'all' ? null : NEWS_CATEGORY_META[cat.value];
+                  const Icon = meta?.icon;
+                  const count = categoryCounts[cat.value] ?? 0;
+                  return (
+                    <Chip
+                      key={cat.value}
+                      selected={categoryFilter === cat.value}
+                      onClick={() => setCategoryFilter(cat.value)}
+                      icon={Icon ? <Icon className="h-3.5 w-3.5" aria-hidden="true" /> : undefined}
+                      trailing={
+                        <span className="rounded-full bg-foreground/10 px-1.5 text-[11px] tabular-nums">
+                          {count}
                         </span>
-                      </div>
+                      }
+                    >
+                      {t(cat.label)}
+                    </Chip>
+                  );
+                })}
+              </ChipRail>
+            </div>
 
-                      <h3 className="text-lg font-semibold mb-1">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">{item.summary}</p>
+            {/* News cards */}
+            {filteredNews.length === 0 ? (
+              <div className="rounded-2xl border border-dashed bg-card">
+                <EmptyState
+                  icon={Newspaper}
+                  illustration={false}
+                  title={t('No news found')}
+                  description={t('Try adjusting your filters')}
+                  actionLabel={filtersActive ? t('Reset filters') : undefined}
+                  onAction={filtersActive ? resetFilters : undefined}
+                />
+              </div>
+            ) : (
+              <MotionDiv
+                key={`${categoryFilter}-${priorityFilter}`}
+                className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3"
+                {...(!prefersReduced && { variants: staggerContainer, initial: 'initial', animate: 'animate' })}
+              >
+                {filteredNews.map(item => (
+                  <NewsCard key={item.id} item={item} />
+                ))}
+              </MotionDiv>
+            )}
 
-                      <div className="flex flex-wrap items-center gap-3">
-                        {item.effectiveDate && (
-                          <span className="text-xs flex items-center gap-1.5 text-warning">
-                            <Calendar className="h-3 w-3" />
-                            {t('Effective')}: {formatDate(item.effectiveDate, locale)}
-                            <CountdownBadge effectiveDate={item.effectiveDate} />
-                          </span>
-                        )}
-                        {item.countries.length > 0 && (
-                          <span className="text-xs flex items-center gap-1 text-muted-foreground">
-                            <Globe className="h-3 w-3" />
-                            {item.countries.join(', ')}
-                          </span>
-                        )}
-                        {item.source && (
-                          <span className="text-xs text-muted-foreground">
-                            {t('Source')}: {item.source}
-                          </span>
-                        )}
-                      </div>
-
-                      {item.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {item.tags.map(tag => (
-                            <Badge key={tag} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-
-                      {item.link && (
-                        <Button variant="link" className="p-0 h-auto mt-2" asChild>
-                          <a href={item.link} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="mr-1 h-3 w-3" />
-                            {t('Read more')}
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </GlassCard>
-            ))
-          )}
-        </MotionDiv>
-
-        <p className="text-sm text-muted-foreground text-center">
-          {t('Showing {{count}} of {{total}} news items', {
-            count: filteredNews.length,
-            total: news.length,
-          })}
-        </p>
+            <p className="text-center text-xs text-muted-foreground">
+              {t('Showing {{count}} of {{total}} news items', {
+                count: filteredNews.length,
+                total: news.length,
+              })}
+            </p>
+          </>
+        )}
       </div>
     </PageContainer>
   );

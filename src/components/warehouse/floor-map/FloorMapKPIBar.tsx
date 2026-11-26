@@ -94,7 +94,7 @@ export function FloorMapKPIBar({ zones, stock }: FloorMapKPIBarProps) {
       {kpis.map((kpi, i) => (
         <div
           key={kpi.label}
-          className="flex items-center gap-2 sm:gap-3 rounded-xl border bg-card/80 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2.5 shadow-sm transition-all duration-300"
+          className="flex items-center gap-2 sm:gap-3 rounded-xl border bg-card/80 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2.5 shadow-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300"
           style={{
             opacity: stagger[i] ? 1 : 0,
             transform: stagger[i] ? 'translateY(0)' : 'translateY(8px)',

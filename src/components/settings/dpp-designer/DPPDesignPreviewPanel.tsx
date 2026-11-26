@@ -40,7 +40,7 @@ export function DPPDesignPreviewPanel({
   return (
     <div className="h-full lg:sticky lg:top-[53px] lg:h-[calc(100dvh-53px)] overflow-y-auto bg-muted/30 p-3 sm:p-4">
       <div
-        className={`mx-auto transition-all duration-300 ${
+        className={`mx-auto transition-[max-width,border-color,box-shadow] duration-300 ${
           isDeviceFrame ? 'border-2 border-muted-foreground/20 rounded-xl shadow-lg' : ''
         }`}
         style={{ maxWidth }}

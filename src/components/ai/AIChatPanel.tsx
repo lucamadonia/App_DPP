@@ -108,7 +108,7 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
       {/* Floating Button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 h-14 w-14 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center justify-center animate-glow-pulse"
+        className="fixed bottom-[calc(var(--safe-bottom)+var(--bottom-nav-h)+1rem)] right-[calc(var(--safe-right)+1rem)] md:bottom-6 md:right-6 z-40 h-14 w-14 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition duration-200 flex items-center justify-center animate-glow-pulse"
       >
         <MessageCircle className="h-6 w-6" />
         {/* Ping indicator */}
@@ -152,7 +152,7 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
                       <button
                         key={q}
                         onClick={() => handleSuggestionClick(t(q))}
-                        className="text-xs border rounded-full px-3 py-1.5 text-muted-foreground hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all duration-200 cursor-pointer"
+                        className="text-xs border rounded-full px-3 py-1.5 text-muted-foreground hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition duration-200 cursor-pointer"
                       >
                         {t(q)}
                       </button>
@@ -202,7 +202,7 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
 
           {/* Input Area */}
           <div className="p-4 border-t bg-background/80 backdrop-blur-sm space-y-2">
-            <div className="flex items-center gap-2 border rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500/40 focus-within:border-blue-300 transition-all duration-200">
+            <div className="flex items-center gap-2 border rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500/40 focus-within:border-blue-300 transition duration-200">
               <input
                 ref={inputRef}
                 value={input}
@@ -215,7 +215,7 @@ export function AIChatPanel({ productContext, requirements }: AIChatPanelProps) 
               <button
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isStreaming}
-                className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-md transition-all duration-200 shrink-0"
+                className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-md transition duration-200 shrink-0"
               >
                 <ArrowUp className="h-4 w-4" />
               </button>

@@ -1,15 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Box, Boxes, Plus, Pencil, Trash2, Check, X, PackagePlus, AlertTriangle, Package, LayoutGrid, Table as TableIcon, Scale } from 'lucide-react';
+import { Box, Boxes, Plus, Pencil, Trash2, Check, PackagePlus, AlertTriangle, Package, LayoutGrid, Table as TableIcon, Scale } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { KPIGrid, type KPIItem } from '@/components/ui/kpi-grid';
@@ -27,16 +26,18 @@ import {
   type WhPackagingTypeInput,
 } from '@/services/supabase/wh-packaging-types';
 import { getPackagingUsage } from '@/services/supabase/wh-packaging-usage';
-import { PackagingMaterialFields } from '@/components/compliance/PackagingMaterialFields';
+import { EMPTY_PACKAGING_FORM, PackagingTypeCreateWizard, PackagingTypeEditSections, type PackagingFormState } from '@/components/warehouse/PackagingTypeFormFields';
+import { FormActions, FormField } from '@/components/ui/form-layout';
 import { PackagingTypeCard, PackagingTypeCardSkeleton } from '@/components/warehouse/packaging-type-card';
 import { gridStagger, useMotionVariants } from '@/lib/motion';
 import { useIsMobile } from '@/hooks/use-mobile';
-import type { LucidMaterial, MaterialSplitEntry } from '@/types/compliance';
 import { toast } from 'sonner';
 import { PageContainer } from '@/components/layout/page-container';
 
 const VIEW_STORAGE_KEY = 'wh-packaging-types-view';
 type ViewMode = 'table' | 'cards';
+/** Low-stock chips shown before "Show all". */
+const LOW_STOCK_PREVIEW = 4;
 
 function stockTone(row: WhPackagingType): { tone: string; label: string } {
   if (!row.stockTracked) return { tone: 'text-muted-foreground', label: '—' };
@@ -47,40 +48,8 @@ function stockTone(row: WhPackagingType): { tone: string; label: string } {
   return { tone: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30', label: 'OK' };
 }
 
-interface FormState {
-  id?: string;
-  name: string;
-  description: string;
-  tare_weight_grams: string;
-  inner_length_cm: string;
-  inner_width_cm: string;
-  inner_height_cm: string;
-  max_load_grams: string;
-  is_active: boolean;
-  is_default: boolean;
-  sort_order: string;
-  stock_tracked: boolean;
-  stock_threshold: string;
-  primary_material: LucidMaterial | null;
-  material_split: MaterialSplitEntry[] | null;
-}
-
-const EMPTY: FormState = {
-  name: '',
-  description: '',
-  tare_weight_grams: '0',
-  inner_length_cm: '',
-  inner_width_cm: '',
-  inner_height_cm: '',
-  max_load_grams: '',
-  is_active: true,
-  is_default: false,
-  sort_order: '0',
-  stock_tracked: false,
-  stock_threshold: '10',
-  primary_material: null,
-  material_split: null,
-};
+type FormState = PackagingFormState;
+const EMPTY: FormState = EMPTY_PACKAGING_FORM;
 
 export function PackagingTypesPage() {
   const { t } = useTranslation('warehouse');
@@ -88,6 +57,9 @@ export function PackagingTypesPage() {
   const cardsContainerVariants = useMotionVariants(gridStagger);
   const [rows, setRows] = useState<WhPackagingType[]>([]);
   const [loading, setLoading] = useState(true);
+  // The low-stock banner lists a few chips; the rest open on request so a
+  // long list never pushes the actual table off screen.
+  const [showAllLowStock, setShowAllLowStock] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = localStorage.getItem(VIEW_STORAGE_KEY);
     if (stored === 'table' || stored === 'cards') return stored;
@@ -97,6 +69,7 @@ export function PackagingTypesPage() {
   const [usageLoading, setUsageLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
+  const updateForm = (updates: Partial<FormState>) => setForm((prev) => ({ ...prev, ...updates }));
   const [saving, setSaving] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptTarget, setReceiptTarget] = useState<WhPackagingType | null>(null);
@@ -373,7 +346,7 @@ export function PackagingTypesPage() {
       <KPIGrid items={kpiItems} cols={{ base: 2, lg: 4 }} compact />
 
       {lowStockRows.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50/80 backdrop-blur-md dark:bg-amber-950/40 dark:border-amber-900 max-sm:sticky max-sm:top-2 max-sm:z-30 max-sm:shadow-lg">
+        <Card className="border-amber-300 bg-amber-50/80 dark:bg-amber-950/40 dark:border-amber-900">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
@@ -382,7 +355,7 @@ export function PackagingTypesPage() {
                   {t('{{count}} Umverpackung(en) unter Schwelle', { count: lowStockRows.length })}
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {lowStockRows.map(r => {
+                  {(showAllLowStock ? lowStockRows : lowStockRows.slice(0, LOW_STOCK_PREVIEW)).map(r => {
                     const st = stockTone(r);
                     return (
                       <div key={r.id} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs ${st.tone}`}>
@@ -397,6 +370,19 @@ export function PackagingTypesPage() {
                     );
                   })}
                 </div>
+                {lowStockRows.length > LOW_STOCK_PREVIEW && (
+                  <Button
+                    size="sm"
+                    variant="link"
+                    className="mt-2 h-auto min-h-8 px-0 text-amber-900 dark:text-amber-100"
+                    aria-expanded={showAllLowStock}
+                    onClick={() => setShowAllLowStock(v => !v)}
+                  >
+                    {showAllLowStock
+                      ? t('Show less')
+                      : t('Show all ({{count}})', { count: lowStockRows.length })}
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
@@ -549,133 +535,75 @@ export function PackagingTypesPage() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto pb-0">
           <DialogHeader>
             <DialogTitle>{form.id ? t('Umverpackung bearbeiten') : t('Neue Umverpackung')}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-3">
-            <div>
-              <Label htmlFor="name">{t('Name')} *</Label>
-              <Input id="name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={t('z.B. Versandkarton M')} />
-            </div>
-            <div>
-              <Label htmlFor="desc">{t('Beschreibung')}</Label>
-              <Input id="desc" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder={t('Kurze Erklärung wofür')} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="tare">{t('Tara (g)')} *</Label>
-                <Input id="tare" type="number" value={form.tare_weight_grams} onChange={e => setForm({ ...form, tare_weight_grams: e.target.value })} />
-              </div>
-              <div>
-                <Label htmlFor="maxload">{t('Max Last (g)')}</Label>
-                <Input id="maxload" type="number" value={form.max_load_grams} onChange={e => setForm({ ...form, max_load_grams: e.target.value })} />
-              </div>
-            </div>
-            <div>
-              <Label>{t('Innenmaße (cm)')}</Label>
-              <div className="grid grid-cols-3 gap-2">
-                <Input type="number" step="0.5" placeholder={t('Länge')} value={form.inner_length_cm} onChange={e => setForm({ ...form, inner_length_cm: e.target.value })} />
-                <Input type="number" step="0.5" placeholder={t('Breite')} value={form.inner_width_cm} onChange={e => setForm({ ...form, inner_width_cm: e.target.value })} />
-                <Input type="number" step="0.5" placeholder={t('Höhe')} value={form.inner_height_cm} onChange={e => setForm({ ...form, inner_height_cm: e.target.value })} />
-              </div>
-            </div>
-            <div className="flex gap-4 pt-2">
-              <div className="flex items-center gap-2">
-                <Switch id="active" checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} />
-                <Label htmlFor="active">{t('Aktiv')}</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="default" checked={form.is_default} onCheckedChange={v => setForm({ ...form, is_default: v })} />
-                <Label htmlFor="default">{t('Default bei Auto-Vorschlag')}</Label>
-              </div>
-              <div className="flex items-center gap-2 ml-auto">
-                <Label htmlFor="sort">{t('Sortierung')}</Label>
-                <Input id="sort" type="number" className="w-16" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: e.target.value })} />
-              </div>
-            </div>
-
-            <div className="border-t pt-4 mt-2">
-              <div className="flex items-center gap-2 mb-3">
-                <Switch id="tracked" checked={form.stock_tracked} onCheckedChange={v => setForm({ ...form, stock_tracked: v })} />
-                <Label htmlFor="tracked" className="font-medium">{t('Bestand tracken')}</Label>
-              </div>
-              {form.stock_tracked && (
-                <div className="grid grid-cols-[1fr_1fr] gap-3">
-                  <div>
-                    <Label htmlFor="threshold">{t('Warnschwelle')}</Label>
-                    <Input
-                      id="threshold"
-                      type="number"
-                      min="0"
-                      value={form.stock_threshold}
-                      onChange={e => setForm({ ...form, stock_threshold: e.target.value })}
-                    />
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      {t('Ab diesem Stand kommt eine Warnung')}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="border-t pt-4 mt-2">
-              <PackagingMaterialFields
-                primaryMaterial={form.primary_material}
-                materialSplit={form.material_split}
-                tareWeightGrams={parseInt(form.tare_weight_grams) || 0}
-                onChange={(patch) => setForm({
-                  ...form,
-                  ...(patch.primaryMaterial !== undefined ? { primary_material: patch.primaryMaterial } : {}),
-                  ...(patch.materialSplit !== undefined ? { material_split: patch.materialSplit } : {}),
-                })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              <X className="mr-1 h-4 w-4" />{t('Cancel')}
-            </Button>
-            <Button onClick={handleSave} disabled={saving || !form.name.trim()}>
-              <Check className="mr-1 h-4 w-4" />{saving ? t('Saving...') : t('Save')}
-            </Button>
-          </DialogFooter>
+          {form.id ? (
+            <>
+              <PackagingTypeEditSections form={form} onChange={updateForm} />
+              <FormActions sticky="dialog">
+                <Button variant="ghost" onClick={() => setDialogOpen(false)}>
+                  {t('Cancel')}
+                </Button>
+                <Button onClick={handleSave} disabled={saving || !form.name.trim()}>
+                  <Check className="mr-1 h-4 w-4" />{saving ? t('Saving...') : t('Save')}
+                </Button>
+              </FormActions>
+            </>
+          ) : (
+            <PackagingTypeCreateWizard
+              form={form}
+              onChange={updateForm}
+              onCancel={() => setDialogOpen(false)}
+              onFinish={handleSave}
+              finishing={saving}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
       {/* Wareneingang buchen */}
       <Dialog open={receiptOpen} onOpenChange={setReceiptOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md pb-0">
           <DialogHeader>
             <DialogTitle>
               <span className="flex items-center gap-2">
-                <PackagePlus className="h-5 w-5 text-emerald-600" />
+                <PackagePlus className="h-5 w-5 text-primary" />
                 {t('Wareneingang buchen')}
               </span>
             </DialogTitle>
           </DialogHeader>
           {receiptTarget && (
-            <div className="space-y-3">
-              <div className="rounded-lg bg-muted px-3 py-2 text-sm">
-                <div className="font-medium">{receiptTarget.name}</div>
-                <div className="text-xs text-muted-foreground tabular-nums">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-3 py-2.5 text-sm">
+                <span className="min-w-0 truncate font-medium">{receiptTarget.name}</span>
+                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                   {t('Aktueller Bestand')}: {receiptTarget.stockOnHand}
-                </div>
+                </span>
               </div>
-              <div>
-                <Label htmlFor="receipt-qty">{t('Menge neuer Karton(s)')} *</Label>
+              <FormField
+                label={t('Menge neuer Karton(s)')}
+                htmlFor="receipt-qty"
+                required
+                hint={receiptQty && parseInt(receiptQty) > 0 ? (
+                  <>
+                    {t('Neuer Bestand')}: <span className="font-semibold text-foreground tabular-nums">{receiptTarget.stockOnHand + parseInt(receiptQty)}</span>
+                  </>
+                ) : undefined}
+              >
                 <Input
                   id="receipt-qty"
                   type="number"
+                  inputMode="numeric"
                   min="1"
                   autoFocus
                   value={receiptQty}
                   onChange={e => setReceiptQty(e.target.value)}
                   placeholder="z.B. 50"
                 />
-              </div>
-              <div>
-                <Label htmlFor="receipt-notes">{t('Notiz')} ({t('optional')})</Label>
+              </FormField>
+              <FormField label={t('Notiz')} htmlFor="receipt-notes" optional>
                 <Textarea
                   id="receipt-notes"
                   value={receiptNotes}
@@ -683,63 +611,60 @@ export function PackagingTypesPage() {
                   placeholder={t('z.B. Lieferschein-Nr. oder Lieferant')}
                   rows={2}
                 />
-              </div>
-              {receiptQty && parseInt(receiptQty) > 0 && (
-                <div className="text-sm text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg">
-                  {t('Neuer Bestand')}: <span className="font-semibold tabular-nums">{receiptTarget.stockOnHand + parseInt(receiptQty)}</span>
-                </div>
-              )}
+              </FormField>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReceiptOpen(false)}>
-              <X className="mr-1 h-4 w-4" />{t('Cancel')}
+          <FormActions sticky="dialog">
+            <Button variant="ghost" onClick={() => setReceiptOpen(false)}>
+              {t('Cancel')}
             </Button>
             <Button onClick={handleReceiptSave} disabled={!receiptQty || parseInt(receiptQty) <= 0}>
               <Check className="mr-1 h-4 w-4" />{t('Buchen')}
             </Button>
-          </DialogFooter>
+          </FormActions>
         </DialogContent>
       </Dialog>
 
       {/* Inventur-Korrektur */}
       <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md pb-0">
           <DialogHeader>
             <DialogTitle>{t('Inventur-Korrektur')}</DialogTitle>
           </DialogHeader>
           {adjustTarget && (
-            <div className="space-y-3">
-              <div className="rounded-lg bg-muted px-3 py-2 text-sm">
-                <div className="font-medium">{adjustTarget.name}</div>
-                <div className="text-xs text-muted-foreground tabular-nums">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-3 py-2.5 text-sm">
+                <span className="min-w-0 truncate font-medium">{adjustTarget.name}</span>
+                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                   {t('Bisheriger Bestand')}: {adjustTarget.stockOnHand}
-                </div>
+                </span>
               </div>
-              <div>
-                <Label htmlFor="adjust-qty">{t('Tatsächlicher Bestand')} *</Label>
+              <FormField
+                label={t('Tatsächlicher Bestand')}
+                htmlFor="adjust-qty"
+                required
+                hint={t('Wird als „adjustment"-Transaktion protokolliert')}
+              >
                 <Input
                   id="adjust-qty"
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   autoFocus
                   value={adjustQty}
                   onChange={e => setAdjustQty(e.target.value)}
                 />
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  {t('Wird als „adjustment"-Transaktion protokolliert')}
-                </p>
-              </div>
+              </FormField>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAdjustOpen(false)}>
-              <X className="mr-1 h-4 w-4" />{t('Cancel')}
+          <FormActions sticky="dialog">
+            <Button variant="ghost" onClick={() => setAdjustOpen(false)}>
+              {t('Cancel')}
             </Button>
             <Button onClick={handleAdjustSave}>
               <Check className="mr-1 h-4 w-4" />{t('Speichern')}
             </Button>
-          </DialogFooter>
+          </FormActions>
         </DialogContent>
       </Dialog>
       </div>

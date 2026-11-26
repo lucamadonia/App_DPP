@@ -86,7 +86,7 @@ export function ContentGalleryGrid({ campaignId, platformFilter, className }: Co
         return (
           <div
             key={post.id}
-            className={`group rounded-lg border bg-card overflow-hidden cursor-pointer transition-all duration-500 hover:shadow-md hover:-translate-y-0.5 ${
+            className={`group rounded-lg border bg-card overflow-hidden cursor-pointer transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300 hover:shadow-md hover:-translate-y-0.5 ${
               visible[idx] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             }`}
             onClick={() => window.open(post.postUrl, '_blank', 'noopener')}
@@ -126,7 +126,7 @@ export function ContentGalleryGrid({ campaignId, platformFilter, className }: Co
               {/* Engagement bar */}
               <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-700"
+                  className="h-full rounded-full bg-gradient-to-r from-pink-500 to-purple-500 transition-[width] duration-700"
                   style={{ width: `${Math.min(engagement * 10, 100)}%` }}
                 />
               </div>

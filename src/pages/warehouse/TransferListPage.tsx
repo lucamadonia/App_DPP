@@ -120,7 +120,7 @@ export function TransferListPage() {
           variants={prefersReduced ? undefined : gridStagger}
           initial={prefersReduced ? undefined : 'initial'}
           animate={prefersReduced ? undefined : 'animate'}
-          className="grid grid-cols-3 gap-2 sm:gap-3"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3"
         >
           {[
             {

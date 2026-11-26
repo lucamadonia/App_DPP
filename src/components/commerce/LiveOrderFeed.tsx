@@ -108,7 +108,7 @@ export function LiveOrderFeed({ orders, limit = 8 }: LiveOrderFeedProps) {
       <Link
         to="/commerce"
         className={cn(
-          'flex items-center justify-center gap-1 border-t border-white/5 px-4 py-3 text-xs font-medium uppercase tracking-[0.18em] text-white/60',
+          'flex min-h-11 items-center justify-center gap-1 border-t border-white/5 px-4 py-3 text-xs font-medium uppercase tracking-[0.18em] text-white/60',
           'active:bg-white/5 transition-colors lg:hidden',
         )}
       >

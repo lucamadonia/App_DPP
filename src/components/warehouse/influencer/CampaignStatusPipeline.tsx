@@ -41,7 +41,7 @@ export function CampaignStatusPipeline({ currentStatus, className = '' }: Campai
               {/* Circle */}
               <div
                 className={`
-                  relative flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[10px] sm:text-xs font-semibold transition-all
+                  relative flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[10px] sm:text-xs font-semibold transition-[color,background-color,border-color,box-shadow,opacity,transform]
                   ${isCompleted ? 'bg-green-500 text-white' : ''}
                   ${isActive ? `${CAMPAIGN_STATUS_COLORS[step]} ring-2 ring-offset-2 ring-offset-background` : ''}
                   ${isFuture ? 'bg-muted text-muted-foreground' : ''}

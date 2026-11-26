@@ -31,7 +31,7 @@ export function AnimatedTimeline({ entries }: AnimatedTimelineProps) {
   return (
     <div
       ref={containerRef}
-      className={`transition-all duration-700 ${
+      className={`transition-[opacity,translate] duration-300 ease-out ${
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
       }`}
     >

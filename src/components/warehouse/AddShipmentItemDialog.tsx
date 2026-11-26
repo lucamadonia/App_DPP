@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Gift, Loader2, Plus, Search } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
+import { Check, Gift, Loader2, Plus, Search } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/adaptive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormActions, FormField, FormToggleRow, InputAffix } from '@/components/ui/form-layout';
+import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { addShipmentItem } from '@/services/supabase/wh-shipments';
 import { getProducts, getProductById, type ProductListItem } from '@/services/supabase/products';
 import { getStockLevels } from '@/services/supabase/wh-stock';
@@ -181,61 +181,72 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 px-4 sm:px-6 py-4 min-w-0">
+        <div className="space-y-5 px-4 sm:px-6 py-4 min-w-0">
           {/* Step 1 — Product search */}
-          <div className="space-y-2 min-w-0">
-            <Label htmlFor="product-search">{t('Produkt suchen')}</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <FormField label={t('Produkt suchen')} htmlFor="product-search">
+            <InputAffix prefix={<Search className="h-4 w-4" />}>
               <Input
                 id="product-search"
+                type="search"
+                enterKeyHint="search"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder={t('Name, GTIN oder Hersteller...')}
-                className="pl-9 w-full"
                 autoFocus
               />
-            </div>
-            <div className="rounded-lg border max-h-40 sm:max-h-48 overflow-y-auto divide-y">
-              {productsLoading ? (
-                <div className="p-3 text-sm text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> {t('Lade Produkte...')}
-                </div>
-              ) : products.length === 0 ? (
-                <div className="p-3 text-sm text-muted-foreground">
-                  {t('Keine Produkte gefunden')}
-                </div>
-              ) : products.map(p => (
+            </InputAffix>
+          </FormField>
+          <div
+            role="listbox"
+            aria-label={t('Produkt suchen')}
+            className="-mt-3 rounded-lg border max-h-44 sm:max-h-48 overflow-y-auto divide-y"
+          >
+            {productsLoading ? (
+              <div className="p-3 text-sm text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> {t('Lade Produkte...')}
+              </div>
+            ) : products.length === 0 ? (
+              <div className="p-3 text-sm text-muted-foreground">
+                {t('Keine Produkte gefunden')}
+              </div>
+            ) : products.map(p => {
+              const selected = selectedProductId === p.id;
+              return (
                 <button
                   key={p.id}
                   type="button"
+                  role="option"
+                  aria-selected={selected}
                   onClick={() => setSelectedProductId(p.id)}
-                  className={`w-full text-left p-2.5 hover:bg-muted/40 transition-colors cursor-pointer min-w-0 ${
-                    selectedProductId === p.id ? 'bg-primary/10' : ''
-                  }`}
+                  className={cn(
+                    'flex min-h-11 w-full min-w-0 items-center gap-3 px-3 py-2 text-left transition-colors duration-150 ease-out hover:bg-muted/50',
+                    selected && 'bg-primary/5'
+                  )}
                 >
-                  <div className="font-medium text-sm leading-tight truncate">{p.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {p.gtin || t('Keine GTIN')} · {p.manufacturer || t('Kein Hersteller')}
-                  </div>
+                  <span className="min-w-0 flex-1">
+                    <span className={cn('block truncate text-sm font-medium leading-tight', selected && 'text-primary')}>{p.name}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {p.gtin || t('Keine GTIN')} · {p.manufacturer || t('Kein Hersteller')}
+                    </span>
+                  </span>
+                  {selected && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />}
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
 
           {/* Step 2 — Batch / location with stock */}
           {selectedProductId && (
-            <div className="space-y-2 min-w-0">
-              <Label htmlFor="stock-pick">{t('Bestand & Standort')}</Label>
-              {stockLoading ? (
-                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin shrink-0" /> {t('Lade Bestand...')}
-                </div>
-              ) : stockOptions.length === 0 ? (
-                <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-2.5 break-words">
-                  {t('Kein verfügbarer Bestand für dieses Produkt')}
-                </div>
-              ) : (
+            stockLoading ? (
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" /> {t('Lade Bestand...')}
+              </div>
+            ) : stockOptions.length === 0 ? (
+              <div role="status" className="rounded-lg border border-dashed bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground break-words">
+                {t('Kein verfügbarer Bestand für dieses Produkt')}
+              </div>
+            ) : (
+              <FormField label={t('Bestand & Standort')} htmlFor="stock-pick">
                 <Select value={selectedStockId} onValueChange={setSelectedStockId}>
                   <SelectTrigger id="stock-pick" className="w-full">
                     <SelectValue placeholder={t('Bestand wählen')} />
@@ -254,59 +265,59 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
                     ))}
                   </SelectContent>
                 </Select>
-              )}
-            </div>
+              </FormField>
+            )
           )}
 
           {/* Step 3 — Quantity */}
           {selectedStock && (
-            <div className="space-y-2 min-w-0">
-              <Label htmlFor="qty">
-                {t('Menge')}{' '}
-                <span className="text-xs font-normal text-muted-foreground">
-                  ({t('max. {{n}}', { n: maxQty })})
-                </span>
-              </Label>
-              <Input
-                id="qty"
-                type="number"
-                min={1}
-                max={maxQty}
-                value={quantity}
-                onChange={e => {
-                  const v = parseInt(e.target.value, 10);
-                  setQuantity(isNaN(v) ? 1 : Math.max(1, Math.min(maxQty, v)));
-                }}
-                className="w-24 sm:w-32"
-              />
-            </div>
+            <FormField
+              label={t('Menge')}
+              htmlFor="qty"
+              labelAside={<span className="tabular-nums">{t('max. {{n}}', { n: maxQty })}</span>}
+            >
+              <InputAffix suffix={t('Stk.')} className="w-36">
+                <Input
+                  id="qty"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={maxQty}
+                  value={quantity}
+                  onChange={e => {
+                    const v = parseInt(e.target.value, 10);
+                    setQuantity(isNaN(v) ? 1 : Math.max(1, Math.min(maxQty, v)));
+                  }}
+                  className="tabular-nums"
+                />
+              </InputAffix>
+            </FormField>
           )}
 
           {/* Step 4 — Gift flag + note */}
           {selectedStock && (
-            <div className="rounded-lg border p-3 space-y-3 bg-muted/20 min-w-0">
-              <label className="flex items-start gap-3 cursor-pointer min-w-0">
+            <div className="space-y-3 min-w-0">
+              <FormToggleRow
+                htmlFor="item-gift"
+                controlPosition="start"
+                label={
+                  <span className="inline-flex items-center gap-2">
+                    <Gift className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                    {t('Als Beigabe / Geschenk markieren')}
+                  </span>
+                }
+                description={t('Position wird mit 0,00 € verrechnet und auf dem Lieferschein als Beigabe ausgewiesen.')}
+              >
                 <Checkbox
+                  id="item-gift"
+                  aria-describedby="item-gift-description"
                   checked={isGift}
                   onCheckedChange={v => setIsGift(!!v)}
-                  className="mt-0.5 shrink-0"
                 />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Gift className="h-4 w-4 text-pink-600 shrink-0" />
-                    <span className="break-words">{t('Als Beigabe / Geschenk markieren')}</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-0.5 break-words">
-                    {t('Position wird mit 0,00 € verrechnet und auf dem Lieferschein als Beigabe ausgewiesen.')}
-                  </div>
-                </div>
-              </label>
+              </FormToggleRow>
 
               {isGift ? (
-                <div className="space-y-2 min-w-0">
-                  <Label htmlFor="gift-note" className="text-xs">
-                    {t('Notiz zur Beigabe (optional)')}
-                  </Label>
+                <FormField label={t('Notiz zur Beigabe (optional)')} htmlFor="gift-note" hint={t('Wird auf Lieferschein hinterlegt')}>
                   <Textarea
                     id="gift-note"
                     value={giftNote}
@@ -315,15 +326,9 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
                     rows={2}
                     className="w-full resize-none"
                   />
-                  <Badge variant="outline" className="text-[10px] gap-1">
-                    <Gift className="h-3 w-3 shrink-0" /> <span className="truncate">{t('Wird auf Lieferschein hinterlegt')}</span>
-                  </Badge>
-                </div>
+                </FormField>
               ) : (
-                <div className="space-y-2 min-w-0">
-                  <Label htmlFor="item-note" className="text-xs">
-                    {t('Interne Notiz (optional)')}
-                  </Label>
+                <FormField label={t('Interne Notiz (optional)')} htmlFor="item-note">
                   <Textarea
                     id="item-note"
                     value={notes}
@@ -332,41 +337,47 @@ export function AddShipmentItemDialog({ open, onOpenChange, shipmentId, preferre
                     rows={2}
                     className="w-full resize-none"
                   />
-                </div>
+                </FormField>
               )}
             </div>
           )}
 
           {/* Summary */}
           {selectedProduct && selectedStock && (
-            <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1 min-w-0">
-              <div className="font-medium break-words">{selectedProduct.name}</div>
-              <div className="text-xs text-muted-foreground break-words">
-                {quantity}× · {selectedStock.locationName}
-                {selectedStock.batchSerialNumber ? ` · ${selectedStock.batchSerialNumber}` : ''}
-                {isGift ? ` · ${t('Beigabe')}` : ''}
+            <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3 text-sm min-w-0">
+              <span className="flex h-9 min-w-9 shrink-0 items-center justify-center rounded-md bg-background px-2 text-sm font-semibold tabular-nums">
+                {quantity}×
+              </span>
+              <div className="min-w-0">
+                <div className="font-medium truncate">{selectedProduct.name}</div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {selectedStock.locationName}
+                  {selectedStock.batchSerialNumber ? ` · ${selectedStock.batchSerialNumber}` : ''}
+                  {isGift ? ` · ${t('Beigabe')}` : ''}
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        <DialogFooter className="sticky bottom-0 bg-background border-t px-4 sm:px-6 py-3 flex-col-reverse sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={submitting}
-            className="w-full sm:w-auto"
-          >
-            {t('Abbrechen')}
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full sm:w-auto">
-            {submitting ? (
-              <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> {t('Speichert...')}</>
-            ) : (
-              <><Plus className="mr-1 h-4 w-4" /> {t('Hinzufügen')}</>
-            )}
-          </Button>
-        </DialogFooter>
+        <div className="sticky bottom-0 z-10 border-t bg-background/95 px-4 pt-3 pb-[max(0.75rem,var(--safe-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
+          <FormActions>
+            <Button
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}
+            >
+              {t('Abbrechen')}
+            </Button>
+            <Button onClick={handleSubmit} disabled={!canSubmit}>
+              {submitting ? (
+                <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> {t('Speichert...')}</>
+              ) : (
+                <><Plus className="mr-1 h-4 w-4" /> {t('Hinzufügen')}</>
+              )}
+            </Button>
+          </FormActions>
+        </div>
       </DialogContent>
     </Dialog>
   );

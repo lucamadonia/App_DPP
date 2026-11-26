@@ -492,7 +492,7 @@ export function EmailTemplateEditorPage() {
             {/* Canvas Header Section */}
             {editDesignConfig.header.enabled && (
               <div
-                className="bg-background rounded-t-lg border border-b-0 shadow-sm cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all group/header"
+                className="bg-background rounded-t-lg border border-b-0 shadow-sm cursor-pointer hover:ring-2 hover:ring-primary/20 transition-shadow duration-150 group/header"
                 onClick={() => {
                   setRightPanelTab('design-settings');
                   setDesignFocusSection('header');
@@ -619,7 +619,7 @@ export function EmailTemplateEditorPage() {
             {/* Canvas Footer Section */}
             {editDesignConfig.footer.enabled && (
               <div
-                className="bg-background rounded-b-lg border border-t-0 shadow-sm cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all group/footer"
+                className="bg-background rounded-b-lg border border-t-0 shadow-sm cursor-pointer hover:ring-2 hover:ring-primary/20 transition-shadow duration-150 group/footer"
                 onClick={() => {
                   setRightPanelTab('design-settings');
                   setDesignFocusSection('footer');

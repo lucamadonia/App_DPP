@@ -584,7 +584,13 @@ function transformInvoice(row: Record<string, unknown>): BillingInvoice {
   return {
     id: row.id as string,
     tenantId: row.tenant_id as string,
+    projectCode: (row.project_code as string | null) ?? 'TRACK',
     stripeInvoiceId: row.stripe_invoice_id as string,
+    invoiceNumber: row.invoice_number as string | null,
+    stripeCustomerId: row.stripe_customer_id as string | null,
+    stripeSubscriptionId: row.stripe_subscription_id as string | null,
+    stripePaymentIntentId: row.stripe_payment_intent_id as string | null,
+    stripeCreatedAt: row.stripe_created_at as string | null,
     stripeInvoiceUrl: row.stripe_invoice_url as string | null,
     stripePdfUrl: row.stripe_pdf_url as string | null,
     amountDue: row.amount_due as number,

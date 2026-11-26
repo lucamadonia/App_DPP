@@ -44,7 +44,11 @@ export async function uploadProductImages(
 
   const results: ProductImage[] = [];
 
-  for (const file of files) {
+  const { compressImageFile } = await import('@/lib/image-compress');
+
+  for (const original of files) {
+    // Shrink multi-MB originals to ≤1600px WebP so lists/galleries load fast.
+    const file = await compressImageFile(original);
     const ext = file.name.split('.').pop() || 'jpg';
     const fileName = `${tenantId}/${productId}/${crypto.randomUUID()}.${ext}`;
 

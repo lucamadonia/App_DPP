@@ -10,6 +10,7 @@
  *   - customer.subscription.deleted           → also fires subscription.cancelled mail
  *   - customer.subscription.trial_will_end    → fires subscription.trial_ending mail
  *   - invoice.paid
+ *   - invoice.created / invoice.finalized       → project references
  *   - invoice.payment_failed                  → also fires subscription.payment_failed mail
  *   - invoice.payment_action_required         → also fires subscription.payment_failed mail
  *
@@ -44,6 +45,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14?target=deno';
+import { ACCOUNTING_PROJECT_CODE } from '../_shared/stripe-catalog.ts';
 import { postToMailHub } from '../_shared/mail-hub.ts';
 import { verifyStripeEvent } from './verify.ts';
 import { subscriptionGrantsAccess, sumPurchasedCredits } from './entitlements.ts';
@@ -51,6 +53,7 @@ import {
   customerIdOf,
   type Db,
   invoiceSubscriptionId,
+  invoicePaymentIntentId,
   planSubscriptionIdOf,
   resolveTenant,
   refetch,
@@ -163,6 +166,13 @@ async function dispatchEvent(supabase: Db, event: Stripe.Event): Promise<void> {
     case 'invoice.paid':
       await handleInvoicePaid(supabase, await freshInvoice(event.data.object as Stripe.Invoice));
       break;
+    case 'invoice.created':
+    case 'invoice.finalized': {
+      const invoice = await freshInvoice(event.data.object as Stripe.Invoice);
+      const tenantId = await resolveTenantId(stripe, supabase, customerIdOf(invoice.customer));
+      if (tenantId) await tagInvoiceAndPayment(invoice);
+      break;
+    }
     case 'invoice.payment_failed':
     case 'invoice.payment_action_required':
       await handleInvoicePaymentFailed(
@@ -407,6 +417,7 @@ async function handleInvoicePaid(supabase: Db, invoice: Stripe.Invoice) {
   const tenantId = await resolveTenantId(stripe, supabase, customerIdOf(invoice.customer));
   if (!tenantId) return;
 
+  await tagInvoiceAndPayment(invoice);
   await upsertInvoice(supabase, tenantId, invoice, 'paid');
 
   // Reset monthly credits only on a renewal of the PLAN subscription
@@ -448,6 +459,8 @@ async function handleInvoicePaymentFailed(
   const customerId = customerIdOf(invoice.customer) as string;
   const tenantId = await resolveTenantId(stripe, supabase, customerId);
   if (!tenantId) return;
+
+  await tagInvoiceAndPayment(invoice);
 
   const { data: tenant } = await supabase.from('tenants').select('plan').eq('id', tenantId).maybeSingle();
 
@@ -491,5 +504,39 @@ async function handleInvoicePaymentFailed(
     }
   } catch (mailErr) {
     console.warn('[stripe-webhook] subscription.payment_failed mail-hub post failed:', mailErr);
+  }
+}
+
+/**
+ * Stripe does not copy subscription metadata to invoice or renewal PaymentIntent
+ * metadata. Only tag objects whose customer resolved to a Trackbliss tenant.
+ * Existing, conflicting tags are an accounting exception, never overwritten.
+ */
+async function tagInvoiceAndPayment(invoice: Stripe.Invoice): Promise<void> {
+  if (invoice.metadata?.project_code && invoice.metadata.project_code !== ACCOUNTING_PROJECT_CODE) {
+    throw new Error(`Conflicting project_code on invoice ${invoice.id}`);
+  }
+  if (invoice.metadata?.project_code !== ACCOUNTING_PROJECT_CODE) {
+    await stripe.invoices.update(invoice.id as string, {
+      metadata: { project_code: ACCOUNTING_PROJECT_CODE },
+    });
+  }
+
+  const paymentIntentId = invoicePaymentIntentId(invoice);
+  if (!paymentIntentId) return;
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  if (paymentIntent.metadata?.project_code && paymentIntent.metadata.project_code !== ACCOUNTING_PROJECT_CODE) {
+    throw new Error(`Conflicting project_code on payment ${paymentIntentId}`);
+  }
+  if (paymentIntent.metadata?.project_code !== ACCOUNTING_PROJECT_CODE ||
+      paymentIntent.metadata?.stripe_invoice_id !== invoice.id) {
+    const subscriptionId = invoiceSubscriptionId(invoice);
+    await stripe.paymentIntents.update(paymentIntentId, {
+      metadata: {
+        project_code: ACCOUNTING_PROJECT_CODE,
+        stripe_invoice_id: invoice.id as string,
+        ...(subscriptionId ? { stripe_subscription_id: subscriptionId } : {}),
+      },
+    });
   }
 }

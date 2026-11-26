@@ -2,6 +2,7 @@
  * PlanComparisonTable -- Feature matrix comparing Free vs Pro vs Enterprise.
  */
 
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Minus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +27,7 @@ interface FeatureRow {
 
 export function PlanComparisonTable({ currentPlan, interval }: PlanComparisonTableProps) {
   const { t } = useTranslation('billing');
+  const [mobilePlan, setMobilePlan] = useState<BillingPlan>(currentPlan === 'free' ? 'pro' : currentPlan);
 
   const plans: { key: BillingPlan; name: string; price: number }[] = [
     {
@@ -72,7 +74,40 @@ export function PlanComparisonTable({ currentPlan, interval }: PlanComparisonTab
       <CardHeader>
         <CardTitle className="text-base">{t('Feature Comparison')}</CardTitle>
       </CardHeader>
-      <CardContent className="overflow-x-auto">
+      {/* Phones: one plan at a time instead of a 4-column matrix */}
+      <CardContent className="md:hidden space-y-4">
+        <div role="group" aria-label={t('Feature Comparison')} className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
+          {plans.map((plan) => (
+            <button
+              key={plan.key}
+              type="button"
+              aria-pressed={mobilePlan === plan.key}
+              onClick={() => setMobilePlan(plan.key)}
+              className={cn(
+                'min-h-11 min-w-0 rounded-md px-2 py-1.5 text-center text-sm font-medium transition-[background-color,color,box-shadow,scale] duration-150 active:scale-[0.97]',
+                mobilePlan === plan.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground',
+              )}
+            >
+              <span className="block truncate">{plan.name}</span>
+              <span className="block truncate text-xs tabular-nums opacity-80">
+                {plan.price === 0 ? t('Free') : `€${plan.price}/${t('mo')}`}
+              </span>
+            </button>
+          ))}
+        </div>
+        {mobilePlan === currentPlan && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{t('Current')}</Badge>
+        )}
+        <dl className="divide-y text-sm">
+          {rows.map((row, i) => (
+            <div key={i} className="flex items-center justify-between gap-3 py-2.5">
+              <dt className="min-w-0 text-muted-foreground">{row.label}</dt>
+              <dd className="shrink-0 text-right"><CellDisplay value={row[mobilePlan]} /></dd>
+            </div>
+          ))}
+        </dl>
+      </CardContent>
+      <CardContent className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b">

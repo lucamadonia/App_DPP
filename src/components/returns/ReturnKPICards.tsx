@@ -119,10 +119,10 @@ export function ReturnKPICards({ stats }: ReturnKPICardsProps) {
       {kpis.map((kpi, i) => (
         <Card
           key={kpi.label}
-          className={`transition-all duration-200 hover-lift ${
+          className={`hover-lift ${
             visible[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
           }`}
-          style={{ transition: 'opacity 0.35s ease-out, transform 0.35s ease-out, box-shadow 0.2s ease' }}
+          style={{ transition: 'opacity 0.3s ease-out, translate 0.3s ease-out, transform 0.2s ease-out, box-shadow 0.2s ease' }}
         >
           <CardContent className="pt-3 pb-3 px-3 sm:pt-4 sm:pb-4 sm:px-4">
             <div className="flex items-center gap-2 sm:gap-3">

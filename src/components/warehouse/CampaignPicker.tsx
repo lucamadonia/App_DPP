@@ -51,9 +51,9 @@ export function CampaignPicker({ value, onChange }: CampaignPickerProps) {
           className="w-full justify-between font-normal"
         >
           {selected ? (
-            <span className="flex items-center gap-2 truncate">
+            <span className="flex min-w-0 items-center gap-2">
               <Megaphone className="h-3.5 w-3.5 text-pink-500 flex-shrink-0" />
-              {selected.name}
+              <span className="truncate">{selected.name}</span>
             </span>
           ) : (
             <span className="text-muted-foreground">{t('No campaign')}</span>
@@ -61,7 +61,7 @@ export function CampaignPicker({ value, onChange }: CampaignPickerProps) {
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
+      <PopoverContent className="w-[min(300px,calc(100vw-2rem))] min-w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] p-0" align="start">
         <Command>
           <CommandInput placeholder={t('Search campaigns...')} />
           <CommandList>
@@ -86,8 +86,8 @@ export function CampaignPicker({ value, onChange }: CampaignPickerProps) {
                   }}
                 >
                   <Check className={cn('mr-2 h-4 w-4', value === c.id ? 'opacity-100' : 'opacity-0')} />
-                  <Megaphone className="mr-2 h-3.5 w-3.5 text-pink-500" />
-                  {c.name}
+                  <Megaphone className="mr-2 h-3.5 w-3.5 shrink-0 text-pink-500" />
+                  <span className="truncate">{c.name}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

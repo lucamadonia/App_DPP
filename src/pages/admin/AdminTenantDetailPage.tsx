@@ -28,7 +28,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/adaptive-dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormField } from '@/components/ui/form-layout';
 import { Switch } from '@/components/ui/switch';
 import {
   getAdminTenant, updateTenantPlan, toggleModule,
@@ -301,7 +301,7 @@ export function AdminTenantDetailPage() {
       className: 'text-right tabular-nums font-medium',
       mobilePriority: 'title',
       cell: (tx) => (
-        <span className={tx.amount > 0 ? 'text-emerald-600' : 'text-red-600'}>
+        <span className={tx.amount > 0 ? 'text-success' : 'text-destructive'}>
           {tx.amount > 0 ? '+' : ''}{tx.amount}
         </span>
       ),
@@ -332,7 +332,7 @@ export function AdminTenantDetailPage() {
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold truncate">{tenant.name}</h1>
+            <h1 className="min-w-0 max-w-full text-2xl font-bold truncate">{tenant.name}</h1>
             <Badge className={PLAN_COLORS[tenant.plan] || ''} variant="secondary">
               {tenant.plan}
             </Badge>
@@ -342,9 +342,9 @@ export function AdminTenantDetailPage() {
               </div>
             )}
           </div>
-          <p className="text-muted-foreground text-sm font-mono">{tenant.slug}</p>
+          <p className="text-muted-foreground text-sm font-mono truncate" title={tenant.slug}>{tenant.slug}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
             variant="outline"
@@ -357,7 +357,7 @@ export function AdminTenantDetailPage() {
           <Button
             size="sm"
             variant="default"
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-destructive text-white hover:bg-destructive/90"
             onClick={() => setImpersonateOpen(true)}
           >
             <Eye className="h-3.5 w-3.5 mr-1.5" />
@@ -368,7 +368,7 @@ export function AdminTenantDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
+        <TabsList className="flex w-full justify-start overflow-x-auto lg:grid lg:grid-cols-7">
           <TabsTrigger value="overview" className="gap-1"><Building2 className="h-3 w-3 hidden sm:block" />{t('Overview')}</TabsTrigger>
           <TabsTrigger value="billing" className="gap-1"><CreditCard className="h-3 w-3 hidden sm:block" />{t('Billing')}</TabsTrigger>
           <TabsTrigger value="users" className="gap-1"><Users className="h-3 w-3 hidden sm:block" />{t('Users')}</TabsTrigger>
@@ -394,9 +394,9 @@ export function AdminTenantDetailPage() {
                   [t('Stripe Customer'), tenant.stripeCustomerId || '-'],
                   [t('Created'), formatDate(tenant.createdAt, locale)],
                 ].map(([label, value]) => (
-                  <div key={label as string}>
+                  <div key={label as string} className="min-w-0">
                     <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
-                    <dd className="mt-1 text-sm">{value}</dd>
+                    <dd className="mt-1 text-sm break-words [overflow-wrap:anywhere]">{value}</dd>
                   </div>
                 ))}
               </dl>
@@ -604,18 +604,16 @@ export function AdminTenantDetailPage() {
       <Dialog open={creditDialogOpen} onOpenChange={setCreditDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{t('Adjust credits for')} {tenant.name}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>{t('Amount')}</Label>
-              <Input type="number" value={creditAmount} onChange={(e) => setCreditAmount(Number(e.target.value))} />
-              <p className="text-xs text-muted-foreground mt-1">{t('Positive adds, negative removes')}</p>
-            </div>
-            <div>
-              <Label>{t('Reason')}</Label>
-              <Input value={creditReason} onChange={(e) => setCreditReason(e.target.value)} placeholder={t('e.g. Promotional credits')} />
-            </div>
-            <div className="rounded-lg border p-3 bg-muted/50">
-              <p className="text-sm"><strong>{t('New Balance')}:</strong> {tenant.purchasedBalance + creditAmount}</p>
+          <div className="space-y-5">
+            <FormField label={t('Amount')} htmlFor="credit-amount" hint={t('Positive adds, negative removes')}>
+              <Input id="credit-amount" type="number" inputMode="numeric" value={creditAmount} onChange={(e) => setCreditAmount(Number(e.target.value))} className="tabular-nums" />
+            </FormField>
+            <FormField label={t('Reason')} htmlFor="credit-reason">
+              <Input id="credit-reason" value={creditReason} onChange={(e) => setCreditReason(e.target.value)} placeholder={t('e.g. Promotional credits')} />
+            </FormField>
+            <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-3 text-sm">
+              <span className="text-muted-foreground">{t('New Balance')}</span>
+              <span className="font-semibold tabular-nums">{tenant.purchasedBalance + creditAmount}</span>
             </div>
           </div>
           <DialogFooter>
@@ -629,10 +627,9 @@ export function AdminTenantDetailPage() {
       <Dialog open={allowanceDialogOpen} onOpenChange={setAllowanceDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{t('Set allowance for')} {tenant.name}</DialogTitle></DialogHeader>
-          <div>
-            <Label>{t('Monthly AI Credits')}</Label>
-            <Input type="number" value={newAllowance} onChange={(e) => setNewAllowance(Number(e.target.value))} min={0} />
-          </div>
+          <FormField label={t('Monthly AI Credits')} htmlFor="credit-allowance">
+            <Input id="credit-allowance" type="number" inputMode="numeric" value={newAllowance} onChange={(e) => setNewAllowance(Number(e.target.value))} min={0} className="tabular-nums" />
+          </FormField>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAllowanceDialogOpen(false)}>{t('Cancel')}</Button>
             <Button onClick={handleSetAllowance} disabled={saving}>{t('Confirm')}</Button>

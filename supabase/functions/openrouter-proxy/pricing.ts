@@ -8,7 +8,7 @@
 
 export const TEXT_CHARS_PER_TOKEN = 3; // German text averages ~3.5 chars/token
 export const IMAGE_PART_TOKENS = 1_600; // Claude downscales images to <= ~1.15 MP
-export const OUTPUT_TOKEN_WEIGHT = 5; // output price / input price (Sonnet: $15 vs $3 per M)
+export const OUTPUT_TOKEN_WEIGHT = 5; // output price / input price (Sonnet 5.5: $10 vs $2 per M)
 export const TOKEN_UNITS_PER_CREDIT = 40_000; // ~= USD 0.12 at Sonnet input price
 export const MIN_CREDITS_PER_CALL = 1;
 

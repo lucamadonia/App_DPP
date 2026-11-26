@@ -154,7 +154,7 @@ export function DPPDesignEditorLayout({
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Settings — fixed column on lg+, Sheet below */}
         {isDesktop && (
-          <div className="w-[420px] flex-shrink-0 border-r h-[calc(100dvh-53px)]">
+          <div className="w-[360px] xl:w-[420px] flex-shrink-0 border-r h-[calc(100dvh-53px)]">
             {settingsPanel}
           </div>
         )}

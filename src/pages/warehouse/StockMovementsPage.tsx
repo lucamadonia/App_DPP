@@ -451,7 +451,7 @@ export function StockMovementsPage() {
                   type="button"
                   whileTap={whileTap}
                   onClick={() => handleFlowChip(k)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 min-h-[44px] sm:min-h-8 sm:py-1 text-xs font-medium whitespace-nowrap transition-colors ${
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 min-h-[44px] sm:py-1 sm:pointer-fine:min-h-8 text-xs font-medium whitespace-nowrap transition-colors ${
                     active
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -523,7 +523,7 @@ export function StockMovementsPage() {
                     variants={tileItem}
                     whileTap={whileTap}
                     onClick={() => setCategoryFilter(active ? 'all' : c.key)}
-                    className={`text-left rounded-lg border p-3 min-h-[44px] transition-all hover:shadow-sm cursor-pointer ${
+                    className={`text-left rounded-lg border p-3 min-h-[44px] transition-[color,background-color,border-color,box-shadow,opacity,transform] hover:shadow-sm cursor-pointer ${
                       active ? 'border-primary ring-1 ring-primary' : 'hover:border-foreground/20'
                     }`}
                   >
@@ -571,7 +571,7 @@ export function StockMovementsPage() {
                       type="button"
                       whileTap={whileTap}
                       onClick={() => setTab(k)}
-                      className={`flex items-center gap-1.5 px-3 min-h-[44px] sm:min-h-9 text-sm rounded-md transition-colors whitespace-nowrap ${
+                      className={`flex items-center gap-1.5 px-3 min-h-[44px] sm:pointer-fine:min-h-9 text-sm rounded-md transition-colors whitespace-nowrap ${
                         active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
                       }`}
                     >

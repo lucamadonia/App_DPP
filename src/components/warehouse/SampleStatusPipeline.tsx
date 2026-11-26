@@ -40,7 +40,7 @@ export function SampleStatusPipeline({ currentStatus, sampleType }: SampleStatus
             {/* Node */}
             <div className="flex flex-col items-center gap-1 sm:gap-1.5 relative">
               <div className={`
-                flex items-center justify-center rounded-full transition-all duration-500
+                flex items-center justify-center rounded-full transition-[color,background-color,border-color,box-shadow,opacity,transform,width,height] duration-300
                 ${isCurrent
                   ? `h-8 w-8 sm:h-10 sm:w-10 ${step.color} bg-current/10 ring-2 ring-current/30 ring-offset-1 sm:ring-offset-2 ring-offset-background shadow-lg`
                   : isCompleted

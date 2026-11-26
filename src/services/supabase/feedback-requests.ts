@@ -7,6 +7,7 @@ import { supabase, getCurrentTenantId } from '@/lib/supabase';
 import type { FeedbackRequest, FeedbackRequestFilter } from '@/types/feedback';
 import { getShipment, getShipmentItems } from './wh-shipments';
 import { getPublicBaseUrl } from '@/lib/platform';
+import { getFeedbackReviewUrl } from './feedback-settings';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transform(row: any): FeedbackRequest {
@@ -170,8 +171,7 @@ export async function createFeedbackRequestsForShipment(
   // The verified link is injected as a "Jetzt bewerten" CTA button.
   let emailsSent = 0;
   if (firstToken && !options.silent) {
-    const origin = getPublicBaseUrl();
-    const feedbackUrl = `${origin}/feedback/${firstToken}`;
+    const feedbackUrl = await getFeedbackReviewUrl(tenantId, firstToken, getPublicBaseUrl());
     const custom = options.email?.mode === 'custom' ? options.email : null;
     try {
       const { sendCustomFeedbackEmail } = await import('./rh-notification-trigger');
@@ -245,11 +245,11 @@ export async function resendFeedbackRequest(id: string): Promise<{ success: bool
     const mod = await import('./rh-notification-trigger');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const trigger = (mod as any).triggerPublicEmailNotification;
-    const origin = getPublicBaseUrl();
+    const feedbackUrl = await getFeedbackReviewUrl(req.tenant_id, req.token, getPublicBaseUrl());
     await trigger(req.tenant_id, 'feedback_reminder', {
       customerName: req.customer_name,
       recipientEmail: req.customer_email,
-      feedbackUrl: `${origin}/feedback/${req.token}`,
+      feedbackUrl,
       shipmentNumber: req.wh_shipments?.shipment_number,
     });
     await supabase

@@ -18,10 +18,9 @@ interface PageTransitionProps {
 /**
  * Route transition.
  *
- * Mobile gets a directional stack: pushing deeper slides in from the right
- * while the outgoing page parallaxes away, going back mirrors it, and a lateral
- * tab change crossfades. That directionality is most of what separates "native
- * app" from "website in a WebView".
+ * Mobile uses a short directional entrance; a lateral tab change crossfades.
+ * The route outlet mounts only the incoming page, so movement stays subtle
+ * instead of exposing an empty screen during a full-width slide.
  *
  * Desktop keeps the existing blur-in, which suits a mouse-driven layout and
  * costs nothing there.

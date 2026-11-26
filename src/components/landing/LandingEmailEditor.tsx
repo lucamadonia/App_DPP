@@ -62,7 +62,7 @@ export function LandingEmailEditor() {
             {templateStrip.map((tmpl, i) => (
               <div
                 key={tmpl.key}
-                className={`rounded-xl border bg-white p-2 w-28 shrink-0 cursor-default transition-all ${
+                className={`rounded-xl border bg-white p-2 w-28 shrink-0 cursor-default transition-[box-shadow,background-color,border-color] ${
                   i === 0 ? 'border-blue-300 shadow-md animate-landing-glow-pulse' : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
@@ -104,7 +104,7 @@ export function LandingEmailEditor() {
               {blockIcons.map((block) => (
                 <div
                   key={block.label}
-                  className={`flex flex-col items-center gap-0.5 rounded-lg p-1.5 bg-gradient-to-b ${block.gradient} hover:bg-white cursor-default transition-all`}
+                  className={`flex flex-col items-center gap-0.5 rounded-lg p-1.5 bg-gradient-to-b ${block.gradient} hover:bg-white cursor-default transition-[background-color,color]`}
                 >
                   <block.icon className="h-4 w-4 text-slate-500" />
                   <span className="text-[8px] text-slate-400">{block.label}</span>
@@ -232,7 +232,7 @@ export function LandingEmailEditor() {
                   </button>
                 </div>
               </div>
-              <div className={`rounded-lg border border-slate-200 bg-white p-2 space-y-1.5 mx-auto transition-all ${
+              <div className={`rounded-lg border border-slate-200 bg-white p-2 space-y-1.5 mx-auto transition-[background-color,border-color] ${
                 previewMode === 'mobile' ? 'max-w-[100px]' : 'max-w-full'
               }`}>
                 <div className="rounded bg-gradient-to-r from-blue-500 to-violet-500 p-2">

@@ -114,7 +114,7 @@ export function ShippingStep({ selected, onSelect, address, onAddressChange }: S
               key={value}
               type="button"
               onClick={() => onSelect(value)}
-              className={`w-full p-5 rounded-xl border-2 text-left transition-all flex items-center gap-4 group ${
+              className={`w-full p-5 rounded-xl border-2 text-left transition-[border-color,background-color,box-shadow] duration-150 flex items-center gap-4 group ${
                 selected === value
                   ? 'border-primary bg-primary/5 shadow-sm'
                   : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'

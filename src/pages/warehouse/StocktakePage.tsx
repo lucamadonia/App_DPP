@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -332,12 +333,14 @@ export function StocktakePage() {
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
   }, []);
 
-  return (
-    <div className="fixed inset-0 z-40 bg-slate-950 text-white flex flex-col">
+  // Portal to <body>: route wrappers create stacking contexts that would
+  // otherwise let the app header paint over this full-screen tool.
+  return createPortal(
+    <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col">
       <input {...inputProps} />
 
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-slate-900/80 backdrop-blur-xl shrink-0">
+      <header className="flex items-center justify-between pl-[max(1rem,var(--safe-left))] pr-[max(1rem,var(--safe-right))] pb-3 pt-[calc(var(--safe-top)+0.75rem)] border-b border-white/5 bg-slate-900/80 backdrop-blur-xl shrink-0">
         <button
           type="button"
           onClick={() => {
@@ -346,7 +349,7 @@ export function StocktakePage() {
             }
             navigate('/warehouse');
           }}
-          className="flex items-center gap-2 px-3 py-2 min-h-11 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="flex items-center justify-center gap-2 px-3 py-2 min-h-11 min-w-11 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">{t('Back')}</span>
@@ -361,7 +364,7 @@ export function StocktakePage() {
           <button
             type="button"
             onClick={() => setCameraOpen(!cameraOpen)}
-            className={`flex items-center gap-2 px-3 py-2 min-h-11 rounded-xl text-sm transition-colors ${
+            className={`flex items-center justify-center gap-2 px-3 py-2 min-h-11 min-w-11 rounded-xl text-sm transition-colors ${
               cameraOpen ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-white hover:bg-white/10'
             }`}
           >
@@ -374,8 +377,8 @@ export function StocktakePage() {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-4 py-5 space-y-4">
+      <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="max-w-3xl mx-auto pl-[max(1rem,var(--safe-left))] pr-[max(1rem,var(--safe-right))] pt-5 pb-[calc(1.25rem+var(--safe-bottom))] space-y-4">
           {/* Location + progress banner */}
           {location && (pageState === 'counting' || pageState === 'loading') && (
             <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
@@ -461,7 +464,7 @@ export function StocktakePage() {
                 <StocktakeCountPanel lines={lines} onAdjust={handleAdjust} onSet={handleSet} onConfirm={handleConfirm} />
               )}
 
-              <div className="flex gap-3 sticky bottom-0 pb-4 pt-2 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent">
+              <div className="flex gap-3 sticky bottom-0 -mb-[calc(1.25rem+var(--safe-bottom))] pb-[calc(1rem+var(--safe-bottom))] pt-2 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent">
                 <button
                   type="button"
                   onClick={handleCancel}
@@ -546,6 +549,7 @@ export function StocktakePage() {
           onClose={() => setPageState('counting')}
         />
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -263,5 +263,17 @@
   "Campaign not found": "Campaign not found",
   "is required": "is required",
   "Deleted": "Deleted",
-  "Creating...": "Creating..."
+  "Creating...": "Creating...",
+  "Required": "Required",
+  "Optional": "Optional",
+  "Unsaved changes": "Unsaved changes",
+  "More details (optional)": "More details (optional)",
+  "Show value": "Show value",
+  "Hide value": "Hide value",
+  "Sections": "Sections",
+  "Step {{current}} of {{total}}": "Step {{current}} of {{total}}",
+  "Progress": "Progress",
+  "Back to overview": "Back to overview",
+  "Batches": "Batches",
+  "Score": "Score"
 }

@@ -1,12 +1,14 @@
 import { useRef, useState, useEffect } from 'react';
+import { useReducedMotion } from '@/lib/motion';
 
 export function useScrollReveal(options?: { threshold?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || reducedMotion) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -20,7 +22,7 @@ export function useScrollReveal(options?: { threshold?: number }) {
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [options?.threshold]);
+  }, [options?.threshold, reducedMotion]);
 
-  return { ref, isVisible };
+  return { ref, isVisible: reducedMotion || isVisible };
 }

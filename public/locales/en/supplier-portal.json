@@ -144,5 +144,22 @@
   "International Bank Account Number": "International Bank Account Number",
   "Bank Identifier Code": "Bank Identifier Code",
   "e.g., Net 30 days, 2% discount if paid within 10 days": "e.g., Net 30 days, 2% discount if paid within 10 days",
-  "Optional: Specify your preferred payment terms": "Optional: Specify your preferred payment terms"
+  "Optional: Specify your preferred payment terms": "Optional: Specify your preferred payment terms",
+  "Company": "Company",
+  "Your registered company name and legal form.": "Your registered company name and legal form.",
+  "Who we should contact about orders and documents.": "Who we should contact about orders and documents.",
+  "Online Presence": "Online Presence",
+  "Optional links that help us get to know you.": "Optional links that help us get to know you.",
+  "The address that appears on invoices.": "The address that appears on invoices.",
+  "Add a separate address for deliveries.": "Add a separate address for deliveries.",
+  "Used to verify your company.": "Used to verify your company.",
+  "Where we send payments.": "Where we send payments.",
+  "Spaces are fine, we ignore them.": "Spaces are fine, we ignore them.",
+  "What you supply": "What you supply",
+  "Helps us match you to the right products.": "Helps us match you to the right products.",
+  "Produces the goods itself": "Produces the goods itself",
+  "Buys and resells in bulk": "Buys and resells in bulk",
+  "Distributes on behalf of brands": "Distributes on behalf of brands",
+  "Provides services, not goods": "Provides services, not goods",
+  "Review": "Review"
 }

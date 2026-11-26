@@ -91,7 +91,7 @@ export function FloorMapToolbar({
         {viewModes.map(({ key, icon: Icon, label }) => (
           <button
             key={key}
-            className={`flex items-center gap-1 rounded-md px-1.5 sm:px-2.5 py-1 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1 rounded-md px-1.5 sm:px-2.5 py-1 text-xs font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] ${
               viewMode === key
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'

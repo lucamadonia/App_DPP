@@ -96,14 +96,14 @@ export function InventoryCardGrid({
                   <StockHealthDot health={health} />
                   <Link
                     to={`/products/${s.productId}`}
-                    className="font-medium text-sm leading-tight hover:underline text-primary truncate"
+                    className="-my-3.5 py-3.5 font-medium text-sm leading-tight hover:underline text-primary truncate"
                   >
                     {s.productName || s.productId.slice(0, 8)}
                   </Link>
                 </div>
                 <Link
                   to={`/products/${s.productId}/batches/${s.batchId}`}
-                  className="block font-mono text-xs text-muted-foreground hover:underline truncate mt-0.5"
+                  className="relative block -my-[14px] py-[14px] font-mono text-xs text-muted-foreground hover:underline truncate mt-0.5"
                 >
                   {s.batchSerialNumber || s.batchId.slice(0, 8)}
                 </Link>

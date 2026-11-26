@@ -111,7 +111,7 @@ function UtilizationBar({ utilization, status }: { utilization: number; status: 
     <div className="h-1 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
       <div
         className={cn(
-          'h-full rounded-full transition-all duration-500',
+          'h-full rounded-full transition-[width] duration-500',
           status === 'blocked' ? 'bg-red-500' : status === 'tight' ? 'bg-amber-500' : 'bg-green-500',
         )}
         style={{ width: `${pct}%` }}

@@ -77,8 +77,81 @@ export function ReturnItemsTable({ items, onRemove, readonly }: ReturnItemsTable
     .filter((v): v is number => v != null);
   const totalValue = lineValues.length ? lineValues.reduce((a, b) => a + b, 0) : null;
 
+  const conditionLabel = (condition: string) =>
+    t(condition === 'like_new' ? 'Like New' : condition.charAt(0).toUpperCase() + condition.slice(1));
+
+  const lineValueOf = (item: RhReturnItem) =>
+    item.refundAmount != null
+      ? item.refundAmount
+      : item.unitPrice != null
+        ? item.unitPrice * (item.quantity || 1)
+        : null;
+
   return (
-    <div className="overflow-x-auto">
+    <>
+    {/* Mobile: one card per item — a 7-column table cannot fit a phone. */}
+    <ul className="md:hidden divide-y">
+      {items.map((item) => {
+        const lineValue = lineValueOf(item);
+        return (
+          <li key={item.id} className="py-3 first:pt-0 last:pb-0">
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium break-words">{item.name}</p>
+                <p className="text-xs text-muted-foreground break-all">
+                  {t('SKU')}: {item.sku || '—'}
+                  {item.serialNumber && <> · SN: {item.serialNumber}</>}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="font-medium tabular-nums">
+                  {item.refundAmount != null
+                    ? `€${item.refundAmount.toFixed(2)}`
+                    : lineValue != null
+                      ? <span className="text-muted-foreground font-normal">≈ €{lineValue.toFixed(2)}</span>
+                      : '—'}
+                </p>
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {item.quantity} × {item.unitPrice != null ? `€${item.unitPrice.toFixed(2)}` : '—'}
+                </p>
+              </div>
+              {!readonly && onRemove && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 -mr-2 text-destructive"
+                  aria-label={t('Remove')}
+                  onClick={() => onRemove(item.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {(item.condition || (item.photos && item.photos.length > 0)) && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {item.condition && (
+                  <Badge variant="outline" className={conditionColors[item.condition] || ''}>
+                    {conditionLabel(item.condition)}
+                  </Badge>
+                )}
+                <PhotoThumbnails paths={item.photos} />
+              </div>
+            )}
+          </li>
+        );
+      })}
+      {totalValue != null && (
+        <li className="flex items-center justify-between gap-3 border-t-2 pt-3 text-sm">
+          <span className="font-medium">
+            {t('Total')} <span className="text-muted-foreground font-normal tabular-nums">({totalQuantity})</span>
+          </span>
+          <span className="font-semibold tabular-nums">
+            {hasExplicitRefund ? '' : '≈ '}€{totalValue.toFixed(2)}
+          </span>
+        </li>
+      )}
+    </ul>
+    <div className="hidden md:block overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left">
@@ -168,5 +241,6 @@ export function ReturnItemsTable({ items, onRemove, readonly }: ReturnItemsTable
         )}
       </table>
     </div>
+    </>
   );
 }

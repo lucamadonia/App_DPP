@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
 import { EmptyState, ErrorState } from '@/components/ui/state-feedback';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -333,31 +333,16 @@ export function PackagingUsageTab({ from, to }: PackagingUsageTabProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Packaging type')}</TableHead>
-                    <TableHead className="text-right">{t('Shipments')}</TableHead>
-                    <TableHead className="text-right">kg</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {byPackagingType.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="text-sm font-medium">{row.name}</TableCell>
-                      <TableCell className="text-right tabular-nums">{row.count}</TableCell>
-                      <TableCell className="text-right tabular-nums">{row.kg.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                  {byPackagingType.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-6">
-                        {t('No data in range')}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              <ResponsiveTable
+                data={byPackagingType}
+                rowKey={row => row.id}
+                columns={[
+                  { id: 'name', header: t('Packaging type'), cell: row => row.name, mobilePriority: 'title' },
+                  { id: 'count', header: t('Shipments'), cell: row => <span className="tabular-nums">{row.count}</span>, mobilePriority: 'meta' },
+                  { id: 'weight', header: 'kg', cell: row => <span className="tabular-nums">{row.kg.toFixed(2)}</span>, mobilePriority: 'meta' },
+                ]}
+                emptyState={<p className="py-6 text-center text-sm text-muted-foreground">{t('No data in range')}</p>}
+              />
             </CardContent>
           </Card>
         </motion.div>

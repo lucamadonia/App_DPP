@@ -47,7 +47,7 @@ export function BlockInsertHandle({ onInsert, onDragOver, showDropZone }: BlockI
           <PopoverTrigger asChild>
             <button
               type="button"
-              className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:animate-insert-handle-pulse transition-all shadow-sm"
+              className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:animate-insert-handle-pulse transition-[background-color,box-shadow] duration-150 shadow-sm"
             >
               <Plus className="h-3 w-3" />
             </button>

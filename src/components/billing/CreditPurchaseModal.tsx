@@ -98,7 +98,7 @@ export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalP
             <Card
               key={pack.id}
               className={cn(
-                'cursor-pointer transition-all hover:border-primary/50',
+                'cursor-pointer transition-[box-shadow,border-color] hover:border-primary/50',
                 selectedPack?.id === pack.id && 'border-primary ring-1 ring-primary',
               )}
               onClick={() => setSelectedPack(pack)}

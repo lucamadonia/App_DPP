@@ -18,7 +18,7 @@ function transformReview(row: any): FeedbackReview {
     productId: row.product_id,
     batchId: row.batch_id || undefined,
     variantTitle: row.variant_title || undefined,
-    rating: row.rating,
+    rating: row.rating ?? null,
     title: row.title || undefined,
     comment: row.comment || undefined,
     reviewerDisplayName: row.reviewer_display_name,
@@ -115,6 +115,21 @@ export async function getReviews(filter?: FeedbackReviewFilter): Promise<Feedbac
       }
       for (const r of reviews) r.photos = byReview.get(r.id) || [];
     }
+
+    // Replies, so the queue shows what is already published below a review.
+    const { data: replyRows } = await supabase
+      .from('feedback_replies')
+      .select('*')
+      .in('review_id', ids)
+      .order('created_at');
+    const repliesByReview = new Map<string, FeedbackReply[]>();
+    for (const rr of replyRows || []) {
+      const reply = transformReply(rr);
+      const arr = repliesByReview.get(reply.reviewId) || [];
+      arr.push(reply);
+      repliesByReview.set(reply.reviewId, arr);
+    }
+    for (const r of reviews) r.replies = repliesByReview.get(r.id) || [];
   }
 
   return reviews;
@@ -183,7 +198,15 @@ export async function rejectReview(id: string, reason?: string): Promise<void> {
 }
 
 export async function hideReview(id: string): Promise<void> {
-  await supabase.from('feedback_reviews').update({ status: 'hidden' }).eq('id', id);
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) throw new Error('No tenant');
+
+  const { error } = await supabase
+    .from('feedback_reviews')
+    .update({ status: 'hidden' })
+    .eq('id', id)
+    .eq('tenant_id', tenantId);
+  if (error) throw new Error(error.message);
 }
 
 export async function addReply(reviewId: string, content: string, authorName: string): Promise<void> {
@@ -207,7 +230,10 @@ export interface ReviewStats {
   approved: number;
   rejected: number;
   hidden: number;
+  /** Average over approved reviews that carry a rating; null when none do. */
   averageRating: number | null;
+  /** Approved reviews without a rating (text-only reports). */
+  approvedWithoutRating: number;
   total: number;
   ratingDistribution: { rating: 1 | 2 | 3 | 4 | 5; count: number }[];
 }
@@ -221,6 +247,7 @@ export async function getReviewStats(): Promise<ReviewStats> {
       rejected: 0,
       hidden: 0,
       averageRating: null,
+      approvedWithoutRating: 0,
       total: 0,
       ratingDistribution: [1, 2, 3, 4, 5].map(r => ({ rating: r as 1 | 2 | 3 | 4 | 5, count: 0 })),
     };
@@ -231,9 +258,10 @@ export async function getReviewStats(): Promise<ReviewStats> {
     .select('status, rating')
     .eq('tenant_id', tenantId);
 
-  const rows: Array<{ status: string; rating: number }> = data || [];
+  const rows: Array<{ status: string; rating: number | null }> = data || [];
   let approvedSum = 0;
   let approvedCount = 0;
+  let approvedWithoutRating = 0;
   const dist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let pending = 0;
   let approved = 0;
@@ -244,9 +272,15 @@ export async function getReviewStats(): Promise<ReviewStats> {
     if (r.status === 'pending_review') pending++;
     else if (r.status === 'approved') {
       approved++;
-      approvedSum += r.rating;
-      approvedCount++;
-      dist[r.rating] = (dist[r.rating] || 0) + 1;
+      // Text-only reports have no rating: keep them out of average and
+      // distribution instead of counting them as 0.
+      if (typeof r.rating === 'number' && r.rating >= 1 && r.rating <= 5) {
+        approvedSum += r.rating;
+        approvedCount++;
+        dist[r.rating] = (dist[r.rating] || 0) + 1;
+      } else {
+        approvedWithoutRating++;
+      }
     } else if (r.status === 'rejected') rejected++;
     else if (r.status === 'hidden') hidden++;
   }
@@ -257,6 +291,7 @@ export async function getReviewStats(): Promise<ReviewStats> {
     rejected,
     hidden,
     averageRating: approvedCount > 0 ? approvedSum / approvedCount : null,
+    approvedWithoutRating,
     total: rows.length,
     ratingDistribution: [1, 2, 3, 4, 5].map(r => ({
       rating: r as 1 | 2 | 3 | 4 | 5,

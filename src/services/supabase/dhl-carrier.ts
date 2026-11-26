@@ -181,13 +181,15 @@ export async function createDHLLabel(
   product?: string,
   weightGramsOverride?: number,
   confirmKleinpaket = false,
+  /** Customs export type for destinations outside the EU (e.g. Switzerland). */
+  exportType?: string,
 ): Promise<DHLLabelResult> {
   // Client-side billing gate
   const { hasModule } = await import('./billing');
   const hasPro = await hasModule('warehouse_professional') || await hasModule('warehouse_business');
   if (!hasPro) throw new Error('Warehouse Professional or Business module required');
 
-  return await callDHL('create_label', { shipmentId, product, weightGramsOverride, confirmKleinpaket });
+  return await callDHL('create_label', { shipmentId, product, weightGramsOverride, confirmKleinpaket, exportType });
 }
 
 /**

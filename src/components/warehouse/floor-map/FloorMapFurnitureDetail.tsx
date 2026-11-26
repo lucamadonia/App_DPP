@@ -251,7 +251,7 @@ export function FloorMapFurnitureDetail({
                   strokeLinecap="round"
                   strokeDasharray={ringCircumference}
                   strokeDashoffset={ringOffset}
-                  className="transition-all duration-1000"
+                  className="transition-[stroke-dashoffset] duration-700"
                 />
               </svg>
               <div className="text-lg font-bold mt-2 tabular-nums">{fillPercent}%</div>
@@ -371,7 +371,7 @@ export function FloorMapFurnitureDetail({
                       {section.capacity && !isEditingThis && (
                         <div className="h-1 rounded-full bg-muted overflow-hidden">
                           <div
-                            className="h-full rounded-full transition-all duration-500"
+                            className="h-full rounded-full transition-[width] duration-500"
                             style={{ width: `${sectionPercent}%`, background: sectionColor }}
                           />
                         </div>

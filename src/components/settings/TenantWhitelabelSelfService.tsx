@@ -4,14 +4,14 @@
  * Super-Admin-Feature (weil DNS-Verifikation erforderlich).
  */
 import { useState, useEffect } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import {
   Globe, Save, CheckCircle2, Copy, Mail, Palette, TestTube, Send, AlertCircle, Link2,
   RefreshCw, ShieldCheck,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormSections, FormSection, FormGrid, FormField, FormActions, FormToggleRow, InputAffix, SecretInput, OptionalDisclosure } from '@/components/ui/form-layout';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
@@ -36,6 +36,7 @@ interface BrandConfig {
 }
 
 export function TenantWhitelabelSelfService() {
+  const { t } = useTranslation('settings');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [whitelabel, setWhitelabel] = useState<TenantWhitelabel | null>(null);
@@ -81,7 +82,7 @@ export function TenantWhitelabelSelfService() {
     try {
       const res = await setOwnSubdomain(subdomain.trim() || null);
       setSubdomain(res.subdomain || '');
-      toast.success(res.fullHost ? `Subdomain gesetzt: ${res.fullHost}` : 'Subdomain gelöscht');
+      toast.success(res.fullHost ? t('Subdomain set: {{host}}', { host: res.fullHost }) : t('Subdomain removed'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -93,7 +94,7 @@ export function TenantWhitelabelSelfService() {
     setSaving(true);
     try {
       await updateOwnWhitelabelConfig(brand as Record<string, unknown>);
-      toast.success('Branding gespeichert');
+      toast.success(t('Branding saved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -106,7 +107,7 @@ export function TenantWhitelabelSelfService() {
     try {
       await setOwnSmtp(smtpForm);
       setSmtpForm({ ...smtpForm, password: '' });
-      toast.success('SMTP-Konfiguration gespeichert');
+      toast.success(t('SMTP configuration saved'));
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
@@ -116,11 +117,11 @@ export function TenantWhitelabelSelfService() {
   }
 
   async function handleTestSmtp() {
-    if (!smtpTestEmail.trim()) { toast.error('Test-Adresse fehlt'); return; }
+    if (!smtpTestEmail.trim()) { toast.error(t('Test address missing')); return; }
     setSmtpTesting(true);
     try {
       const res = await testOwnSmtp(smtpTestEmail.trim());
-      if (res.ok) toast.success(`Test-Mail erfolgreich an ${smtpTestEmail} gesendet!`);
+      if (res.ok) toast.success(t('Test email sent successfully to {{email}}!', { email: smtpTestEmail }));
       else toast.error(res.result);
       await load();
     } catch (e) {
@@ -132,7 +133,7 @@ export function TenantWhitelabelSelfService() {
 
   function copy(s: string) {
     navigator.clipboard.writeText(s);
-    toast.success('Kopiert');
+    toast.success(t('Copied'));
   }
 
   if (loading || !whitelabel) {
@@ -142,52 +143,53 @@ export function TenantWhitelabelSelfService() {
   const subdomainHost = subdomain ? `${subdomain}.trackbliss.eu` : null;
 
   return (
-    <div className="space-y-5">
+    <FormSections>
       {/* Subdomain */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Globe className="h-4 w-4 text-primary" />
-            Eigene Subdomain
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Erstelle eine Adresse unter <code>.trackbliss.eu</code>, unter der deine Kunden, Team-Mitglieder und öffentliche DPP-Seiten erreichbar sind.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-stretch gap-2">
-            <div className="flex items-stretch rounded-md border bg-background flex-1 focus-within:ring-2 focus-within:ring-ring">
+      <FormSection
+      layout="stacked"
+        icon={Globe}
+        title={t('Your own subdomain')}
+        description={<Trans t={t} i18nKey="Create an address under <code>.trackbliss.eu</code> where your customers, team members and public DPP pages can be reached." components={{ code: <code /> }} />}
+      >
+        <div className="space-y-3">
+          <FormField
+            label={t('Subdomain')}
+            htmlFor="wl-subdomain"
+            hint={subdomainHost ? (
+              <span className="inline-flex flex-wrap items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden="true" />
+                {t('Live at')} <code className="rounded bg-muted px-1.5 py-0.5">{subdomainHost}</code>
+                <button
+                  type="button"
+                  onClick={() => copy(`https://${subdomainHost}`)}
+                  aria-label={t('Copy')}
+                  className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:bg-muted hover:text-foreground"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            ) : undefined}
+          >
+            <InputAffix suffix=".trackbliss.eu" variant="addon">
               <Input
+                id="wl-subdomain"
                 value={subdomain}
                 onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                placeholder="z.B. dein-firmenname"
-                className="border-0 rounded-r-none focus-visible:ring-0 flex-1"
+                placeholder={t('e.g. your-company-name')}
                 maxLength={32}
+                autoCapitalize="none"
+                spellCheck={false}
               />
-              <div className="flex items-center px-3 text-sm text-muted-foreground bg-muted border-l rounded-r-md">
-                .trackbliss.eu
-              </div>
-            </div>
-            <Button onClick={saveSubdomain} disabled={saving} size="sm">
-              <Save className="h-3.5 w-3.5 mr-1" />
-              Speichern
+            </InputAffix>
+          </FormField>
+          <FormActions>
+            <Button onClick={saveSubdomain} disabled={saving}>
+              <Save className="h-4 w-4 mr-2" />
+              {t('Save')}
             </Button>
-          </div>
-          {subdomainHost && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              Live unter <code className="bg-muted px-1.5 py-0.5 rounded">{subdomainHost}</code>
-              <button
-                type="button"
-                onClick={() => copy(`https://${subdomainHost}`)}
-                className="text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <Copy className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </FormActions>
+        </div>
+      </FormSection>
 
       {/* Custom Domain — Self-Service */}
       <CustomDomainSection
@@ -196,223 +198,249 @@ export function TenantWhitelabelSelfService() {
       />
 
       {/* Branding Config */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Palette className="h-4 w-4 text-primary" />
-            Marken-Konfiguration
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Erscheint in der App, auf öffentlichen DPP-Seiten und in E-Mails (falls SMTP aktiv).
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">App-Name</Label>
+      <FormSection
+      layout="stacked"
+        icon={Palette}
+        title={t('Brand configuration')}
+        description={t('Appears in the app, on public DPP pages and in emails (if SMTP is active).')}
+      >
+        <div className="space-y-5">
+          <FormGrid cols={2}>
+            <FormField label={t('App name')} htmlFor="wl-app-name">
               <Input
+                id="wl-app-name"
                 value={brand.appName || ''}
                 onChange={e => setBrand({ ...brand, appName: e.target.value })}
-                placeholder="z.B. Meine Firma"
+                placeholder={t('e.g. My Company')}
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Support-E-Mail</Label>
+            </FormField>
+            <FormField label={t('Support email')} htmlFor="wl-support-email">
               <Input
+                id="wl-support-email"
                 type="email"
+                inputMode="email"
+                autoComplete="email"
                 value={brand.supportEmail || ''}
                 onChange={e => setBrand({ ...brand, supportEmail: e.target.value })}
-                placeholder="support@firma.de"
+                placeholder={t('support@company.com')}
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Primärfarbe</Label>
-              <div className="flex gap-2">
+            </FormField>
+            <FormField label={t('Primary color')} htmlFor="wl-primary">
+              <InputAffix
+                variant="addon"
+                prefix={
+                  <input
+                    type="color"
+                    tabIndex={-1}
+                    aria-label={t('Primary color')}
+                    value={brand.primaryColor || '#4A4E42'}
+                    onChange={e => setBrand({ ...brand, primaryColor: e.target.value })}
+                    className="size-7 cursor-pointer rounded border-0 bg-transparent p-0"
+                  />
+                }
+              >
                 <Input
-                  type="color"
-                  value={brand.primaryColor || '#4A4E42'}
-                  onChange={e => setBrand({ ...brand, primaryColor: e.target.value })}
-                  className="w-16 h-10 p-1 cursor-pointer"
-                />
-                <Input
+                  id="wl-primary"
                   value={brand.primaryColor || ''}
                   onChange={e => setBrand({ ...brand, primaryColor: e.target.value })}
                   placeholder="#4A4E42"
-                  className="flex-1 font-mono"
+                  className="font-mono"
+                  spellCheck={false}
                 />
-              </div>
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Akzentfarbe</Label>
-              <div className="flex gap-2">
+              </InputAffix>
+            </FormField>
+            <FormField label={t('Accent color')} htmlFor="wl-accent">
+              <InputAffix
+                variant="addon"
+                prefix={
+                  <input
+                    type="color"
+                    tabIndex={-1}
+                    aria-label={t('Accent color')}
+                    value={brand.accentColor || '#B8A88A'}
+                    onChange={e => setBrand({ ...brand, accentColor: e.target.value })}
+                    className="size-7 cursor-pointer rounded border-0 bg-transparent p-0"
+                  />
+                }
+              >
                 <Input
-                  type="color"
-                  value={brand.accentColor || '#B8A88A'}
-                  onChange={e => setBrand({ ...brand, accentColor: e.target.value })}
-                  className="w-16 h-10 p-1 cursor-pointer"
-                />
-                <Input
+                  id="wl-accent"
                   value={brand.accentColor || ''}
                   onChange={e => setBrand({ ...brand, accentColor: e.target.value })}
                   placeholder="#B8A88A"
-                  className="flex-1 font-mono"
+                  className="font-mono"
+                  spellCheck={false}
                 />
-              </div>
-            </div>
-            <div className="sm:col-span-2">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Logo-URL</Label>
+              </InputAffix>
+            </FormField>
+            <FormField label={t('Logo URL')} htmlFor="wl-logo" span="full">
               <Input
+                id="wl-logo"
+                type="url"
+                inputMode="url"
                 value={brand.logoUrl || ''}
                 onChange={e => setBrand({ ...brand, logoUrl: e.target.value })}
-                placeholder="https://cdn.firma.de/logo.png"
+                placeholder={t('https://cdn.company.com/logo.png')}
               />
-              {brand.logoUrl && (
-                <div className="mt-2 p-3 rounded-md border bg-muted/30 flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">Vorschau:</span>
-                  <img src={brand.logoUrl} alt="Logo" className="h-8 object-contain" />
-                </div>
-              )}
+            </FormField>
+          </FormGrid>
+          {brand.logoUrl && (
+            <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+              <span className="text-xs text-muted-foreground">{t('Preview:')}</span>
+              <img src={brand.logoUrl} alt="Logo" className="h-8 object-contain" />
             </div>
-          </div>
-          <div className="flex justify-end pt-1">
-            <Button onClick={saveBrand} disabled={saving} size="sm">
-              <Save className="h-3.5 w-3.5 mr-1" />
-              Branding speichern
+          )}
+          <FormActions>
+            <Button onClick={saveBrand} disabled={saving}>
+              <Save className="h-4 w-4 mr-2" />
+              {t('Save branding')}
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </FormActions>
+        </div>
+      </FormSection>
 
       {/* SMTP */}
-      <Card>
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Mail className="h-4 w-4 text-primary" />
-              Eigener SMTP-Server
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Bei Aktivierung werden E-Mails von deinem Server gesendet statt von Trackbliss.
-            </p>
-          </div>
-          {whitelabel.smtp?.enabled && (
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
-              <CheckCircle2 className="h-3 w-3" /> Aktiv
-            </Badge>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-3">
+      <FormSection
+      layout="stacked"
+        icon={Mail}
+        title={t('Custom SMTP server')}
+        description={t('When enabled, emails are sent from your server instead of Trackbliss.')}
+        aside={whitelabel.smtp?.enabled ? (
+          <Badge variant="outline" className="gap-1 border-success/30 bg-success/10 text-success">
+            <CheckCircle2 className="h-3 w-3" /> {t('Active')}
+          </Badge>
+        ) : undefined}
+      >
+        <div className="space-y-5">
+          <FormToggleRow htmlFor="smtp-enabled" label={t('Use your own SMTP')}>
             <Switch
               id="smtp-enabled"
               checked={smtpForm.enabled}
               onCheckedChange={v => setSmtpForm({ ...smtpForm, enabled: v })}
             />
-            <Label htmlFor="smtp-enabled" className="font-medium">Eigenen SMTP verwenden</Label>
-          </div>
+          </FormToggleRow>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Host</Label>
+          <FormGrid cols={6}>
+            <FormField label={t('Host')} htmlFor="smtp-host" span={4}>
               <Input
+                id="smtp-host"
                 value={smtpForm.host}
                 onChange={e => setSmtpForm({ ...smtpForm, host: e.target.value })}
-                placeholder="smtp.deine-firma.de"
+                placeholder={t('smtp.your-company.com')}
+                autoCapitalize="none"
+                spellCheck={false}
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Port</Label>
+            </FormField>
+            <FormField label={t('Port')} htmlFor="smtp-port" span={2}>
               <Input
+                id="smtp-port"
                 type="number"
+                inputMode="numeric"
                 value={smtpForm.port}
                 onChange={e => setSmtpForm({ ...smtpForm, port: parseInt(e.target.value) || 465 })}
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Benutzername</Label>
+            </FormField>
+            <FormField label={t('Username')} htmlFor="smtp-user" span={3}>
               <Input
+                id="smtp-user"
                 value={smtpForm.username}
                 onChange={e => setSmtpForm({ ...smtpForm, username: e.target.value })}
-                placeholder="noreply@firma.de"
+                placeholder={t('noreply@company.com')}
+                autoCapitalize="none"
+                autoComplete="off"
+                spellCheck={false}
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Passwort {whitelabel.smtp?.passwordSet && <span className="text-emerald-600 normal-case tracking-normal">(gesetzt)</span>}
-              </Label>
-              <Input
-                type="password"
+            </FormField>
+            <FormField
+              label={t('Password')}
+              htmlFor="smtp-pass"
+              span={3}
+              labelAside={whitelabel.smtp?.passwordSet ? <span className="text-success">{t('set')}</span> : undefined}
+            >
+              <SecretInput
+                id="smtp-pass"
                 value={smtpForm.password}
                 onChange={e => setSmtpForm({ ...smtpForm, password: e.target.value })}
-                placeholder={whitelabel.smtp?.passwordSet ? '•••••••• (leer = behalten)' : 'App-Passwort'}
+                placeholder={whitelabel.smtp?.passwordSet ? t('•••••••• (empty = keep)') : t('App password')}
+                autoComplete="new-password"
               />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Absender-E-Mail</Label>
-              <Input
-                type="email"
-                value={smtpForm.fromAddress}
-                onChange={e => setSmtpForm({ ...smtpForm, fromAddress: e.target.value })}
-                placeholder="noreply@firma.de"
-              />
-            </div>
-            <div>
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Absender-Name</Label>
-              <Input
-                value={smtpForm.fromName}
-                onChange={e => setSmtpForm({ ...smtpForm, fromName: e.target.value })}
-                placeholder="Dein Firmenname"
-              />
-            </div>
-            <div className="col-span-2 flex items-center gap-3">
+            </FormField>
+          </FormGrid>
+
+          <OptionalDisclosure
+            label={t('Sender & encryption')}
+            description={t('Sender email, sender name, TLS')}
+            filledCount={[smtpForm.fromAddress, smtpForm.fromName].filter(Boolean).length}
+          >
+            <FormGrid cols={2}>
+              <FormField label={t('Sender email')} htmlFor="smtp-from">
+                <Input
+                  id="smtp-from"
+                  type="email"
+                  inputMode="email"
+                  value={smtpForm.fromAddress}
+                  onChange={e => setSmtpForm({ ...smtpForm, fromAddress: e.target.value })}
+                  placeholder={t('noreply@company.com')}
+                />
+              </FormField>
+              <FormField label={t('Sender name')} htmlFor="smtp-from-name">
+                <Input
+                  id="smtp-from-name"
+                  value={smtpForm.fromName}
+                  onChange={e => setSmtpForm({ ...smtpForm, fromName: e.target.value })}
+                  placeholder={t('Your company name')}
+                />
+              </FormField>
+            </FormGrid>
+            <FormToggleRow htmlFor="smtp-tls" label={t('Use TLS (recommended)')}>
               <Switch
                 id="smtp-tls"
                 checked={smtpForm.useTls}
                 onCheckedChange={v => setSmtpForm({ ...smtpForm, useTls: v })}
               />
-              <Label htmlFor="smtp-tls" className="text-sm">TLS verwenden (empfohlen)</Label>
-            </div>
-          </div>
+            </FormToggleRow>
+          </OptionalDisclosure>
 
-          <div className="flex justify-end pt-2 border-t">
-            <Button onClick={saveSmtp} disabled={saving || !smtpForm.host || !smtpForm.username} size="sm">
-              <Save className="h-3.5 w-3.5 mr-1" />
-              Speichern
+          <FormActions>
+            <Button onClick={saveSmtp} disabled={saving || !smtpForm.host || !smtpForm.username}>
+              <Save className="h-4 w-4 mr-2" />
+              {t('Save')}
             </Button>
-          </div>
+          </FormActions>
 
           {whitelabel.smtp && (
-            <div className="mt-3 rounded-lg border bg-muted/30 p-3">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
-                <TestTube className="h-3 w-3" />
-                Test-E-Mail senden
-              </Label>
-              <div className="flex gap-2 mt-2">
+            <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:items-start sm:p-4">
+              <FormField
+                className="flex-1"
+                label={<span className="inline-flex items-center gap-1.5"><TestTube className="h-3.5 w-3.5" aria-hidden="true" />{t('Send test email')}</span>}
+                htmlFor="smtp-test"
+                hint={whitelabel.smtp.lastTestedAt ? (
+                  <>
+                    {t('Last test:')}{' '}
+                    <span className={whitelabel.smtp.lastTestResult === 'ok' ? 'font-medium text-success' : 'font-medium text-destructive'}>
+                      {whitelabel.smtp.lastTestResult}
+                    </span>
+                  </>
+                ) : undefined}
+              >
                 <Input
+                  id="smtp-test"
                   type="email"
+                  inputMode="email"
                   value={smtpTestEmail}
                   onChange={e => setSmtpTestEmail(e.target.value)}
-                  placeholder="test@empfaenger.de"
-                  className="flex-1"
+                  placeholder={t('test@recipient.com')}
                 />
-                <Button onClick={handleTestSmtp} disabled={smtpTesting || !smtpTestEmail.trim()} size="sm">
-                  <Send className="h-3.5 w-3.5 mr-1" />
-                  {smtpTesting ? 'Sendet...' : 'Testen'}
-                </Button>
-              </div>
-              {whitelabel.smtp.lastTestedAt && (
-                <div className="mt-2 text-xs">
-                  <span className="text-muted-foreground">Letzter Test:</span>{' '}
-                  <span className={whitelabel.smtp.lastTestResult === 'ok' ? 'text-emerald-700 font-medium' : 'text-red-700 font-medium'}>
-                    {whitelabel.smtp.lastTestResult}
-                  </span>
-                </div>
-              )}
+              </FormField>
+              <Button variant="outline" onClick={handleTestSmtp} disabled={smtpTesting || !smtpTestEmail.trim()} className="shrink-0 sm:mt-7">
+                <Send className="h-4 w-4 mr-2" />
+                {smtpTesting ? t('Sending...') : t('Test')}
+              </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </FormSection>
+    </FormSections>
   );
 }
 
@@ -425,6 +453,7 @@ function CustomDomainSection({
   whitelabel: TenantWhitelabel;
   onChanged: () => Promise<void>;
 }) {
+  const { t } = useTranslation('settings');
   const [domain, setDomain] = useState(whitelabel.customDomain || '');
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -450,7 +479,7 @@ function CustomDomainSection({
         instructions: res.instructions,
         vercelVerification: res.vercelVerification,
       });
-      toast.success(res.customDomain ? 'Custom Domain hinterlegt — jetzt DNS einrichten' : 'Custom Domain entfernt');
+      toast.success(res.customDomain ? t('Custom domain saved — now set up DNS') : t('Custom domain removed'));
       await onChanged();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
@@ -463,8 +492,8 @@ function CustomDomainSection({
     setVerifying(true);
     try {
       const res = await verifyOwnCustomDomain();
-      if (res.verified) toast.success('Custom Domain erfolgreich verifiziert!');
-      else toast.error(res.error || 'Verifikation fehlgeschlagen');
+      if (res.verified) toast.success(t('Custom domain verified successfully!'));
+      else toast.error(res.error || t('Verification failed'));
       await onChanged();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
@@ -475,55 +504,56 @@ function CustomDomainSection({
 
   function copy(s: string) {
     navigator.clipboard.writeText(s);
-    toast.success('Kopiert');
+    toast.success(t('Copied'));
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Link2 className="h-4 w-4 text-primary" />
-          Eigene Domain
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Verbinde deine eigene Domain (z.B. <code>app.deine-firma.de</code>) mit der App. Zwei DNS-Records setzen, einmal „Prüfen" klicken — fertig.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-stretch gap-2">
-          <Input
-            value={domain}
-            onChange={e => setDomain(e.target.value.toLowerCase())}
-            placeholder="app.deine-firma.de"
-            className="flex-1"
-          />
-          <Button onClick={save} disabled={saving} size="sm" variant={domain ? 'default' : 'outline'}>
-            <Save className="h-3.5 w-3.5 mr-1" />
-            Speichern
+    <FormSection
+      layout="stacked"
+      icon={Link2}
+      title={t('Your own domain')}
+      description={<Trans t={t} i18nKey="Connect your own domain (e.g. <code>app.your-company.com</code>) to the app. Set two DNS records, click “Check DNS” once — done." components={{ code: <code /> }} />}
+    >
+      <div className="space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <FormField label={t('Domain')} htmlFor="wl-custom-domain" className="flex-1">
+            <Input
+              id="wl-custom-domain"
+              value={domain}
+              onChange={e => setDomain(e.target.value.toLowerCase())}
+              placeholder={t('app.your-company.com')}
+              inputMode="url"
+              autoCapitalize="none"
+              spellCheck={false}
+            />
+          </FormField>
+          <Button onClick={save} disabled={saving} variant={domain ? 'default' : 'outline'} className="shrink-0">
+            <Save className="h-4 w-4 mr-2" />
+            {t('Save')}
           </Button>
         </div>
 
         {whitelabel.customDomain && (
-          <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-            <div className="flex items-center justify-between">
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-3 sm:p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="font-mono text-sm truncate">{whitelabel.customDomain}</div>
                 {whitelabel.customDomainVerified ? (
-                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 mt-1">
+                  <Badge variant="outline" className="mt-1 gap-1 border-success/30 bg-success/10 text-success">
                     <ShieldCheck className="h-3 w-3" />
-                    Verifiziert und aktiv
+                    {t('Verified and active')}
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1 mt-1">
+                  <Badge variant="outline" className="mt-1 gap-1 border-warning/30 bg-warning/10 text-warning">
                     <AlertCircle className="h-3 w-3" />
-                    Verifikation steht aus
+                    {t('Verification pending')}
                   </Badge>
                 )}
               </div>
               {!whitelabel.customDomainVerified && (
-                <Button size="sm" variant="outline" onClick={verify} disabled={verifying}>
-                  <RefreshCw className={`h-3.5 w-3.5 mr-1 ${verifying ? 'animate-spin' : ''}`} />
-                  DNS prüfen
+                <Button variant="outline" onClick={verify} disabled={verifying}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${verifying ? 'animate-spin' : ''}`} />
+                  {t('Check DNS')}
                 </Button>
               )}
             </div>
@@ -531,7 +561,7 @@ function CustomDomainSection({
             {!whitelabel.customDomainVerified && instructions.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Setze folgende DNS-Records bei deinem Provider, dann „DNS prüfen":
+                  {t('Add the following DNS records at your provider, then click “Check DNS”:')}
                 </p>
                 <div className="space-y-1.5">
                   {instructions.map((line, i) => {
@@ -541,7 +571,7 @@ function CustomDomainSection({
                     const [, type, name, value] = match;
                     return (
                       <div key={i} className="rounded-md bg-background border p-2 flex items-center gap-2 font-mono text-xs">
-                        <Badge variant="outline" className="h-5 font-mono text-[10px] shrink-0">{type}</Badge>
+                        <Badge variant="outline" className="h-5 font-mono text-xs shrink-0">{type}</Badge>
                         <div className="min-w-0 flex-1 grid sm:grid-cols-2 gap-x-3">
                           <div className="truncate text-muted-foreground">{name}</div>
                           <div className="truncate font-semibold">{value}</div>
@@ -549,23 +579,23 @@ function CustomDomainSection({
                         <button
                           type="button"
                           onClick={() => copy(`${name}\t${type}\t${value}`)}
-                          className="p-1 rounded hover:bg-muted cursor-pointer shrink-0"
-                          title="Kopieren"
+                          className="inline-flex size-9 shrink-0 items-center justify-center rounded-md transition-colors duration-150 ease-out hover:bg-muted pointer-coarse:size-11"
+                          aria-label={t('Copy')}
                         >
-                          <Copy className="h-3 w-3" />
+                          <Copy className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-muted-foreground italic">
-                  DNS-Propagation kann bis zu 24 Stunden dauern, meistens innerhalb weniger Minuten.
+                <p className="text-xs text-muted-foreground">
+                  {t('DNS propagation can take up to 24 hours, usually within a few minutes.')}
                 </p>
               </div>
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </FormSection>
   );
 }

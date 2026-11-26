@@ -55,10 +55,10 @@ export function TicketKPICards({ stats }: TicketKPICardsProps) {
       {kpis.map((kpi, i) => (
         <Card
           key={kpi.label}
-          className={`hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${
+          className={`hover:-translate-y-0.5 hover:shadow-md transition-[translate,box-shadow,border-color] duration-200 ${
             cardVisibility[i] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
           }`}
-          style={{ transition: 'opacity 0.35s ease-out, transform 0.35s ease-out, box-shadow 0.2s ease' }}
+          style={{ transition: 'opacity 0.3s ease-out, translate 0.2s ease-out, box-shadow 0.2s ease, border-color 0.2s ease' }}
         >
           <CardContent className="pt-4 pb-4 px-4">
             <div className="flex items-center gap-3">

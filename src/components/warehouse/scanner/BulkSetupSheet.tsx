@@ -85,7 +85,7 @@ export function BulkSetupSheet({ open, mode, onConfirm, onClose }: BulkSetupShee
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-full max-w-lg animate-sheet-up rounded-t-3xl sm:rounded-3xl border border-white/10 bg-slate-900/95 backdrop-blur-xl p-6 pb-8 sm:pb-6">
+      <div className="relative w-full max-w-lg max-h-[calc(100dvh-var(--safe-top)-0.75rem)] overflow-y-auto overscroll-contain animate-sheet-up rounded-t-3xl sm:rounded-3xl border border-white/10 bg-slate-900/95 backdrop-blur-xl p-5 pb-[calc(1.5rem+var(--safe-bottom))] sm:p-6">
         <div className="sm:hidden flex justify-center mb-4">
           <div className="w-12 h-1.5 rounded-full bg-white/20" />
         </div>
@@ -118,7 +118,7 @@ export function BulkSetupSheet({ open, mode, onConfirm, onClose }: BulkSetupShee
                   key={loc.id}
                   type="button"
                   onClick={() => setLocationId(loc.id)}
-                  className={`text-left rounded-xl px-4 py-3 text-sm transition-all border ${
+                  className={`text-left rounded-xl px-4 py-3 text-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] border ${
                     locationId === loc.id
                       ? `bg-${accentColor}-500/15 border-${accentColor}-500/40 text-${accentColor}-400 ring-1 ring-${accentColor}-500/20`
                       : 'bg-white/5 border-white/5 text-slate-300 hover:bg-white/10 hover:border-white/10'

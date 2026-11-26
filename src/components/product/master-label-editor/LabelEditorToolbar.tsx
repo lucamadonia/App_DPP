@@ -123,14 +123,14 @@ export function LabelEditorToolbar({
   return (
     <div className="h-12 shrink-0 border-b bg-background/80 backdrop-blur-sm flex items-center gap-2 px-3 overflow-x-auto">
       {/* Back */}
-      <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
+      <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8 shrink-0">
         <ArrowLeft className="h-4 w-4" />
       </Button>
 
       {/* Template name + save status dot */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1.5">
         <SaveStatusDot status={saveStatus} />
-        <span className="text-sm font-medium truncate max-w-[140px]">{templateName}</span>
+        <span className="text-sm font-medium truncate max-w-[96px] sm:max-w-[140px]">{templateName}</span>
       </div>
 
       {/* Mobile: element palette toggle */}
@@ -159,11 +159,11 @@ export function LabelEditorToolbar({
         </Button>
       )}
 
-      <div className="w-px h-5 bg-border mx-1" />
+      <div className="w-px h-5 shrink-0 bg-border mx-1" />
 
       {/* Variant toggle */}
       <Select value={variant} onValueChange={(v) => onVariantChange(v as LabelVariant)}>
-        <SelectTrigger className="h-8 w-[100px] text-xs">
+        <SelectTrigger className="h-8 w-[100px] shrink-0 text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -174,7 +174,7 @@ export function LabelEditorToolbar({
 
       {/* Batch selector */}
       <Select value={selectedBatchId} onValueChange={onBatchChange}>
-        <SelectTrigger className="h-8 w-[140px] text-xs">
+        <SelectTrigger className="h-8 w-[140px] shrink-0 text-xs">
           <SelectValue placeholder={t('ml.selectBatchPlaceholder')} />
         </SelectTrigger>
         <SelectContent>
@@ -193,7 +193,7 @@ export function LabelEditorToolbar({
           value={manufacturerOverrideId || '_default'}
           onValueChange={(v) => onManufacturerOverride(v === '_default' ? null : v)}
         >
-          <SelectTrigger className="h-8 w-[200px] text-xs">
+          <SelectTrigger className="h-8 w-[200px] shrink-0 text-xs">
             <div className="flex items-center gap-1 truncate">
               <Factory className="h-3 w-3 shrink-0" />
               <SelectValue />
@@ -202,7 +202,7 @@ export function LabelEditorToolbar({
           <SelectContent>
             {hasManufacturerTextField && (
               <SelectItem value="_default">
-                <div className="flex items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-1.5">
                   <Package className="h-3 w-3 shrink-0 text-muted-foreground" />
                   <span className="truncate">{product.manufacturer}</span>
                 </div>
@@ -213,7 +213,7 @@ export function LabelEditorToolbar({
             )}
             {manufacturerSuppliers.map((sp) => (
               <SelectItem key={sp.supplier_id} value={sp.supplier_id}>
-                <div className="flex items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-1.5">
                   <Factory className="h-3 w-3 shrink-0 text-muted-foreground" />
                   <span className="truncate">{sp.supplier_name}</span>
                 </div>
@@ -229,7 +229,7 @@ export function LabelEditorToolbar({
           value={importerOverrideId || '_default'}
           onValueChange={(v) => onImporterOverride(v === '_default' ? null : v)}
         >
-          <SelectTrigger className="h-8 w-[200px] text-xs">
+          <SelectTrigger className="h-8 w-[200px] shrink-0 text-xs">
             <div className="flex items-center gap-1 truncate">
               <Building2 className="h-3 w-3 shrink-0" />
               <SelectValue />
@@ -238,7 +238,7 @@ export function LabelEditorToolbar({
           <SelectContent>
             {hasImporterTextField && (
               <SelectItem value="_default">
-                <div className="flex items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-1.5">
                   <Package className="h-3 w-3 shrink-0 text-muted-foreground" />
                   <span className="truncate">{product.importer}</span>
                 </div>
@@ -249,7 +249,7 @@ export function LabelEditorToolbar({
             )}
             {importerSuppliers.map((sp) => (
               <SelectItem key={sp.supplier_id} value={sp.supplier_id}>
-                <div className="flex items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-1.5">
                   <Building2 className="h-3 w-3 shrink-0 text-muted-foreground" />
                   <span className="truncate">{sp.supplier_name}</span>
                 </div>
@@ -259,13 +259,13 @@ export function LabelEditorToolbar({
         </Select>
       )}
 
-      <div className="w-px h-5 bg-border mx-1" />
+      <div className="w-px h-5 shrink-0 bg-border mx-1" />
 
       {/* Undo/Redo */}
-      <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canUndo} onClick={onUndo}>
+      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={!canUndo} onClick={onUndo}>
         <Undo2 className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canRedo} onClick={onRedo}>
+      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={!canRedo} onClick={onRedo}>
         <Redo2 className="h-4 w-4" />
       </Button>
 
@@ -273,33 +273,33 @@ export function LabelEditorToolbar({
 
       {/* Prominent Save button(s) */}
       {isBuiltinTemplate ? (
-        <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={onSaveAs}>
+        <Button variant="outline" size="sm" className="h-8 gap-1.5 shrink-0" onClick={onSaveAs}>
           <Copy className="h-3.5 w-3.5" />
           {t('ml.editor.saveAsCopy')}
         </Button>
       ) : (
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <Button
             variant="outline"
             size="sm"
-            className="h-8 gap-1.5"
+            className="h-8 gap-1.5 shrink-0"
             onClick={onSave}
             disabled={saveStatus === 'saving'}
           >
             <Save className="h-3.5 w-3.5" />
             {saveStatus === 'saving' ? t('ml.editor.saving') : t('ml.editor.save')}
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={onSaveAs}>
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 shrink-0" onClick={onSaveAs}>
             <Copy className="h-3.5 w-3.5" />
             {t('ml.editor.saveAs')}
           </Button>
         </div>
       )}
 
-      <div className="w-px h-5 bg-border mx-1" />
+      <div className="w-px h-5 shrink-0 bg-border mx-1" />
 
       {/* Zoom */}
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <Button
           variant="ghost"
           size="icon"
@@ -338,10 +338,10 @@ export function LabelEditorToolbar({
         </Button>
       </div>
 
-      <div className="w-px h-5 bg-border mx-1" />
+      <div className="w-px h-5 shrink-0 bg-border mx-1" />
 
       {/* Generate PDF - Split Button */}
-      <div className="flex items-center gap-0.5">
+      <div className="flex shrink-0 items-center gap-0.5">
         <Button
           onClick={onGeneratePDF}
           disabled={isGenerating}

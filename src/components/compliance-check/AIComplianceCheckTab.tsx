@@ -242,9 +242,9 @@ export function AIComplianceCheckTab({ product }: AIComplianceCheckTabProps) {
     <div className="space-y-6">
       {/* Toolbar */}
       {isComplete && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BrainCircuit className="h-5 w-5 text-primary" />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <BrainCircuit className="h-5 w-5 shrink-0 text-primary" />
             <span className="font-semibold">
               {t('AI Compliance Check', { defaultValue: 'AI Compliance Check' })}
             </span>
@@ -254,7 +254,7 @@ export function AIComplianceCheckTab({ product }: AIComplianceCheckTabProps) {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {viewState === 'result' && (
               <Button
                 variant="outline"

@@ -41,8 +41,8 @@ export function StatusPipeline({ status }: StatusPipelineProps) {
     return (
       <div className="w-full">
         <div className="flex items-center justify-center py-6">
-          <div className="flex items-center gap-3 px-6 py-3 rounded-xl bg-destructive/10 border border-destructive/20">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive text-white">
+          <div className="flex items-center gap-3 px-4 sm:px-6 py-3 rounded-xl bg-destructive/10 border border-destructive/20">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive text-white">
               <X className="h-5 w-5" />
             </div>
             <div>
@@ -56,9 +56,14 @@ export function StatusPipeline({ status }: StatusPipelineProps) {
     );
   }
 
+  const activeStage = activeIndex >= 0 ? STAGES[activeIndex] : null;
+  const activeLabel = activeStage
+    ? t(activeStage.subStatusLabels?.[status] ?? activeStage.labelKey)
+    : null;
+
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="flex items-center min-w-[500px] py-4">
+    <div className="w-full sm:overflow-x-auto">
+      <div className="flex items-center pt-4 pb-2 sm:py-4 sm:min-w-[500px]">
         {STAGES.map((stage, i) => {
           const isCompleted = i < activeIndex;
           const isCurrent = i === activeIndex;
@@ -68,7 +73,7 @@ export function StatusPipeline({ status }: StatusPipelineProps) {
               {/* Node */}
               <div className="flex flex-col items-center relative">
                 <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-500 ${
+                  className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-[border-color,background-color,color] duration-300 ${
                     isCompleted
                       ? 'bg-primary border-primary text-primary-foreground'
                       : isCurrent
@@ -83,7 +88,7 @@ export function StatusPipeline({ status }: StatusPipelineProps) {
                   )}
                 </div>
                 <span
-                  className={`mt-2 text-[11px] text-center whitespace-nowrap flex items-center gap-0.5 ${
+                  className={`mt-2 text-[11px] text-center whitespace-nowrap hidden sm:flex items-center gap-0.5 ${
                     isCurrent ? 'font-semibold text-primary' : isCompleted ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
@@ -99,7 +104,7 @@ export function StatusPipeline({ status }: StatusPipelineProps) {
                 <div className="flex-1 h-0.5 mx-1 relative">
                   <div className="absolute inset-0 bg-gray-200 rounded-full" />
                   <div
-                    className="absolute inset-y-0 left-0 bg-primary rounded-full transition-all duration-700 ease-out"
+                    className="absolute inset-y-0 left-0 bg-primary rounded-full transition-[width] duration-300 ease-out"
                     style={{
                       width: isCompleted ? '100%' : isCurrent ? '50%' : '0%',
                     }}
@@ -110,6 +115,15 @@ export function StatusPipeline({ status }: StatusPipelineProps) {
           );
         })}
       </div>
+      {/* Phones: six labels cannot sit under six nodes in ~280px without
+          scrolling, so only the current stage is named, as a caption. */}
+      {activeLabel && (
+        <p className="sm:hidden text-center text-sm">
+          <span className="tabular-nums text-muted-foreground">{activeIndex + 1}/{STAGES.length}</span>
+          <span className="mx-1.5 text-muted-foreground">·</span>
+          <span className="font-semibold text-primary">{activeLabel}</span>
+        </p>
+      )}
     </div>
   );
 }

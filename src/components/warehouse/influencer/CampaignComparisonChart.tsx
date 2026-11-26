@@ -59,7 +59,7 @@ export function CampaignComparisonChart({ campaigns, className }: CampaignCompar
               </div>
               <div className="h-4 sm:h-5 rounded bg-muted overflow-hidden">
                 <div
-                  className="h-full rounded bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-700 ease-out"
+                  className="h-full rounded bg-gradient-to-r from-pink-500 to-purple-500 transition-[width] duration-700 ease-out"
                   style={{ width: animated ? `${widthPercent}%` : '0%' }}
                 />
               </div>

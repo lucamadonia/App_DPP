@@ -32,7 +32,7 @@ function FAQItem({
         />
       </button>
       <div
-        className={`grid transition-all duration-300 ${
+        className={`grid transition-[grid-template-rows] duration-300 ${
           isOpen ? 'grid-rows-[1fr] pb-5' : 'grid-rows-[0fr]'
         }`}
       >
@@ -80,7 +80,7 @@ export function LandingFAQ() {
       <div ref={ref} className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div
-          className={`text-center mb-14 transition-all duration-700 ${
+          className={`text-center mb-14 transition-[opacity,translate] duration-500 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}
         >
@@ -98,7 +98,7 @@ export function LandingFAQ() {
 
         {/* Accordion */}
         <div
-          className={`rounded-2xl border border-slate-200 bg-white px-6 shadow-sm transition-all duration-700 ${
+          className={`rounded-2xl border border-slate-200 bg-white px-6 shadow-sm transition-[opacity,translate,box-shadow] duration-500 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}
           style={{ transitionDelay: '200ms' }}

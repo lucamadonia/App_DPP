@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, GripVertical, Package, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Package, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { FormSection, FormGrid, FormField, InputAffix, FormToggleRow } from '@/components/ui/form-layout';
 import { Badge } from '@/components/ui/badge';
 import {
   getProductPackaging,
@@ -99,220 +101,199 @@ export function PackagingLayersEditor({ productId, readOnly = false }: Packaging
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium flex items-center gap-2">
-          <Package className="h-4 w-4 text-muted-foreground" />
-          {t('Packaging Layers')}
-        </h3>
-        {!readOnly && (
-          <Button variant="outline" size="sm" onClick={handleAddLayer} disabled={isSaving === 'new'}>
-            {isSaving === 'new' ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="mr-2 h-4 w-4" />
-            )}
-            {t('Add Packaging Layer')}
-          </Button>
-        )}
-      </div>
-
+    <FormSection
+      title={t('Packaging Layers')}
+      description={t('Add packaging layers to define all packaging components')}
+      icon={Package}
+      layout="stacked"
+      variant="plain"
+      aside={!readOnly && (
+        <Button variant="outline" size="sm" className="pointer-coarse:min-h-11" onClick={handleAddLayer} disabled={isSaving === 'new'}>
+          {isSaving === 'new' ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="mr-2 h-4 w-4" />
+          )}
+          {t('Add Packaging Layer')}
+        </Button>
+      )}
+    >
       {layers.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-8 text-center">
-            <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">{t('No packaging layers yet')}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('Add packaging layers to define all packaging components')}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border border-dashed py-8 text-center">
+          <Package className="mx-auto mb-2 size-6 text-muted-foreground" aria-hidden="true" />
+          <p className="text-sm text-muted-foreground">{t('No packaging layers yet')}</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {layers.map((layer) => (
-            <Card key={layer.id} className="relative">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+            <div key={layer.id} className="rounded-lg border bg-card p-4">
+              <div className="mb-4 flex items-start justify-between gap-2">
+                <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    {!readOnly && (
-                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                    )}
                     <Badge variant="outline" className="font-normal">
                       {t(LAYER_TYPES.find(lt => lt.value === layer.layerType)?.labelKey || layer.layerType)}
                     </Badge>
                     {isSaving === layer.id && (
-                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                      <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-label={t('Saving...')} />
                     )}
                   </div>
-                  {!readOnly && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDeleteLayer(layer.id)}
-                      disabled={!!isSaving}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  )}
+                  <p className="mt-1 text-xs text-pretty text-muted-foreground">
+                    {t(LAYER_TYPES.find(lt => lt.value === layer.layerType)?.descKey || '')}
+                  </p>
                 </div>
-                <CardDescription className="text-xs">
-                  {t(LAYER_TYPES.find(lt => lt.value === layer.layerType)?.descKey || '')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {/* Layer Type */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t('Layer Type')}</label>
-                    <Select
-                      value={layer.layerType}
-                      onValueChange={(v) => handleUpdateLayer(layer.id, 'layerType', v as PackagingLayerType)}
-                      disabled={readOnly}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LAYER_TYPES.map(lt => (
-                          <SelectItem key={lt.value} value={lt.value}>
-                            {t(lt.labelKey)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                {!readOnly && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 pointer-coarse:size-11"
+                    aria-label={t('Delete', { ns: 'common' })}
+                    onClick={() => handleDeleteLayer(layer.id)}
+                    disabled={!!isSaving}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
+              </div>
 
-                  {/* Packaging Type */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t('Packaging Type')}</label>
-                    <Select
-                      value={layer.packagingType || ''}
-                      onValueChange={(v) => handleUpdateLayer(layer.id, 'packagingType', v as PackagingType)}
-                      disabled={readOnly}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={t('Select packaging type...')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PACKAGING_TYPES.map(pt => (
-                          <SelectItem key={pt} value={pt}>
-                            {t(`packaging.${pt}`)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <FormGrid cols={6}>
+                <FormField label={t('Layer Type')} span={3} htmlFor={`layer-layer-type-${layer.id}`}>
+                  <Select
+                    value={layer.layerType}
+                    onValueChange={(v) => handleUpdateLayer(layer.id, 'layerType', v as PackagingLayerType)}
+                    disabled={readOnly}
+                  >
+                    <SelectTrigger id={`layer-layer-type-${layer.id}`} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LAYER_TYPES.map(lt => (
+                        <SelectItem key={lt.value} value={lt.value}>
+                          {t(lt.labelKey)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
 
-                  {/* Material */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t('Main Material')}</label>
-                    <Input
-                      className="h-9"
-                      placeholder={t('e.g. Cardboard')}
-                      value={layer.material || ''}
-                      onChange={(e) => handleUpdateLayer(layer.id, 'material', e.target.value)}
-                      disabled={readOnly}
-                    />
-                  </div>
+                <FormField label={t('Packaging Type')} span={3} htmlFor={`layer-packaging-type-${layer.id}`}>
+                  <Select
+                    value={layer.packagingType || ''}
+                    onValueChange={(v) => handleUpdateLayer(layer.id, 'packagingType', v as PackagingType)}
+                    disabled={readOnly}
+                  >
+                    <SelectTrigger id={`layer-packaging-type-${layer.id}`} className="w-full">
+                      <SelectValue placeholder={t('Select packaging type...')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PACKAGING_TYPES.map(pt => (
+                        <SelectItem key={pt} value={pt}>
+                          {t(`packaging.${pt}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
 
-                  {/* Recycling Code */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t('Recycling Code')}</label>
-                    <Input
-                      className="h-9"
-                      placeholder={t('e.g. PAP 21')}
-                      value={layer.recyclingCode || ''}
-                      onChange={(e) => handleUpdateLayer(layer.id, 'recyclingCode', e.target.value)}
-                      disabled={readOnly}
-                    />
-                  </div>
-                </div>
+                <FormField label={t('Main Material')} span={3}>
+                  <Input
+                    placeholder={t('e.g. Cardboard')}
+                    value={layer.material || ''}
+                    onChange={(e) => handleUpdateLayer(layer.id, 'material', e.target.value)}
+                    disabled={readOnly}
+                  />
+                </FormField>
 
-                {/* Dimensions Row */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">{t('Height (cm)')}</label>
+                <FormField label={t('Recycling Code')} optional span={3}>
+                  <Input
+                    placeholder={t('e.g. PAP 21')}
+                    value={layer.recyclingCode || ''}
+                    onChange={(e) => handleUpdateLayer(layer.id, 'recyclingCode', e.target.value)}
+                    disabled={readOnly}
+                  />
+                </FormField>
+
+                <FormField label={t('Height')} optional span={2}>
+                  <InputAffix suffix="cm">
                     <Input
                       type="number"
+                      inputMode="decimal"
                       step="0.1"
                       min="0"
-                      className="h-9"
-                      placeholder={t('e.g. 10')}
+                      placeholder="10"
                       value={layer.heightCm ?? ''}
                       onChange={(e) => handleUpdateLayer(layer.id, 'heightCm', e.target.value ? parseFloat(e.target.value) : undefined)}
                       disabled={readOnly}
                     />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">{t('Width (cm)')}</label>
+                  </InputAffix>
+                </FormField>
+                <FormField label={t('Width')} optional span={2}>
+                  <InputAffix suffix="cm">
                     <Input
                       type="number"
+                      inputMode="decimal"
                       step="0.1"
                       min="0"
-                      className="h-9"
-                      placeholder={t('e.g. 20')}
+                      placeholder="20"
                       value={layer.widthCm ?? ''}
                       onChange={(e) => handleUpdateLayer(layer.id, 'widthCm', e.target.value ? parseFloat(e.target.value) : undefined)}
                       disabled={readOnly}
                     />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">{t('Depth (cm)')}</label>
+                  </InputAffix>
+                </FormField>
+                <FormField label={t('Depth')} optional span={2}>
+                  <InputAffix suffix="cm">
                     <Input
                       type="number"
+                      inputMode="decimal"
                       step="0.1"
                       min="0"
-                      className="h-9"
-                      placeholder={t('e.g. 5')}
+                      placeholder="5"
                       value={layer.depthCm ?? ''}
                       onChange={(e) => handleUpdateLayer(layer.id, 'depthCm', e.target.value ? parseFloat(e.target.value) : undefined)}
                       disabled={readOnly}
                     />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">{t('Packaging Weight (g)')}</label>
+                  </InputAffix>
+                </FormField>
+
+                <FormField label={t('Weight')} optional span={3}>
+                  <InputAffix suffix="g">
                     <Input
                       type="number"
+                      inputMode="decimal"
                       step="0.1"
                       min="0"
-                      className="h-9"
-                      placeholder={t('e.g. 50')}
+                      placeholder="50"
                       value={layer.weightG ?? ''}
                       onChange={(e) => handleUpdateLayer(layer.id, 'weightG', e.target.value ? parseFloat(e.target.value) : undefined)}
                       disabled={readOnly}
                     />
-                  </div>
-                  <div className="space-y-1 flex items-end">
-                    <label className="flex items-center gap-2 h-9">
-                      <input
-                        type="checkbox"
-                        checked={layer.recyclable ?? false}
-                        onChange={(e) => handleUpdateLayer(layer.id, 'recyclable', e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300"
-                        disabled={readOnly}
-                      />
-                      <span className="text-sm">{t('Recyclable')}</span>
-                    </label>
-                  </div>
+                  </InputAffix>
+                </FormField>
+                <div className="flex items-end @md:col-span-3">
+                  <FormToggleRow label={t('Recyclable')} htmlFor={`layer-recyclable-${layer.id}`} className="w-full">
+                    <Switch
+                      id={`layer-recyclable-${layer.id}`}
+                      checked={layer.recyclable ?? false}
+                      onCheckedChange={(v) => handleUpdateLayer(layer.id, 'recyclable', v)}
+                      disabled={readOnly}
+                    />
+                  </FormToggleRow>
                 </div>
 
-                {/* Description */}
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">{t('Packaging Description')}</label>
-                  <textarea
-                    className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                <FormField label={t('Packaging Description')} optional span="full">
+                  <Textarea
                     placeholder={t('Describe the packaging...')}
                     value={layer.packagingDescription || ''}
                     onChange={(e) => handleUpdateLayer(layer.id, 'packagingDescription', e.target.value)}
                     disabled={readOnly}
+                    rows={2}
                   />
-                </div>
-              </CardContent>
-            </Card>
+                </FormField>
+              </FormGrid>
+            </div>
           ))}
         </div>
       )}
-    </div>
+    </FormSection>
   );
 }

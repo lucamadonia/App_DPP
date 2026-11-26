@@ -52,7 +52,7 @@ export function InventoryCardView({ stock, locations, onAdjust, onTransfer }: In
         return (
           <Card
             key={s.id}
-            className={`hover:shadow-md transition-all duration-200 ${isLow ? 'border-l-2 border-l-orange-400' : ''}`}
+            className={`hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 ${isLow ? 'border-l-2 border-l-orange-400' : ''}`}
           >
             <CardContent className="pt-4 pb-3 px-4">
               <div className="flex items-start justify-between gap-2 mb-2">

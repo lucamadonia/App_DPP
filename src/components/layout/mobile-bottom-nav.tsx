@@ -74,6 +74,9 @@ const CHROME_FREE_PREFIXES = [
   '/privacy',
   '/terms',
   '/auth/',
+  // Immersive full-screen warehouse tools (own header + back button).
+  '/warehouse/scanner',
+  '/warehouse/stocktake',
 ];
 
 function isTabActive(pathname: string, tab: TabItem): boolean {
@@ -114,7 +117,7 @@ export function MobileBottomNav() {
     <>
       <nav
         className={cn(
-          'fixed inset-x-0 bottom-0 z-30 md:hidden',
+          'app-tab-bar fixed inset-x-0 bottom-0 z-30 md:hidden',
           'border-t border-border bg-background/95 backdrop-blur-lg',
           'pb-[var(--safe-bottom)]'
         )}
@@ -132,7 +135,7 @@ export function MobileBottomNav() {
                   onClick={() => haptic.light()}
                   className={cn(
                     'flex h-full touch-target flex-col items-center justify-center gap-0.5',
-                    'text-[10px] font-medium transition-colors',
+                    'text-[11px] font-medium transition-colors',
                     active ? 'text-primary' : 'text-muted-foreground',
                     locked && 'opacity-55'
                   )}
@@ -140,11 +143,11 @@ export function MobileBottomNav() {
                 >
                   {active &&
                     (prefersReduced ? (
-                      <span className="absolute left-1/2 top-0 h-0.5 w-10 -translate-x-1/2 rounded-full bg-primary" />
+                      <span className="absolute left-1/2 top-1 h-8 w-12 -translate-x-1/2 rounded-xl bg-primary/10" />
                     ) : (
                       <motion.span
                         layoutId="mobile-nav-active-indicator"
-                        className="absolute left-1/2 top-0 h-0.5 w-10 -translate-x-1/2 rounded-full bg-primary"
+                        className="absolute left-1/2 top-1 h-8 w-12 -translate-x-1/2 rounded-xl bg-primary/10"
                         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                       />
                     ))}
@@ -178,7 +181,7 @@ export function MobileBottomNav() {
               aria-expanded={moreOpen}
               className={cn(
                 'flex h-full w-full touch-target flex-col items-center justify-center gap-0.5',
-                'text-[10px] font-medium transition-colors',
+                'text-[11px] font-medium transition-colors',
                 moreActive || moreOpen ? 'text-primary' : 'text-muted-foreground'
               )}
             >

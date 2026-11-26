@@ -98,7 +98,7 @@ export function CampaignTimeline({ campaignId, className = '' }: CampaignTimelin
               return (
                 <div
                   key={event.id}
-                  className={`relative transition-all duration-300 ${
+                  className={`relative transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300 ${
                     visible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'
                   }`}
                 >

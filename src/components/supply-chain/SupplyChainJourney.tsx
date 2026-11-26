@@ -192,7 +192,7 @@ function AddStationButton({ onClick, className = '' }: { onClick: () => void; cl
       aria-label={t('Add station here')}
       title={t('Add station here')}
       whileTap={{ scale: 0.97 }}
-      className={`flex h-11 w-11 items-center justify-center text-muted-foreground transition-all hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full ${className}`}
+      className={`flex h-11 w-11 items-center justify-center text-muted-foreground transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full ${className}`}
     >
       <span className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-current">
         <Plus className="h-3.5 w-3.5" />

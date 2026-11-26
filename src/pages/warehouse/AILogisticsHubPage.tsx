@@ -27,16 +27,16 @@ import { EXPERT_SUGGESTED_QUESTIONS, type WarehouseExpertId } from '@/services/o
 
 function HubBackdrop({ variant = 'hero' }: { variant?: 'hero' | 'chat' }) {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+    <div className="pointer-events-none absolute inset-0 overflow-clip [contain:paint]" aria-hidden="true">
       {/* Grid */}
       <div className="absolute inset-0 hub-grid-bg opacity-60 animate-grid-drift" />
       {/* Radial fade to hide grid edges */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,var(--background)_85%)]" />
       {/* Floating orbs */}
-      <div className="absolute -top-24 -left-16 h-[380px] w-[380px] rounded-full bg-blue-500/20 blur-3xl animate-orb-float" />
-      <div className="absolute top-1/3 -right-24 h-[420px] w-[420px] rounded-full bg-violet-500/15 blur-3xl animate-orb-float-alt" />
+      <div className="absolute -top-24 -left-16 h-56 w-56 sm:h-[380px] sm:w-[380px] rounded-full bg-blue-500/20 blur-3xl animate-orb-float" />
+      <div className="absolute top-1/3 -right-24 h-64 w-64 sm:h-[420px] sm:w-[420px] rounded-full bg-violet-500/15 blur-3xl animate-orb-float-alt" />
       {variant === 'hero' && (
-        <div className="absolute bottom-0 left-1/3 h-[320px] w-[320px] rounded-full bg-cyan-400/15 blur-3xl animate-orb-float" style={{ animationDelay: '-7s' }} />
+        <div className="absolute bottom-0 left-1/3 h-52 w-52 sm:h-[320px] sm:w-[320px] rounded-full bg-cyan-400/15 blur-3xl animate-orb-float" style={{ animationDelay: '-7s' }} />
       )}
     </div>
   );
@@ -127,7 +127,7 @@ function ExpertCard({ id, icon, name, description, specialty, index, onSelect }:
       style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'both' }}
     >
       {/* Outer holographic border on hover */}
-      <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+      <div className="absolute inset-0 overflow-hidden rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
         <div className="absolute inset-0 rounded-3xl bg-[conic-gradient(from_0deg,transparent_0%,#3b82f6_20%,#8b5cf6_40%,#06b6d4_60%,transparent_80%)] animate-holo-spin blur-sm" />
       </div>
 
@@ -157,7 +157,7 @@ function ExpertCard({ id, icon, name, description, specialty, index, onSelect }:
         </div>
 
         {/* Name */}
-        <h3 className="relative text-lg sm:text-xl font-bold tracking-tight mb-1.5">
+        <h3 className="relative min-w-0 break-words text-lg sm:text-xl font-bold tracking-tight mb-1.5">
           {name}
         </h3>
 
@@ -177,7 +177,7 @@ function ExpertCard({ id, icon, name, description, specialty, index, onSelect }:
           <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
             {t('Start Chat')}
           </span>
-          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-md shadow-blue-500/30 group-hover:shadow-lg group-hover:shadow-violet-500/40 group-hover:scale-110 transition-all duration-300">
+          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-md shadow-blue-500/30 group-hover:shadow-lg group-hover:shadow-violet-500/40 group-hover:scale-110 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300">
             <ArrowUp className="h-4 w-4 rotate-45" />
           </div>
         </div>
@@ -270,14 +270,14 @@ export function AILogisticsHubPage() {
       <div className="relative min-h-[calc(100dvh-4rem)]">
         <HubBackdrop variant="hero" />
 
-        <div className="relative container mx-auto max-w-6xl px-4 py-8 sm:py-12 lg:py-16 space-y-10 sm:space-y-12">
+        <div className="relative container mx-auto max-w-6xl px-0 py-4 sm:px-4 sm:py-12 lg:py-16 space-y-6 sm:space-y-12">
           {/* Epic Hero */}
-          <div className="space-y-6 animate-fade-in-up">
+          <div className="space-y-4 sm:space-y-6 animate-fade-in-up">
             {/* Status bar */}
-            <div className="inline-flex items-center gap-3 px-3 py-1.5 rounded-full bg-card/60 backdrop-blur-md border border-border/60 text-xs font-mono">
+            <div className="inline-flex max-w-full flex-wrap items-center gap-2 px-3 py-2 rounded-2xl bg-card/60 backdrop-blur-md border border-border/60 text-xs font-mono">
               <LiveDot />
               <span className="text-muted-foreground uppercase tracking-[0.2em]">
-                {t('4 AI Agents Online', { defaultValue: '4 AI Agents Online' })}
+                {t('{{count}} AI advisors', { count: Object.keys(expertConfig).length })}
               </span>
               <div className="h-3 w-px bg-border" />
               <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
@@ -298,12 +298,12 @@ export function AILogisticsHubPage() {
                 </div>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[0.95]">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[0.95]">
                 <span className="animate-text-shimmer-fast">
                   {t('AI Logistics Hub')}
                 </span>
               </h1>
-              <p className="max-w-2xl text-base sm:text-lg text-muted-foreground leading-relaxed">
+              <p className="max-w-2xl text-sm sm:text-lg text-muted-foreground leading-relaxed">
                 {t('Expert AI advisors for your warehouse operations')}
               </p>
             </div>
@@ -346,7 +346,7 @@ export function AILogisticsHubPage() {
               </div>
             </div>
 
-            <div className="grid gap-5 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 sm:gap-6 grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3">
               {(Object.keys(expertConfig) as WarehouseExpertId[]).map((id, idx) => {
                 const cfg = expertConfig[id];
                 return (
@@ -374,7 +374,7 @@ export function AILogisticsHubPage() {
   const cfg = expertConfig[selectedExpert];
 
   return (
-    <div className="relative flex flex-col h-[calc(100dvh-4rem)] overflow-hidden">
+    <div className="relative flex min-w-0 flex-col h-[calc(var(--app-visible-height,100dvh)-9rem)] min-h-64 overflow-hidden">
       <HubBackdrop variant="chat" />
 
       {/* Chat Header - Command Bar */}
@@ -487,7 +487,7 @@ export function AILogisticsHubPage() {
                       <button
                         key={q}
                         onClick={() => handleSend(t(q))}
-                        className="group relative text-xs px-3 py-2 rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm text-muted-foreground hover:text-foreground hover:border-blue-400/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-all duration-200 cursor-pointer animate-fade-in-up"
+                        className="group relative text-xs px-3 py-2 rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm text-muted-foreground hover:text-foreground hover:border-blue-400/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 cursor-pointer animate-fade-in-up"
                         style={{ animationDelay: `${150 + i * 80}ms`, animationFillMode: 'both' }}
                       >
                         <span className="inline-flex items-center gap-1.5">
@@ -565,7 +565,7 @@ export function AILogisticsHubPage() {
                 {/* Glowing animated ring when focused */}
                 <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-blue-500/0 via-blue-500/30 to-violet-500/0 opacity-0 group-focus-within:opacity-100 blur-sm transition-opacity duration-300" />
 
-                <div className="relative flex items-center gap-2 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-md px-2 sm:px-3 py-1.5 focus-within:border-blue-500/60 focus-within:shadow-lg focus-within:shadow-blue-500/10 transition-all duration-200">
+                <div className="relative flex items-center gap-2 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-md px-2 sm:px-3 py-1.5 focus-within:border-blue-500/60 focus-within:shadow-lg focus-within:shadow-blue-500/10 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200">
                   {/* Command prefix */}
                   <div className="hidden sm:flex items-center gap-1 pl-1 pr-2 border-r border-border/60">
                     <Command className="h-3.5 w-3.5 text-muted-foreground" />
@@ -581,13 +581,13 @@ export function AILogisticsHubPage() {
                     onKeyDown={handleKeyDown}
                     placeholder={t('Enter your question...')}
                     disabled={isStreaming}
-                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70 disabled:opacity-50 py-1.5 px-1"
+                    className="min-w-0 min-h-11 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/70 disabled:opacity-50 py-1.5 px-1"
                   />
 
                   <button
                     onClick={() => handleSend()}
                     disabled={!input.trim() || isStreaming}
-                    className="relative flex items-center justify-center h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 text-white disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:shadow-lg enabled:hover:shadow-blue-500/40 enabled:hover:scale-105 transition-all duration-200 shrink-0 cursor-pointer group/btn"
+                    className="relative flex items-center justify-center h-11 w-11 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 text-white disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:shadow-lg enabled:hover:shadow-blue-500/40 enabled:hover:scale-105 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 shrink-0 cursor-pointer group/btn"
                     aria-label={t('Send', { defaultValue: 'Send' })}
                   >
                     <span className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />

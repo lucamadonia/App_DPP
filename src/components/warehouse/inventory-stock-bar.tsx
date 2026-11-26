@@ -68,10 +68,10 @@ export function InventoryStockBar({ row, showLegend = true, className }: Invento
         <TooltipTrigger asChild>
           <div className={cn('cursor-default', className)}>
             <div className="flex h-2 w-full min-w-[80px] rounded-full overflow-hidden bg-muted">
-              {row.quantityAvailable > 0 && <div className="bg-emerald-500 transition-all duration-300" style={{ width: pct(row.quantityAvailable) }} />}
-              {row.quantityReserved > 0 && <div className="bg-blue-500 transition-all duration-300" style={{ width: pct(row.quantityReserved) }} />}
-              {row.quantityDamaged > 0 && <div className="bg-orange-500 transition-all duration-300" style={{ width: pct(row.quantityDamaged) }} />}
-              {row.quantityQuarantine > 0 && <div className="bg-red-500 transition-all duration-300" style={{ width: pct(row.quantityQuarantine) }} />}
+              {row.quantityAvailable > 0 && <div className="bg-emerald-500 transition-[width] duration-300" style={{ width: pct(row.quantityAvailable) }} />}
+              {row.quantityReserved > 0 && <div className="bg-blue-500 transition-[width] duration-300" style={{ width: pct(row.quantityReserved) }} />}
+              {row.quantityDamaged > 0 && <div className="bg-orange-500 transition-[width] duration-300" style={{ width: pct(row.quantityDamaged) }} />}
+              {row.quantityQuarantine > 0 && <div className="bg-red-500 transition-[width] duration-300" style={{ width: pct(row.quantityQuarantine) }} />}
             </div>
             {showLegend && (
               <div className="flex gap-2 mt-0.5 text-[10px] text-muted-foreground leading-none tabular-nums">

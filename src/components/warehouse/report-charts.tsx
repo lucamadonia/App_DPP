@@ -54,7 +54,7 @@ export function RevealSection({ children, className }: { children: React.ReactNo
     <div
       ref={ref}
       className={cn(
-        !prefersReduced && 'transition-all duration-700 ease-out will-change-transform',
+        !prefersReduced && 'transition-[opacity,transform] duration-300 ease-out will-change-transform',
         prefersReduced || isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6',
         className,
       )}

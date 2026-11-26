@@ -144,5 +144,22 @@
   "International Bank Account Number": "Internationale Bankkontonummer",
   "Bank Identifier Code": "Bank Identifier Code (BIC)",
   "e.g., Net 30 days, 2% discount if paid within 10 days": "z. B. 30 Tage netto, 2 % Skonto bei Zahlung innerhalb von 10 Tagen",
-  "Optional: Specify your preferred payment terms": "Optional: Geben Sie Ihre bevorzugten Zahlungsbedingungen an"
+  "Optional: Specify your preferred payment terms": "Optional: Geben Sie Ihre bevorzugten Zahlungsbedingungen an",
+  "Company": "Unternehmen",
+  "Your registered company name and legal form.": "Ihr eingetragener Firmenname und Ihre Rechtsform.",
+  "Who we should contact about orders and documents.": "Wen wir zu Bestellungen und Dokumenten kontaktieren sollen.",
+  "Online Presence": "Online-Präsenz",
+  "Optional links that help us get to know you.": "Optionale Links, mit denen wir Sie besser kennenlernen.",
+  "The address that appears on invoices.": "Die Adresse, die auf Rechnungen erscheint.",
+  "Add a separate address for deliveries.": "Fügen Sie eine abweichende Lieferadresse hinzu.",
+  "Used to verify your company.": "Zur Verifizierung Ihres Unternehmens.",
+  "Where we send payments.": "Wohin wir Zahlungen überweisen.",
+  "Spaces are fine, we ignore them.": "Leerzeichen sind erlaubt und werden ignoriert.",
+  "What you supply": "Was Sie liefern",
+  "Helps us match you to the right products.": "Hilft uns, Sie den passenden Produkten zuzuordnen.",
+  "Produces the goods itself": "Stellt die Ware selbst her",
+  "Buys and resells in bulk": "Kauft und verkauft in großen Mengen",
+  "Distributes on behalf of brands": "Vertreibt im Auftrag von Marken",
+  "Provides services, not goods": "Erbringt Dienstleistungen statt Waren",
+  "Review": "Prüfen"
 }

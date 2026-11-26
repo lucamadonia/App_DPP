@@ -13,6 +13,7 @@ import {
   isServiceRoleBearer,
 } from '../_shared/tenant-secrets.ts';
 import { enforceRateLimits, getClientIp, hashKey, rateLimitedResponse } from '../_shared/rate-limit.ts';
+import { buildCustoms, requiresCustoms } from './customs.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -693,6 +694,40 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
     ? { services: { endorsement: 'RETURN' } }
     : {};
 
+  // Destinations outside the EU customs territory (CH, GB, NO, ...) need a
+  // customs declaration. Without it DHL rejects the order with "Please enter
+  // the type of shipment". Build it from the shipment items + product data and
+  // fail with a readable message when master data is missing.
+  let customsBlock: Record<string, unknown> = {};
+  if (requiresCustoms(shipperCountry, consigneeCountry)) {
+    const { data: itemRows, error: itemsErr } = await supabase
+      .from('wh_shipment_items')
+      .select('quantity, unit_price, products(name, hs_code, customs_value, country_of_origin, net_weight, gross_weight)')
+      .eq('shipment_id', shipmentId);
+    if (itemsErr) {
+      return json({ error: `Could not load shipment items for the customs declaration: ${itemsErr.message}` });
+    }
+    const customsResult = buildCustoms({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      lines: (itemRows || []).map((row: any) => ({
+        name: row.products?.name || 'Goods',
+        quantity: row.quantity,
+        unitPriceEur: row.unit_price,
+        customsValueEur: row.products?.customs_value,
+        hsCode: row.products?.hs_code,
+        originIso3: lookupCountryISO3(row.products?.country_of_origin || ''),
+        // Product weights are stored in grams.
+        unitWeightGrams: row.products?.net_weight ?? row.products?.gross_weight,
+      })),
+      totalWeightGrams: effectiveWeightGrams,
+      postalChargesEur: shipment.shipping_cost,
+      exportType: params.exportType as string | undefined,
+      exportDescription: params.exportDescription as string | undefined,
+    });
+    if ('error' in customsResult) return json({ error: customsResult.error });
+    customsBlock = { customs: customsResult.customs };
+  }
+
   const dhlOrder = {
     profile: 'STANDARD_GRUPPENPROFIL',
     shipments: [
@@ -725,6 +760,7 @@ async function handleCreateLabel(supabase: any, tenantId: string, params?: Recor
           dim: dimsForProduct(product),
           weight: { uom: 'kg', value: weightKg },
         },
+        ...customsBlock,
       },
     ],
   };
@@ -1273,6 +1309,20 @@ async function handleValidateAddress(supabase: any, tenantId: string, params?: R
           dim: dimsForProduct(product),
           weight: { uom: 'kg', value: Math.max(0.1, Number(params?.weightKg) || 1) },
         },
+        // Non-EU destinations: DHL validates the customs block too. Send a
+        // placeholder so the probe reports address problems, not customs noise.
+        ...(requiresCustoms(shipperCountry, consigneeCountry) ? {
+          customs: {
+            exportType: 'COMMERCIAL_GOODS',
+            postalCharges: { currency: 'EUR', value: 0 },
+            items: [{
+              itemDescription: 'Address validation probe',
+              packagedQuantity: 1,
+              itemValue: { currency: 'EUR', value: 1 },
+              itemWeight: { uom: 'kg', value: 0.1 },
+            }],
+          },
+        } : {}),
       },
     ],
   };
@@ -2822,6 +2872,17 @@ async function handleCancelReturnLabel(supabase: any, tenantId: string, params?:
 
 function mapCountryToISO3(country: string): string {
   if (!country) return 'DEU';
+  const iso3 = lookupCountryISO3(country);
+  if (iso3) return iso3;
+  // Last resort: log and default to DEU so the shipment doesn't fail silently.
+  console.warn('[dhl-shipping] mapCountryToISO3: unknown country "%s" — defaulting to DEU', country);
+  return 'DEU';
+}
+
+/** Strict variant: null for unknown input. Use where a wrong guess would be a
+ *  false statement (e.g. country of origin on a customs declaration). */
+function lookupCountryISO3(country: string): string | null {
+  if (!country) return null;
   const trimmed = country.trim();
   const upper = trimmed.toUpperCase();
 
@@ -2837,7 +2898,8 @@ function mapCountryToISO3(country: string): string {
     HU: 'HUN', RO: 'ROU', BG: 'BGR', HR: 'HRV', SK: 'SVK',
     SI: 'SVN', LT: 'LTU', LV: 'LVA', EE: 'EST', GR: 'GRC',
     MT: 'MLT', CY: 'CYP', LI: 'LIE', IS: 'ISL', CA: 'CAN',
-    AU: 'AUS', NZ: 'NZL', JP: 'JPN',
+    AU: 'AUS', NZ: 'NZL', JP: 'JPN', CN: 'CHN', TW: 'TWN',
+    KR: 'KOR', IN: 'IND', VN: 'VNM', TR: 'TUR', BD: 'BGD',
   };
   if (iso2[upper]) return iso2[upper];
 
@@ -2877,10 +2939,12 @@ function mapCountryToISO3(country: string): string {
     AUSTRALIEN: 'AUS', AUSTRALIA: 'AUS',
     NEUSEELAND: 'NZL', 'NEW ZEALAND': 'NZL',
     JAPAN: 'JPN',
+    CHINA: 'CHN', TAIWAN: 'TWN',
+    SÜDKOREA: 'KOR', SUEDKOREA: 'KOR', 'SOUTH KOREA': 'KOR',
+    INDIEN: 'IND', INDIA: 'IND',
+    VIETNAM: 'VNM',
+    TÜRKEI: 'TUR', TUERKEI: 'TUR', TURKEY: 'TUR', TÜRKIYE: 'TUR',
+    BANGLADESCH: 'BGD', BANGLADESH: 'BGD',
   };
-  if (names[upper]) return names[upper];
-
-  // Last resort: log and default to DEU so the shipment doesn't fail silently.
-  console.warn('[dhl-shipping] mapCountryToISO3: unknown country "%s" — defaulting to DEU', country);
-  return 'DEU';
+  return names[upper] ?? null;
 }

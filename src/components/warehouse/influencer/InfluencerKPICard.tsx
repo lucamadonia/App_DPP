@@ -33,7 +33,7 @@ export function InfluencerKPICard({
 
   return (
     <Card
-      className={`transition-all duration-500 hover:-translate-y-0.5 hover:shadow-md ${
+      className={`transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300 hover:-translate-y-0.5 hover:shadow-md ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
       }`}
     >

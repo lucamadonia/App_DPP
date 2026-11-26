@@ -49,9 +49,9 @@ export function EditorToolbar({
   const { t } = useTranslation('returns');
 
   return (
-    <div className="flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border-b border-white/20 shadow-sm shrink-0 z-10">
+    <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-1.5 gap-y-1 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border-b border-white/20 shadow-sm shrink-0 z-10">
       {/* Back button */}
-      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onBack}>
+      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onBack} aria-label={t('Back')}>
         <ArrowLeft className="h-4 w-4" />
       </Button>
 
@@ -60,16 +60,18 @@ export function EditorToolbar({
         <h2 className="text-sm font-semibold truncate">{t(templateName)}</h2>
       </div>
 
+      {/* Tool cluster — its own row on phones so nothing is squeezed out */}
+      <div className="order-last flex w-full items-center gap-1.5 sm:order-none sm:w-auto sm:gap-3">
       {/* Mobile: Block sidebar toggle */}
       {showMobileToggles && (
-        <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 lg:hidden" onClick={onToggleBlockSidebar} title="Add Block">
+        <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 lg:hidden" onClick={onToggleBlockSidebar} title={t('Add Block')} aria-label={t('Add Block')}>
           <Plus className="h-3.5 w-3.5" />
         </Button>
       )}
 
       {/* Mobile: Right pane toggle */}
       {showMobileToggles && (
-        <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 lg:hidden" onClick={onToggleRightPane} title="Settings & Preview">
+        <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 lg:hidden" onClick={onToggleRightPane} title={t('Settings & Preview')} aria-label={t('Settings & Preview')}>
           <PanelRight className="h-3.5 w-3.5" />
         </Button>
       )}
@@ -118,7 +120,7 @@ export function EditorToolbar({
       <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
 
       {/* Undo/Redo */}
-      <div className="flex items-center gap-0.5 shrink-0">
+      <div className="flex items-center gap-0.5 shrink-0 ml-auto sm:ml-0">
         <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!canUndo} onClick={onUndo} title={t('Undo')}>
           <Undo2 className="h-3.5 w-3.5" />
         </Button>
@@ -137,6 +139,8 @@ export function EditorToolbar({
         <RotateCcw className="h-3 w-3" />
         <span className="hidden md:inline">{t('Reset')}</span>
       </Button>
+
+      </div>
 
       {/* Save button */}
       <Button size="sm" className="h-7 gap-1 text-xs shrink-0" onClick={onSave} disabled={saving}>

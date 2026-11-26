@@ -24,9 +24,9 @@ export function RecentProductsCard({ products, className }: { products: ProductL
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-muted-foreground" />
-              {t('Recent Products')}
+            <CardTitle className="flex min-w-0 items-center gap-2">
+              <Package className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 truncate">{t('Recent Products')}</span>
             </CardTitle>
             <CardDescription className="hidden sm:block">
               {t('Your most recently added products')}

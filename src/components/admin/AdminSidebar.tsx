@@ -68,7 +68,7 @@ const ROLE_LABEL: Record<AdminRole, string> = {
   security_admin: 'Security',
 };
 
-export function AdminSidebar() {
+export function AdminSidebar({ mobile = false, onNavigate }: { mobile?: boolean; onNavigate?: () => void }) {
   const { pathname } = useLocation();
   const { isSuperAdmin, adminRole } = useAuth();
 
@@ -80,7 +80,7 @@ export function AdminSidebar() {
   const effectiveRoleLabel = isSuperAdmin ? ROLE_LABEL.super_admin : (adminRole ? ROLE_LABEL[adminRole] : 'Admin');
 
   return (
-    <aside className="hidden md:flex md:flex-col w-[220px] shrink-0 border-r bg-slate-950 text-slate-100">
+    <aside className={cn('w-[220px] shrink-0 flex-col border-r bg-slate-950 text-slate-100', mobile ? 'flex h-full w-full' : 'hidden md:flex')}>
       <div className="px-4 pt-4 pb-3 border-b border-slate-800">
         <div className="flex items-center gap-2 text-sm">
           <Shield className="h-4 w-4 text-red-400" />
@@ -106,8 +106,9 @@ export function AdminSidebar() {
                     <li key={item.to}>
                       <Link
                         to={item.to}
+                        onClick={onNavigate}
                         className={cn(
-                          'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer',
+                          'flex min-h-11 items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer',
                           active
                             ? 'bg-red-500/15 text-red-100 font-medium ring-1 ring-red-500/30'
                             : 'text-slate-300 hover:bg-slate-800 hover:text-white',
@@ -128,6 +129,7 @@ export function AdminSidebar() {
       <div className="border-t border-slate-800 p-3">
         <Link
           to="/"
+          onClick={onNavigate}
           className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-3.5 w-3.5" />

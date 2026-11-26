@@ -104,8 +104,8 @@ export function useWarehouseAIChat(locale: 'en' | 'de'): UseWarehouseAIChatRetur
 
     try {
       for await (const chunk of streamCompletion(apiMessages, {
-        maxTokens: 2000,
-        temperature: 0.4,
+        maxTokens: 4000,
+        temperature: 0.3,
         creditCost: 1,
         operationLabel: 'Warehouse AI Chat',
       })) {

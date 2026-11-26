@@ -57,9 +57,9 @@ export function InfluencerProfileCard({ contact, isVisible, className }: Influen
 
   return (
     <Card
-      className={`group relative overflow-hidden transition-all duration-500 ${
+      className={`group relative overflow-hidden transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300 ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-      } hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${className || ''}`}
+      } hover:-translate-y-0.5 hover:shadow-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200 ${className || ''}`}
     >
       {/* Gradient header band */}
       <div className="h-12 sm:h-16 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-blue-500/20" />

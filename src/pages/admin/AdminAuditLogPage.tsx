@@ -174,7 +174,7 @@ export function AdminAuditLogPage() {
       <Card>
         <CardContent className="p-3">
           <div className="flex flex-wrap gap-2 items-center">
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative min-w-0 basis-full sm:basis-auto sm:flex-1 sm:min-w-[200px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
@@ -184,14 +184,14 @@ export function AdminAuditLogPage() {
               />
             </div>
             <Select value={actionFilter} onValueChange={(v) => { setActionFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-[200px] h-9"><SelectValue placeholder={t('Action')} /></SelectTrigger>
+              <SelectTrigger className="h-9 min-w-[8.5rem] flex-1 sm:w-[200px] sm:flex-none"><SelectValue placeholder={t('Action')} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('All Actions')}</SelectItem>
                 {allActions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={targetTypeFilter} onValueChange={(v) => { setTargetTypeFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder={t('Target Type')} /></SelectTrigger>
+              <SelectTrigger className="h-9 min-w-[8.5rem] flex-1 sm:w-[160px] sm:flex-none"><SelectValue placeholder={t('Target Type')} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('All Types')}</SelectItem>
                 <SelectItem value="tenant">{t('Tenant')}</SelectItem>

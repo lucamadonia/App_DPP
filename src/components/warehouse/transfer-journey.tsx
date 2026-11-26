@@ -55,7 +55,7 @@ function LocationCard({
   return (
     <div
       className={cn(
-        'rounded-xl border bg-card p-3 sm:p-4 transition-all duration-300',
+        'rounded-xl border bg-card p-3 sm:p-4 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300',
         active
           ? side === 'from'
             ? 'border-orange-300 dark:border-orange-800 shadow-sm ring-1 ring-orange-200/60 dark:ring-orange-900/40'
@@ -127,7 +127,7 @@ export function TransferJourney({
   const lineClass = bothSelected ? 'stroke-primary' : 'stroke-border';
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[1fr_4.5rem_1fr] items-stretch">
+    <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)] items-stretch">
       <LocationCard
         side="from"
         label={t('From Location')}

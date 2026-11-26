@@ -1062,9 +1062,13 @@ async function fireShipmentEmail(shipment: any, eventType: 'shipment_packed' | '
     if (eventType === 'shipment_delivered') {
       try {
         const { createFeedbackRequestsForShipment } = await import('./feedback-requests');
+        const { getFeedbackReviewUrl } = await import('./feedback-settings');
+        // Storefront review page when the tenant has one, else the built-in form.
+        const reviewUrlFor = (token: string) =>
+          getFeedbackReviewUrl(shipment.tenant_id, token, 'https://dpp-app.fambliss.eu');
         const result = await createFeedbackRequestsForShipment(shipment.id, { silent: true });
         if (result.firstToken) {
-          feedbackUrl = `https://dpp-app.fambliss.eu/feedback/${result.firstToken}`;
+          feedbackUrl = await reviewUrlFor(result.firstToken);
         } else {
           // No new request created — look up existing one (rerun on a re-delivered shipment)
           const { data: existing } = await supabase
@@ -1076,7 +1080,7 @@ async function fireShipmentEmail(shipment: any, eventType: 'shipment_packed' | '
             .limit(1)
             .maybeSingle();
           if (existing?.token) {
-            feedbackUrl = `https://dpp-app.fambliss.eu/feedback/${existing.token}`;
+            feedbackUrl = await reviewUrlFor(existing.token);
           }
         }
       } catch (e) {

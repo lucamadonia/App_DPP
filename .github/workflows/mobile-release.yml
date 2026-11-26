@@ -384,6 +384,11 @@ jobs:
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           IPA_PATH: ${{ steps.ipa.outputs.path }}
         run: |
+          # GitHub secrets can retain newlines from copying the generated Apple
+          # password. Neither Apple IDs nor app-specific passwords use whitespace.
+          APPLE_ID=$(printf '%s' "$APPLE_ID" | tr -d '[:space:]')
+          APPLE_APP_PASSWORD=$(printf '%s' "$APPLE_APP_PASSWORD" | tr -d '[:space:]')
+          echo "::add-mask::$APPLE_APP_PASSWORD"
           xcrun altool --validate-app -f "$IPA_PATH" -t ios \
             -u "$APPLE_ID" -p "$APPLE_APP_PASSWORD"
 
@@ -394,5 +399,8 @@ jobs:
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           IPA_PATH: ${{ steps.ipa.outputs.path }}
         run: |
+          APPLE_ID=$(printf '%s' "$APPLE_ID" | tr -d '[:space:]')
+          APPLE_APP_PASSWORD=$(printf '%s' "$APPLE_APP_PASSWORD" | tr -d '[:space:]')
+          echo "::add-mask::$APPLE_APP_PASSWORD"
           xcrun altool --upload-app -f "$IPA_PATH" -t ios \
             -u "$APPLE_ID" -p "$APPLE_APP_PASSWORD"

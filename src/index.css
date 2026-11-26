@@ -22,6 +22,17 @@ code, .font-mono {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* One easing language for CSS, mirrored in src/lib/motion.ts.
+   `static` keeps the variables emitted even when no utility references them,
+   so arbitrary values like ease-(--ease-drawer) and plain CSS can read them.
+   Overriding --ease-out / --ease-in-out also retunes Tailwind's own
+   `ease-out` / `ease-in-out` utilities to the stronger curves. */
+@theme static {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -296,17 +307,12 @@ html, body {
   0% { stroke-dashoffset: 100; }
   100% { stroke-dashoffset: 0; }
 }
-@keyframes pulse-ring {
-  0% { transform: scale(1); opacity: 0.5; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
 
 .animate-scale-in { animation: scale-in 0.4s ease-out; }
 .animate-slide-in-right { animation: slide-in-right 0.3s ease-out; }
 .animate-slide-in-left { animation: slide-in-left 0.3s ease-out; }
 .animate-confetti-fall { animation: confetti-fall 1.5s ease-in forwards; }
 .animate-check-draw { animation: check-draw 0.6s ease-out forwards; stroke-dasharray: 100; stroke-dashoffset: 100; }
-.animate-pulse-ring { animation: pulse-ring 1.5s ease-out infinite; }
 
 /* Returns Hub Redesign Animations */
 @keyframes stagger-fade-in {
@@ -493,11 +499,16 @@ html, body {
   background-clip: text;
 }
 .landing-card-hover {
-  transition: all 0.3s ease;
+  transition-property: transform, box-shadow;
+  transition-duration: 250ms;
+  transition-timing-function: var(--ease-out);
 }
-.landing-card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+/* Touch devices would keep the lift "stuck" after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .landing-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  }
 }
 .landing-glow {
   box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
@@ -780,10 +791,12 @@ html, body {
 .animate-scan-success { animation: scan-success 0.3s ease-out; }
 
 @keyframes sheet-up {
-  0% { transform: translateY(100%); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
+  0% { transform: translateY(100%); }
+  100% { transform: translateY(0); }
 }
-.animate-sheet-up { animation: sheet-up 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+/* Drawer curve, no overshoot: a sheet that bounces past its rest point reads
+   as a toy, not a native sheet. */
+.animate-sheet-up { animation: sheet-up 300ms var(--ease-drawer); }
 
 @keyframes scan-history-in {
   0% { opacity: 0; transform: translateX(20px); }
